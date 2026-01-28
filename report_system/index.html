@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Report Page</title>
+    <link rel="stylesheet" href="report.css">
+    </head>
+    <body>
+        <header>
+            <div class="headercontent">
+                <span class="title">K_Tawiah Student Report System</span>
+            </div>
+            <div class =generate>
+            <label>How many students are in the class?</label>
+            <input type="number" id="studentcount" name="studentnumber" min="1" value="1">
+            <button type="button" onclick="genrows()">Generate Report</button>
+        </div>
+        </header>
+        <article>
+        <form id="MyForm">
+            <table id="report_table" border="1">
+                <thead>
+                    <tr>
+                        <th>NAME</th>
+                        <th>ENGLISH</th>
+                        <th>MATH</th>
+                        <th>SCIENCE</th>
+                        <th>COMPUTING</th>
+                        <th>HISTORY</th>
+                        <th>CREATIVE ARTS</th>
+                        <th>FRENCH</th>
+                        <th>RELIGIOUS EDUCATION</th>
+                        <th>TWI</th>
+                        <th>TOTAL</th>
+                    </tr>
+                </thead>
+                <tbody id="tablebody">
+                    <!-- Rows will be generated here -->
+                </tbody>
+            </table>
+        </form>
+        <button type="button" onclick="downloadCSV()">Download Results</button>
+        </article>
+        <footer>
+            <p>© 2026 K_Tawiah Student Report System</p>
+        </footer>
+        <script src="report.js"></script>
+    </body>
+</html>

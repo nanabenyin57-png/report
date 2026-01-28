@@ -1,0 +1,48 @@
+header{
+    height: 500px;
+    width: auto;
+    background-image: url("/practice/report_system/reportimages/hbg.jpg");
+    background-size: cover;
+    background-attachment: fixed;
+    color: thistle;
+    position: relative;
+}
+.headercontent{
+    position: absolute;
+    top: 100px;
+    left: 150px;
+    font-size: 60px;
+    font-weight: bold;
+    color: moccasin;
+}
+.generate{
+    position: absolute;
+    top: 300px;
+    left: 200px;
+    background-color: rgba(0, 0, 0, 0.5);
+    color: rgb(70, 42, 42);
+    height: auto;
+    width: 800px;
+    text-align: center;
+    line-height: 50px;
+    font-size: 40px;
+    font-weight: bold;
+    border-radius: 10px;
+    cursor: pointer;
+}
+body{
+    margin: 0;
+    padding: 0;
+    font-family: Arial, Helvetica, sans-serif;
+    background-attachment: fixed;
+    background-image: url("/practice/report_system/reportimages/graduate.jpg");
+    background-size: cover;
+    background-repeat: no-repeat;
+    height: fit-content;
+    width: auto;
+}
+article{
+    background-color: rgba(0, 0, 0, 0.5);
+    height: fit-content;
+    width: auto;
+}
