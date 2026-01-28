@@ -1,6 +1,6 @@
 header{
     height: 500px;
-    width: auto;
+    width:fit-content;
     background-image: url("/report_system/reportimages/hbg.jpg");
     background-size: cover;
     background-attachment: fixed;
