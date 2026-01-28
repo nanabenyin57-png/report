@@ -1,7 +1,7 @@
 header{
     height: 500px;
     width: auto;
-    background-image: url("/report_system/reportimages/hbg.jpg");
+    background-image: url("report_system/reportimages/hbg.jpg");
     background-size: cover;
     background-attachment: fixed;
     color: thistle;
@@ -35,7 +35,7 @@ body{
     padding: 0;
     font-family: Arial, Helvetica, sans-serif;
     background-attachment: fixed;
-    background-image: url("/report_system/reportimages/graduate.jpg");
+    background-image: url("report_system/reportimages/graduate.jpg");
     background-size: cover;
     background-repeat: no-repeat;
     height: fit-content;
@@ -47,3 +47,4 @@ article{
     width: fit-content;
 
 }
+
