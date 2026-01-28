@@ -1,7 +1,7 @@
 header{
     height: 500px;
     width:fit-content;
-    background-image: url("/report_system/reportimages/hbg.jpg");
+    background-image: url("report_system/reportimages/hbg.jpg");
     background-size: cover;
     background-attachment: fixed;
     color: thistle;
@@ -47,4 +47,5 @@ article{
     width: fit-content;
 
 }
+
 
