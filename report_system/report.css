@@ -32,10 +32,7 @@ header{
     font-weight: bold;
     border-radius: 10px;
     cursor: pointer;
-}
-@media(min-width:768px){
-    
-
+}   
 body{
     margin: 0;
     padding: 0;
@@ -47,7 +44,7 @@ body{
     height: fit-content;
     width: fit-content;
 }
-}
+
 article{
     background-color: rgba(0, 0, 0, 0.5);
     height: fit-content;
