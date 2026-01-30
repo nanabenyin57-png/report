@@ -15,11 +15,11 @@
                 <label class="theadgen">
                     Choose your department.
                 </label>
-                <select id="department" name="departments">
+                <select id="department" name="departments" onchange="table_head()">
                     <option value="Preschool" >PRESCHOOL</option>
-                    <option value=" LowerPrimary" >LOWER PRIMARY</option>
-                    <option value=" UpperPrimary" >UPPER PRIMARY</option>
-                    <option value=" JuniorHigh" >JUNIOR HIGH</option>
+                    <option value="LowerPrimary" >LOWER PRIMARY</option>
+                    <option value="UpperPrimary" >UPPER PRIMARY</option>
+                    <option value="JuniorHigh" >JUNIOR HIGH</option>
                 </select>
             </div>
             <div class =generate>
@@ -32,19 +32,9 @@
         <form id="MyForm">
             <table id="report_table" border="1">
                 <thead>
-                    <tr>
-                        <th>NAME</th>
-                        <th>ENGLISH</th>
-                        <th>MATH</th>
-                        <th>SCIENCE</th>
-                        <th>COMPUTING</th>
-                        <th>HISTORY</th>
-                        <th>CREATIVE ARTS</th>
-                        <th>FRENCH</th>
-                        <th>RELIGIOUS EDUCATION</th>
-                        <th>TWI</th>
-                        <th>TOTAL</th>
-                    </tr>
+                    <tr id="headerrow">
+                         <!--your table head appears here. -->
+                    </tr> 
                 </thead>
                 <tbody id="tablebody">
                     <!-- Rows will be generated here -->
