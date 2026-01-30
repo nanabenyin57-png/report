@@ -40,7 +40,6 @@ function genrows() {
          <td> <input type="number" Name="ENGLISH[]" class="score" oninput="calculateRowTotal(this)" required> </td>
          <td> <input type="number" Name="MATHS[]" class="score" oninput="calculateRowTotal(this)" required> </td>
          <td> <input type="number" Name="SCIENCE[]" class="score" oninput="calculateRowTotal(this)" required> </td>
-         <td> <input type="number" Name="TOTAL_SCORE[]" class="total-box" readonly> </td>
          <td> <input type="number" Name="HISTORY[]" class="score" oninput="calculateRowTotal(this)" required> </td>
          <td> <input type="number" Name="CREATIVE_ARTS[]" class="score" oninput="calculateRowTotal(this)" required> </td>
          <td> <input type="number" Name="FRENCH[]" class="score" oninput="calculateRowTotal(this)" required> </td>
@@ -54,7 +53,6 @@ else if(dept==="UpperPrimary"){
          <td> <input type="number" Name="MATHS[]" class="score" oninput="calculateRowTotal(this)" required> </td>
          <td> <input type="number" Name="SCIENCE[]" class="score" oninput="calculateRowTotal(this)" required> </td>
          <td> <input type="number" Name="COMPUTING[]" class="score" oninput="calculateRowTotal(this)" required> </td>
-         <td> <input type="number" Name="TOTAL_SCORE[]" class="total-box" readonly> </td>
          <td> <input type="number" Name="HISTORY[]" class="score" oninput="calculateRowTotal(this)" required> </td>
          <td> <input type="number" Name="CREATIVE_ARTS[]" class="score" oninput="calculateRowTotal(this)" required> </td>
          <td> <input type="number" Name="FRENCH[]" class="score" oninput="calculateRowTotal(this)" required> </td>
@@ -67,12 +65,12 @@ else if(dept==="UpperPrimary"){
          <td> <input type="number" Name="MATHS[]" class="score" oninput="calculateRowTotal(this)" required> </td>
          <td> <input type="number" Name="SCIENCE[]" class="score" oninput="calculateRowTotal(this)" required> </td>
          <td> <input type="number" Name="COMPUTING[]" class="score" oninput="calculateRowTotal(this)" required> </td>
-         <td> <input type="number" Name="TOTAL_SCORE[]" class="total-box" readonly> </td>
-         <td> <input type="number" Name="HISTORY[]" class="score" oninput="calculateRowTotal(this)" required> </td>
+         <td> <input type="number" Name="SOCIAL_STUDIES[]" class="score" oninput="calculateRowTotal(this)" required> </td>
          <td> <input type="number" Name="CREATIVE_ARTS[]" class="score" oninput="calculateRowTotal(this)" required> </td>
          <td> <input type="number" Name="FRENCH[]" class="score" oninput="calculateRowTotal(this)" required> </td>
          <td> <input type="number" Name="RELIGIOUS_EDUCATION[]" class="score" oninput="calculateRowTotal(this)" required> </td>
-         <td> <input type="number" Name="TWI[]" class="score" oninput="calculateRowTotal(this)" required> </td>  `;
+         <td> <input type="number" Name="TWI[]" class="score" oninput="calculateRowTotal(this)" required> </td>
+         <td> <input type="number" Name="CAREER_TECHNOLOGY[]" class="score" oninput="calculateRowTotal(this)" required> </td>  `;
         }
         rowcontent +=`<td> <input type="number" Name="TOTAL_SCORE[]" class="total-box" readonly> </td> `
     tablebody.innerHTML += `<tr>${rowcontent}</tr>`;
