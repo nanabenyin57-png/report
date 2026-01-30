@@ -4,16 +4,16 @@ function table_head(){
     const header= document.getElementById("headerrow");
     let col1= "<th>STUDENT NAME</th>";
     if(tablehead==="Preschool"){
-        col1+= "<th>LITERACY</th><th>NUMERACY</th><th>CREATIVe ARTS</th><th>OUR WORLD OUR PEOPLE</th>";
+        col1+= "<th>LITERACY</th><th>NUMERACY</th><th>CREATIVe ARTS</th><th>OUR WORLD OUR PEOPLE</th><th>TOTAL</th>";
     }
     else if(tablehead==="LowerPrimary"){
-        col1+= "<th>ENGLISH</th><th>MATHS</th><th>SCIENCE</th><th>TWI</th><th>HISTORY</th><th>RELIGIOUS EDUCATION</th><th>CREATIVe ARTS</th><th>FRENCH</th>";
+        col1+= "<th>ENGLISH</th><th>MATHS</th><th>SCIENCE</th><th>TWI</th><th>HISTORY</th><th>RELIGIOUS EDUCATION</th><th>CREATIVe ARTS</th><th>FRENCH</th><th>TOTAL</th";
     }
       else if(tablehead==="UpperPrimary"){
-        col1+= "<th>ENGLISH</th><th>MATHS</th><th>SCIENCE</th><th>COMPUTING</th><th>TWI</th><th>HISTORY</th><th>RELIGIOUS EDUCATION</th><th>CREATIVe ARTS</th><th>FRENCH</th>";
+        col1+= "<th>ENGLISH</th><th>MATHS</th><th>SCIENCE</th><th>COMPUTING</th><th>TWI</th><th>HISTORY</th><th>RELIGIOUS EDUCATION</th><th>CREATIVe ARTS</th><th>FRENCH</th><th>TOTAL</th";
     }
     else if(tablehead==="JuniorHigh"){
-        col1+= "<th>ENGLISH</th><th>MATHS</th><th>SCIENCE</th><th>COMPUTING</th><th>TWI</th><th>HISTORY</th><th>RELIGIOUS EDUCATION</th><th>CREATIVe ARTS</th><th>FRENCH</th>";
+        col1+= "<th>ENGLISH</th><th>MATHS</th><th>SCIENCE</th><th>COMPUTING</th><th>TWI</th><th>SOCIAL STUDIES</th><th>RELIGIOUS EDUCATION</th><th>CREATIVe ARTS</th><th>FRENCH</th><th>CAREER TECHNOLOGY<th>TOTAL</th";
     }
     else{
         col1="<th>Please Select A Department";
@@ -23,23 +23,61 @@ function table_head(){
 // Function to generate table rows based on user input
 function genrows() {
     const count= document.getElementById("studentcount").value;
+    const dept= document.getElementById("department").value;
     const tablebody= document.getElementById("tablebody");
     tablebody.innerHTML= "";
     for(var i=0; i<count; i++){
-        const row= `<tr>
-        <td> <input type="text" name="STUDENT_NAME[]" reguired> </td>
-        <td> <input type="number" Name="ENGLISH[]" class="score" oninput="calculateRowTotal(this)" required> </td>
-        <td> <input type="number" Name="MATHS[]" class="score" oninput="calculateRowTotal(this)" required> </td>
-        <td> <input type="number" Name="SCIENCE[]" class="score" oninput="calculateRowTotal(this)" required> </td>
-        <td> <input type="number" Name="COMPUTING[]" class="score" oninput="calculateRowTotal(this)" required> </td>
-        <td> <input type="number" Name="HISTORY[]" class="score" oninput="calculateRowTotal(this)" required> </td>
-        <td> <input type="number" Name="CREATIVE_ARTS[]" class="score" oninput="calculateRowTotal(this)" required> </td>
-        <td> <input type="number" Name="FRENCH[]" class="score" oninput="calculateRowTotal(this)" required> </td>
-        <td> <input type="number" Name="RELIGIOUS_EDUCATION[]" class="score" oninput="calculateRowTotal(this)" required> </td>
-        <td> <input type="number" Name="TWI[]" class="score" oninput="calculateRowTotal(this)" required> </td>
-        <td> <input type="number" Name="TOTAL_SCORE[]" class="total-box" readonly> </td>  
-    </tr>`;
-    tablebody.innerHTML += row;
+        let rowcontent=`<td> <input type="text" name="STUDENT_NAME[]" reguired> </td>`;
+        if(dept==="Preschool"){
+            rowcontent += `
+            <td> <input type="number" Name="LITERACY[]" class="score" oninput="calculateRowTotal(this)" required> </td>
+            <td> <input type="number" Name="NUMERACY[]" class="score" oninput="calculateRowTotal(this)" required> </td>
+            <td> <input type="number" Name="CREATIVE_ARTS[]" class="score" oninput="calculateRowTotal(this)" required> </td>
+            <td> <input type="number" Name="OUR_WORLD_OUR_PEOPLE[]" class="score" oninput="calculateRowTotal(this)" required> </td>
+            <td> <input type="number" Name="TOTAL_SCORE[]" class="total-box" readonly> </td>`; 
+        }
+        else if(dept==="LowerPrimary"){
+             rowcontent += `
+         <td> <input type="number" Name="ENGLISH[]" class="score" oninput="calculateRowTotal(this)" required> </td>
+         <td> <input type="number" Name="MATHS[]" class="score" oninput="calculateRowTotal(this)" required> </td>
+         <td> <input type="number" Name="SCIENCE[]" class="score" oninput="calculateRowTotal(this)" required> </td>
+         <td> <input type="number" Name="TOTAL_SCORE[]" class="total-box" readonly> </td>
+         <td> <input type="number" Name="HISTORY[]" class="score" oninput="calculateRowTotal(this)" required> </td>
+         <td> <input type="number" Name="CREATIVE_ARTS[]" class="score" oninput="calculateRowTotal(this)" required> </td>
+         <td> <input type="number" Name="FRENCH[]" class="score" oninput="calculateRowTotal(this)" required> </td>
+         <td> <input type="number" Name="RELIGIOUS_EDUCATION[]" class="score" oninput="calculateRowTotal(this)" required> </td>
+         <td> <input type="number" Name="TWI[]" class="score" oninput="calculateRowTotal(this)" required> </td>
+         <td> <input type="number" Name="TOTAL_SCORE[]" class="total-box" readonly> </td>  `;
+        }
+else if(dept==="UpperPrimary"){
+             rowcontent += `
+         <td> <input type="number" Name="ENGLISH[]" class="score" oninput="calculateRowTotal(this)" required> </td>
+         <td> <input type="number" Name="MATHS[]" class="score" oninput="calculateRowTotal(this)" required> </td>
+         <td> <input type="number" Name="SCIENCE[]" class="score" oninput="calculateRowTotal(this)" required> </td>
+         <td> <input type="number" Name="COMPUTING[]" class="score" oninput="calculateRowTotal(this)" required> </td>
+         <td> <input type="number" Name="TOTAL_SCORE[]" class="total-box" readonly> </td>
+         <td> <input type="number" Name="HISTORY[]" class="score" oninput="calculateRowTotal(this)" required> </td>
+         <td> <input type="number" Name="CREATIVE_ARTS[]" class="score" oninput="calculateRowTotal(this)" required> </td>
+         <td> <input type="number" Name="FRENCH[]" class="score" oninput="calculateRowTotal(this)" required> </td>
+         <td> <input type="number" Name="RELIGIOUS_EDUCATION[]" class="score" oninput="calculateRowTotal(this)" required> </td>
+         <td> <input type="number" Name="TWI[]" class="score" oninput="calculateRowTotal(this)" required> </td>
+         <td> <input type="number" Name="TOTAL_SCORE[]" class="total-box" readonly> </td>  `;
+        }
+       else{
+             rowcontent += `
+         <td> <input type="number" Name="ENGLISH[]" class="score" oninput="calculateRowTotal(this)" required> </td>
+         <td> <input type="number" Name="MATHS[]" class="score" oninput="calculateRowTotal(this)" required> </td>
+         <td> <input type="number" Name="SCIENCE[]" class="score" oninput="calculateRowTotal(this)" required> </td>
+         <td> <input type="number" Name="COMPUTING[]" class="score" oninput="calculateRowTotal(this)" required> </td>
+         <td> <input type="number" Name="TOTAL_SCORE[]" class="total-box" readonly> </td>
+         <td> <input type="number" Name="HISTORY[]" class="score" oninput="calculateRowTotal(this)" required> </td>
+         <td> <input type="number" Name="CREATIVE_ARTS[]" class="score" oninput="calculateRowTotal(this)" required> </td>
+         <td> <input type="number" Name="FRENCH[]" class="score" oninput="calculateRowTotal(this)" required> </td>
+         <td> <input type="number" Name="RELIGIOUS_EDUCATION[]" class="score" oninput="calculateRowTotal(this)" required> </td>
+         <td> <input type="number" Name="TWI[]" class="score" oninput="calculateRowTotal(this)" required> </td>
+         <td> <input type="number" Name="TOTAL_SCORE[]" class="total-box" readonly> </td>  `;
+        }
+    tablebody.innerHTML += `<tr>${rowcontent}</tr>`;
     }
 }
     //function to calculate total score for each row
