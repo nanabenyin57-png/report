@@ -1,6 +1,6 @@
 // The function to generat the table head
 function table_head(){
-    const tablehead= document.getElementById("department").value;
+    var tablehead= document.getElementById("department").value;
     const header= document.getElementById("headerrow");
     let col1= "<th>STUDENT NAME</th>";
     if(tablehead==="Preschool"){
