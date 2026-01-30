@@ -3,16 +3,16 @@ function table_head(){
     const tablehead= document.getElementById("department").value;
     const header= document.getElementById("headerrow");
     let col1= "<th>STUDENT NAME</th>";
-    if(tablehead===Preschool){
+    if(tablehead==="Preschool"){
         col1+= "<th>LITERACY</th><th>NUMERACY</th><th>CREATIVe ARTS</th><th>OUR WORLD OUR PEOPLE</th>";
     }
-    else if(tablehead===LowerPrimary){
+    else if(tablehead==="LowerPrimary"){
         col1+= "<th>ENGLISH</th><th>MATHS</th><th>SCIENCE</th><th>TWI</th><th>HISTORY</th><th>RELIGIOUS EDUCATION</th><th>CREATIVe ARTS</th><th>FRENCH</th>";
     }
-      else if(tablehead===UpperPrimary){
+      else if(tablehead==="UpperPrimary"){
         col1+= "<th>ENGLISH</th><th>MATHS</th><th>SCIENCE</th><th>COMPUTING</th><th>TWI</th><th>HISTORY</th><th>RELIGIOUS EDUCATION</th><th>CREATIVe ARTS</th><th>FRENCH</th>";
     }
-    else if(tablehead===JuniorHigh){
+    else if(tablehead==="JuniorHigh"){
         col1+= "<th>ENGLISH</th><th>MATHS</th><th>SCIENCE</th><th>COMPUTING</th><th>TWI</th><th>HISTORY</th><th>RELIGIOUS EDUCATION</th><th>CREATIVe ARTS</th><th>FRENCH</th>";
     }
     else{
