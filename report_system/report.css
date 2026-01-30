@@ -35,7 +35,7 @@ header{
 }
 .tableheadgen{
     position: absolute;
-    top: 230px;
+    top: 250px;
     left: 200px;
     background-color: rgba(0, 0, 0, 0.5);
     color: rgb(70, 42, 42);
