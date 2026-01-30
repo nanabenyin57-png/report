@@ -18,7 +18,7 @@ function table_head(){
     else{
         col1="<th>Please Select A Department";
     }
-    tablehead=innerHTML= col1;
+    header.innerHTML= col1;
 }
 // Function to generate table rows based on user input
 function genrows() {
