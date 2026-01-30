@@ -33,6 +33,21 @@ header{
     border-radius: 10px;
     cursor: pointer;
 }
+.tableheadgen{
+    position: absolute;
+    top: 200px;
+    left: 200px;
+    background-color: rgba(0, 0, 0, 0.5);
+    color: rgb(70, 42, 42);
+    height: auto;
+    width: 800px;
+    text-align: center;
+    line-height: 50px;
+    font-size: 40px;
+    font-weight: bold;
+    border-radius: 10px;
+    cursor: pointer;
+}
 @media(min-width:768px){
     
 
