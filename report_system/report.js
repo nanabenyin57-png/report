@@ -33,7 +33,7 @@ function genrows() {
             <td> <input type="number" Name="LITERACY[]" class="score" oninput="calculateRowTotal(this)" required> </td>
             <td> <input type="number" Name="NUMERACY[]" class="score" oninput="calculateRowTotal(this)" required> </td>
             <td> <input type="number" Name="CREATIVE_ARTS[]" class="score" oninput="calculateRowTotal(this)" required> </td>
-            <td> <input type="number" Name="OUR_WORLD_OUR_PEOPLE[]" class="score" oninput="calculateRowTotal(this)" required> </td> `; 
+            <td> <input type="number" Name="WRITING[]" class="score" oninput="calculateRowTotal(this)" required> </td> `; 
         }
         else if(dept==="LowerPrimary"){
              rowcontent += `
@@ -144,3 +144,5 @@ else if(dept==="UpperPrimary"){
         }
     }
 });
+ table_head();
+ genrows();
