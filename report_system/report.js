@@ -146,3 +146,9 @@ else if(dept==="UpperPrimary"){
 });
  table_head();
  genrows();
+ function toggleMenu(){
+    const overlay = document.getElementById("navover");
+    const humburger= document.getElementById("navigation");
+    overlay.classList.toggle("open");
+    humburger.classList.toggle("is-active");
+ }
