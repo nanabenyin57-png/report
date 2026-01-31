@@ -100,9 +100,20 @@ article{
     opacity: 1;
     transform: scale(1);
     pointer-events: auto;
-
 }
-
+.navigation{
+    cursor: pointer;
+    z-index: 1001;
+}
+.navigation.is-active span:nth-child(1) {
+    transform: translateY(8px) rotate(45deg);
+}
+.navigation.is-active span:nth-child(2) {
+    opacity: 0;
+}
+.navigation.is-active span:nth-child(3) {
+    transform: translateY(-8px) rotate(-45deg);
+}
 
 
 
