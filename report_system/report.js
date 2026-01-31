@@ -4,7 +4,7 @@ function table_head(){
     const header= document.getElementById("headerrow");
     let col1= "<th>STUDENT NAME</th>";
     if(tablehead==="Preschool"){
-        col1+= "<th>LITERACY</th><th>NUMERACY</th><th>CREATIVe ARTS</th><th>OUR WORLD OUR PEOPLE</th><th>TOTAL</th>";
+        col1+= "<th>LITERACY</th><th>NUMERACY</th><th>CREATIVe ARTS</th><th>WRITING</th><th>TOTAL</th>";
     }
     else if(tablehead==="LowerPrimary"){
         col1+= "<th>ENGLISH</th><th>MATHS</th><th>SCIENCE</th><th>TWI</th><th>HISTORY</th><th>RELIGIOUS EDUCATION</th><th>CREATIVe ARTS</th><th>FRENCH</th><th>TOTAL</th";
