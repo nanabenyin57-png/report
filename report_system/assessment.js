@@ -1,4 +1,5 @@
- function toggleMenu(){
+console.log("Report script is loaded and active!");
+function toggleMenu(){
     const overlay = document.getElementById("navover");
     const humburger= document.getElementById("navigation");
     overlay.classList.toggle("open");
