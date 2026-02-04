@@ -75,12 +75,12 @@
     if (subjectlist.value !== "") {
         for (let i = 0; i < count; i++) {
             allRows += `<tr>
-                <td><input type="text" name="STUDENT_NAME[]" required></td>
-                <td><input type="number" name="CLASS_SCORE[]" class="score" oninput="calculateRowTotal(this)" min="0" max="15" required></td>
-                <td><input type="number" name="GROUP_WORK[]" class="score" oninput="calculateRowTotal(this)" min="0" max="15" required></td>
-                <td><input type="number" name="CLASS_TEST[]" class="score" oninput="calculateRowTotal(this)" min="0" max="15" required></td>
-                <td><input type="number" name="PROJECT_WORK[]" class="score" oninput="calculateRowTotal(this)" min="0" max="15" required></td>
-                <td><input type="number" name="TOTAL[]" class="total-box" readonly></td>
+                <td><input type="text" id="student_name_${i}" name="STUDENT_NAME[]" required></td>
+                <td><input type="number" id="class_score_${i}" name="CLASS_SCORE[]" class="score" oninput="calculateRowTotal(this)" min="0" max="15" required></td>
+                <td><input type="number" id="group_work_${i}" name="GROUP_WORK[]" class="score" oninput="calculateRowTotal(this)" min="0" max="15" required></td>
+                <td><input type="number" id="class_test_${i}" name="CLASS_TEST[]" class="score" oninput="calculateRowTotal(this)" min="0" max="15" required></td>
+                <td><input type="number" id="project_work_${i}" name="PROJECT_WORK[]" class="score" oninput="calculateRowTotal(this)" min="0" max="15" required></td>
+                <td><input type="number" id="total_${i}" name="TOTAL[]" class="total-box" readonly></td>
             </tr>`;
         }
         tbody.innerHTML = allRows;
