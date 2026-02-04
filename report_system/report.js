@@ -1,3 +1,4 @@
+console.log("Report script is loaded and active!");
 // The function to generat the table head
 function table_head(){
     var tablehead= document.getElementById("department").value;
@@ -49,15 +50,15 @@ function genrows() {
         }
 else if(dept==="UpperPrimary"){
              rowcontent += `
-         <td> <input type="number" Name="ENGLISH[]" class="score" oninput="calculateRowTotal(this)" required> </td>
-         <td> <input type="number" Name="MATHS[]" class="score" oninput="calculateRowTotal(this)" required> </td>
-         <td> <input type="number" Name="SCIENCE[]" class="score" oninput="calculateRowTotal(this)" required> </td>
-         <td> <input type="number" Name="COMPUTING[]" class="score" oninput="calculateRowTotal(this)" required> </td>
-         <td> <input type="number" Name="HISTORY[]" class="score" oninput="calculateRowTotal(this)" required> </td>
-         <td> <input type="number" Name="CREATIVE_ARTS[]" class="score" oninput="calculateRowTotal(this)" required> </td>
-         <td> <input type="number" Name="FRENCH[]" class="score" oninput="calculateRowTotal(this)" required> </td>
-         <td> <input type="number" Name="RELIGIOUS_EDUCATION[]" class="score" oninput="calculateRowTotal(this)" required> </td>
-         <td> <input type="number" Name="TWI[]" class="score" oninput="calculateRowTotal(this)" required> </td>  `;
+         <td> <input type="number" Name="ENGLISH[]" class="score" oninput="calculateRowTotal(this)" min="0" max="100" required> </td>
+         <td> <input type="number" Name="MATHS[]" class="score" oninput="calculateRowTotal(this)" min="0" max="100" required> </td>
+         <td> <input type="number" Name="SCIENCE[]" class="score" oninput="calculateRowTotal(this)" min="0" max="100" required> </td>
+         <td> <input type="number" Name="COMPUTING[]" class="score" oninput="calculateRowTotal(this)" min="0" max="100" required> </td>
+         <td> <input type="number" Name="HISTORY[]" class="score" oninput="calculateRowTotal(this)" min="0" max="100" required> </td>
+         <td> <input type="number" Name="CREATIVE_ARTS[]" class="score" oninput="calculateRowTotal(this)" min="0" max="100" required> </td>
+         <td> <input type="number" Name="FRENCH[]" class="score" oninput="calculateRowTotal(this)" min="0" max="100" required> </td>
+         <td> <input type="number" Name="RELIGIOUS_EDUCATION[]" class="score" oninput="calculateRowTotal(this)" min="0" max="100" required> </td>
+         <td> <input type="number" Name="TWI[]" class="score" oninput="calculateRowTotal(this)" min="0" max="100" required> </td>  `;
         }
        else{
              rowcontent += `
@@ -121,34 +122,47 @@ else if(dept==="UpperPrimary"){
     // Clean up memory
     URL.revokeObjectURL(url);
 }
-        //this function allows navigation using the enter key
-      document.getElementById("tablebody").addEventListener("keydown", function(e) {
-    if (e.key === "Enter") {
-        e.preventDefault(); // Stop the form from submitting
-
-        const currentInput = e.target;
-        const currentTd = currentInput.closest("td");
-        const currentTr = currentInput.closest("tr");
-        const columnindex = Array.from(currentTr.children).indexOf(currentTd);
-        const nextrow = currentTr.nextElementSibling;
-
-        // Everything must happen inside this IF block
-        if (nextrow) {
-            const nextInput = nextrow.children[columnindex].querySelector("input");
-            
-            // We check if nextInput exists and isn't readonly inside the same block
-            if (nextInput && !nextInput.readOnly) {
-                nextInput.focus();
-                nextInput.select();
-            }
-        }
-    }
-});
- table_head();
- genrows();
+   
+ 
  function toggleMenu(){
     const overlay = document.getElementById("navover");
     const humburger= document.getElementById("navigation");
     overlay.classList.toggle("open");
     humburger.classList.toggle("is-active");
  }
+ table_head();
+ genrows();
+document.addEventListener("keydown", function(e) {
+    if (e.key === "Enter") {
+        const currentInput = e.target;
+        if (currentInput.tagName !== "INPUT") return;
+
+        const table = currentInput.closest("table");
+        if (!table) return;
+
+        // Block the default "Form Submit/Reload"
+        e.preventDefault();
+
+        // 1. Get every single input in this table
+        const allInputs = Array.from(table.querySelectorAll('input:not([readonly])'));
+        
+        // 2. Find the index of the input we are currently in
+        const currentIndex = allInputs.indexOf(currentInput);
+
+        // 3. How many columns are there? (Usually 5 for your SBA)
+        // We find this by looking at the first row of the table
+        const columnsCount = table.querySelector('tr').querySelectorAll('th, td').length;
+
+        // 4. Move to the input exactly one row below (currentIndex + total columns)
+        const nextInput = allInputs[currentIndex + 1]; 
+
+        /* Note: To move DOWN like Excel, use: allInputs[currentIndex + columnsCount - 1]
+           To move NEXT (sideways then down), use: allInputs[currentIndex + 1]
+        */
+
+        if (nextInput) {
+            nextInput.focus();
+            nextInput.select();
+        }
+    }
+}, true);

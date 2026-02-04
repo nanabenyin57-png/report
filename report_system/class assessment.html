@@ -18,9 +18,39 @@
                         </ul>
                     </div>
     <div class="subject">
+        <label for="catgory">CHOOSE A DEPARTMENT</label>
+        <select id="category" name="category" onchange="departmentchange()">
+            <option value="Choose_A_Departmet" selected>CHOOSE A DEPARTMENT</option>
+            <option value="Preschool" >PRESCHOOL</option>  
+            <option value="LowerPrimary" >LOWER PRIMARY</option>
+            <option value="UpperPrimary" >UPPER PRIMARY</option>
+            <option value="JuniorHigh" >JUNIOR HIGH</option>
+        </select>
+         <label for="studentcount">How many students are in the class?</label>
+            <input type="number" id="studentcount" name="studentnumber" min="1" value="1">
 
+       
+    </div>
+
+    <div class="assessment" id="assessment" >
+ <section class="subjectchoice" id="subjectchoice">
+            <label for="subjects">Choose Subjects</label>
+            <select id="subjects" name="subjects"  onchange="SBA()"> 
+            <!-- Subject options will be populated here based on department selection -->
+            </select>
+        </section>
+        
     </div>
 </header>
-<script src="report.js"></script>
+<table id="assessment_table" border="1">
+            <thead>
+                <tr id="assessment_headerrow">
+                     <!--your table head appears here. -->
+                </tr> 
+            </thead>
+            <tbody id="assessment_tablebody">
+                <!-- Rows will be generated here -->
+            </tbody>
+<script src="assessment.js"></script>
     </body>
 </html>
