@@ -31,49 +31,49 @@ function genrows() {
         let rowcontent=`<td> <input type="text" name="STUDENT_NAME[]" required> </td>`;
         if(dept==="Preschool"){
             rowcontent += `
-            <td> <input type="number" Name="LITERACY[]" class="score" oninput="calculateRowTotal(this)" required> </td>
-            <td> <input type="number" Name="NUMERACY[]" class="score" oninput="calculateRowTotal(this)" required> </td>
-            <td> <input type="number" Name="CREATIVE_ARTS[]" class="score" oninput="calculateRowTotal(this)" required> </td>
-            <td> <input type="number" Name="WRITING[]" class="score" oninput="calculateRowTotal(this)" required> </td> `; 
+            <td> <input type="number" Name="LITERACY[]" id="literacy_${i}" class="score" oninput="calculateRowTotal(this)" required> </td>
+            <td> <input type="number" Name="NUMERACY[]" id="numeracy_${i}" class="score" oninput="calculateRowTotal(this)" required> </td>
+            <td> <input type="number" Name="CREATIVE_ARTS[]" id="creative_arts_${i}" class="score" oninput="calculateRowTotal(this)" required> </td>
+            <td> <input type="number" Name="WRITING[]" id="writing_${i}" class="score" oninput="calculateRowTotal(this)" required> </td> `; 
         }
         else if(dept==="LowerPrimary"){
              rowcontent += `
-         <td> <input type="number" Name="ENGLISH[]" class="score" oninput="calculateRowTotal(this)" required> </td>
-         <td> <input type="number" Name="MATHS[]" class="score" oninput="calculateRowTotal(this)" required> </td>
-         <td> <input type="number" Name="SCIENCE[]" class="score" oninput="calculateRowTotal(this)" required> </td>
-         <td> <input type="number" Name="HISTORY[]" class="score" oninput="calculateRowTotal(this)" required> </td>
-         <td> <input type="number" Name="CREATIVE_ARTS[]" class="score" oninput="calculateRowTotal(this)" required> </td>
-         <td> <input type="number" Name="FRENCH[]" class="score" oninput="calculateRowTotal(this)" required> </td>
-         <td> <input type="number" Name="RELIGIOUS_EDUCATION[]" class="score" oninput="calculateRowTotal(this)" required> </td>
-         <td> <input type="number" Name="TWI[]" class="score" oninput="calculateRowTotal(this)" required> </td>
+         <td> <input type="number" Name="ENGLISH[]" id="english_${i}" class="score" oninput="calculateRowTotal(this)" required> </td>
+         <td> <input type="number" Name="MATHS[]" id="maths_${i}" class="score" oninput="calculateRowTotal(this)" required> </td>
+         <td> <input type="number" Name="SCIENCE[]" id="science_${i}" class="score" oninput="calculateRowTotal(this)" required> </td>
+         <td> <input type="number" Name="HISTORY[]" id="history_${i}" class="score" oninput="calculateRowTotal(this)" required> </td>
+         <td> <input type="number" Name="CREATIVE_ARTS[]" id="creative_arts_${i}" class="score" oninput="calculateRowTotal(this)" required> </td>
+         <td> <input type="number" Name="FRENCH[]" id="french_${i}" class="score" oninput="calculateRowTotal(this)" required> </td>
+         <td> <input type="number" Name="RELIGIOUS_EDUCATION[]" id="religious_education_${i}" class="score" oninput="calculateRowTotal(this)" required> </td>
+         <td> <input type="number" Name="TWI[]" id="twi_${i}" class="score" oninput="calculateRowTotal(this)" required> </td>
           `;
         }
 else if(dept==="UpperPrimary"){
              rowcontent += `
-         <td> <input type="number" Name="ENGLISH[]" class="score" oninput="calculateRowTotal(this)" min="0" max="100" required> </td>
-         <td> <input type="number" Name="MATHS[]" class="score" oninput="calculateRowTotal(this)" min="0" max="100" required> </td>
-         <td> <input type="number" Name="SCIENCE[]" class="score" oninput="calculateRowTotal(this)" min="0" max="100" required> </td>
-         <td> <input type="number" Name="COMPUTING[]" class="score" oninput="calculateRowTotal(this)" min="0" max="100" required> </td>
-         <td> <input type="number" Name="HISTORY[]" class="score" oninput="calculateRowTotal(this)" min="0" max="100" required> </td>
-         <td> <input type="number" Name="CREATIVE_ARTS[]" class="score" oninput="calculateRowTotal(this)" min="0" max="100" required> </td>
-         <td> <input type="number" Name="FRENCH[]" class="score" oninput="calculateRowTotal(this)" min="0" max="100" required> </td>
-         <td> <input type="number" Name="RELIGIOUS_EDUCATION[]" class="score" oninput="calculateRowTotal(this)" min="0" max="100" required> </td>
-         <td> <input type="number" Name="TWI[]" class="score" oninput="calculateRowTotal(this)" min="0" max="100" required> </td>  `;
+         <td> <input type="number" Name="ENGLISH[]" id="english_${i}" class="score" oninput="calculateRowTotal(this)" min="0" max="100" required> </td>
+         <td> <input type="number" Name="MATHS[]" id="maths_${i}" class="score" oninput="calculateRowTotal(this)" min="0" max="100" required> </td>
+         <td> <input type="number" Name="SCIENCE[]" id="science_${i}" class="score" oninput="calculateRowTotal(this)" min="0" max="100" required> </td>
+         <td> <input type="number" Name="COMPUTING[]" id="computing_${i}" class="score" oninput="calculateRowTotal(this)" min="0" max="100" required> </td>
+         <td> <input type="number" Name="HISTORY[]" id="history_${i}" class="score" oninput="calculateRowTotal(this)" min="0" max="100" required> </td>
+         <td> <input type="number" Name="CREATIVE_ARTS[]" id= "creative_arts_${i}" class= "score" oninput= "calculateRowTotal(this)" min= "0" max= "100" required   > </td>
+         <td> <input type="number" Name="FRENCH[]" id="french_${i}" class="score" oninput="calculateRowTotal(this)" min="0" max="100" required> </td>
+         <td> <input type="number" Name="RELIGIOUS_EDUCATION[]" id="religious_education_${i}" class="score" oninput="calculateRowTotal(this)" min="0" max="100" required> </td>
+         <td> <input type="number" Name="TWI[]" id="twi_${i}" class="score" oninput="calculateRowTotal(this)" min="0" max="100" required> </td>  `;
         }
        else{
              rowcontent += `
-         <td> <input type="number" Name="ENGLISH[]" class="score" oninput="calculateRowTotal(this)" required> </td>
-         <td> <input type="number" Name="MATHS[]" class="score" oninput="calculateRowTotal(this)" required> </td>
-         <td> <input type="number" Name="SCIENCE[]" class="score" oninput="calculateRowTotal(this)" required> </td>
-         <td> <input type="number" Name="COMPUTING[]" class="score" oninput="calculateRowTotal(this)" required> </td>
-         <td> <input type="number" Name="SOCIAL_STUDIES[]" class="score" oninput="calculateRowTotal(this)" required> </td>
-         <td> <input type="number" Name="CREATIVE_ARTS[]" class="score" oninput="calculateRowTotal(this)" required> </td>
-         <td> <input type="number" Name="FRENCH[]" class="score" oninput="calculateRowTotal(this)" required> </td>
-         <td> <input type="number" Name="RELIGIOUS_EDUCATION[]" class="score" oninput="calculateRowTotal(this)" required> </td>
-         <td> <input type="number" Name="TWI[]" class="score" oninput="calculateRowTotal(this)" required> </td>
-         <td> <input type="number" Name="CAREER_TECHNOLOGY[]" class="score" oninput="calculateRowTotal(this)" required> </td>  `;
+         <td> <input type="number" Name="ENGLISH[]" id="english_${i}" class="score" oninput="calculateRowTotal(this)" required> </td>
+         <td> <input type="number" Name="MATHS[]" id="maths_${i}" class="score" oninput="calculateRowTotal(this)" required> </td>
+         <td> <input type="number" Name="SCIENCE[]" id="science_${i}" class="score" oninput="calculateRowTotal(this)" required> </td>
+         <td> <input type="number" Name="COMPUTING[]" id="computing_${i}" class="score" oninput="calculateRowTotal(this)" required> </td>
+         <td> <input type="number" Name="SOCIAL_STUDIES[]" id="social_studies_${i}" class="score" oninput="calculateRowTotal(this)" required> </td>
+         <td> <input type="number" Name="CREATIVE_ARTS[]" id= "creative_arts_${i}" class= "score" oninput= "calculateRowTotal(this)" required   > </td>
+         <td> <input type="number" Name="FRENCH[]" id="french_${i}" class="score" oninput="calculateRowTotal(this)" required> </td>
+         <td> <input type="number" Name="RELIGIOUS_EDUCATION[]" id="religious_education_${i}" class="score" oninput="calculateRowTotal(this)" min="0" max="100" required> </td>
+         <td> <input type="number" Name="TWI[]" id="twi_${i}" class="score" oninput="calculateRowTotal(this)" min="0" max="100" required> </td>
+         <td> <input type="number" Name="CAREER_TECHNOLOGY[]" id="career_technology_${i}" class="score" oninput="calculateRowTotal(this)" min="0" max="100" required> </td>  `;
         }
-        rowcontent +=`<td> <input type="number" Name="TOTAL_SCORE[]" class="total-box" readonly> </td> `
+        rowcontent +=`<td> <input type="number" id="total_${i}" Name="TOTAL_SCORE[]" class="total-box" readonly> </td> `
     tablebody.innerHTML += `<tr>${rowcontent}</tr>`;
     }
 }
