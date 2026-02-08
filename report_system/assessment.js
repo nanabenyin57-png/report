@@ -69,6 +69,7 @@ function toggleMenu(){
         <th>CLASS TEST</th>
         <th>PROJECT WORK</th>
         <th>TOTAL</th>
+        <th>60 TO 50</th>
     </tr>`;
 
     // Build the rows in a single variable
@@ -81,7 +82,8 @@ function toggleMenu(){
                 <td><input type="number" id="group_work_${i}" name="GROUP_WORK[]" class="score" oninput="calculateRowTotal(this)" min="0" max="15" required></td>
                 <td><input type="number" id="class_test_${i}" name="CLASS_TEST[]" class="score" oninput="calculateRowTotal(this)" min="0" max="15" required></td>
                 <td><input type="number" id="project_work_${i}" name="PROJECT_WORK[]" class="score" oninput="calculateRowTotal(this)" min="0" max="15" required></td>
-                <td><input type="number" id="total_${i}" name="TOTAL[]" class="total-box" readonly></td>
+                <td><input type="number" id="total_${i}" name="TOTAL[]" class="total-box" readonly ></td>
+                <td><input type="number" id="convertbox_${i}" name="convertbox[]" class="convertbox" readonly></td>
             </tr>`;
         }
         tbody.innerHTML = allRows;
@@ -92,16 +94,35 @@ function toggleMenu(){
 
  //function to calculate total score for each row
     function calculateRowTotal(input) {
-        const row = input.closest('tr');
-        const scores = row.querySelectorAll('.score');
-        var sum = 0;
-        scores.forEach((score) => {
-            const value = Number(score.value) || 0;
-            sum += value;
-        });
-        row.querySelector('.total-box').value = sum;
+    const row = input.closest('tr');
+    if (!row) return;
+
+    const scores = row.querySelectorAll('.score');
+    let sum = 0;
+
+    scores.forEach((score) => {
+        sum += Number(score.value) || 0;
+    });
+
+    // 1. Find the elements first
+    const totalBox = row.querySelector('.total-box');
+    const convertBox = row.querySelector('.convertbox');
+
+    // 2. ONLY set the value if the element actually exists
+    if (totalBox) {
+        totalBox.value = sum;
+    } else {
+        console.error("Could not find an element with class 'total-box' in this row.");
     }
-       
+
+    if (convertBox) {
+        const conversion = (sum / 60) * 50;
+        convertBox.value = conversion.toFixed(2);
+    } else {
+        console.error("Could not find an element with class 'convertbox' in this row.");
+    }
+}
+
 
 document.addEventListener("keydown", function(e) {
     if (e.key === "Enter") {
