@@ -27,10 +27,15 @@ function signup_page(){
     </div>
     `
 }
-function handlesignin(){
+async function handlesignin(){
     const email = document.getElementById("email").value;
     const password = document.getElementById("password").value;
-    if(email === "74151441a2bb5454109f100c720c2dd0de33cad03dd1febb1531e71df90dd95f" && password === "3234169073352811b227d739a37aace2888d407707519a8107af5de24bdcba44"){
+    const hashedpassword= "3234169073352811b227d739a37aace2888d407707519a8107af5de24bdcba44";
+    const Shaapi = new TextEncoder().encode(password);
+    const buffer = await crypto.subtle.digest("SHA-256", Shaapi);
+        const hashArray = Array.from(new Uint8Array(buffer));
+        const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    if(email === "nanabenyin57@gmail.com" && hashHex === hashedpassword){
         window.location.href = "report.html";
     }
     else{
