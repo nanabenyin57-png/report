@@ -30,17 +30,8 @@ function signup_page(){
 function handlesignin(){
     const email = document.getElementById("email").value;
     const password = document.getElementById("password").value;
-    if(email === "nanabenyin57@gmail.com" && password === "nana1234"){
+    if(email === "74151441a2bb5454109f100c720c2dd0de33cad03dd1febb1531e71df90dd95f" && password === "3234169073352811b227d739a37aace2888d407707519a8107af5de24bdcba44"){
         window.location.href = "report.html";
-        let userRole = "guest";
-
-if (emailInput === "yourname@email.com") {
-    userRole = "admin";
-    sessionStorage.setItem("userRole", "admin"); // Save it for the next page
-} else {
-    userRole = "teacher";
-    sessionStorage.setItem("userRole", "teacher");
-}
     }
     else{
         alert("Invalid email or password. Please try again.");
