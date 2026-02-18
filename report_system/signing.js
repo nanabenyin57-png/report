@@ -17,10 +17,10 @@ function signup_page(){
     <textarea type="text" placeholder="User's first name" id="firstname" class="firstname"></textarea>
     <textarea type="text" placeholder="User's last name" id="lastname" class="lastname"></textarea>
     <textarea type="text" placeholder="User's email" id="email" class="email"></textarea>
-    <h1>
+    <p>
     Create a strong password
     Note: Password must be at least 8 characters long and contain at least one uppercase letter, 
-    one lowercase letter, and one number.</h1>
+    one lowercase letter, and one number.</p>
     <textarea type="password" placeholder="Password" id="password" class="pass"></textarea>
     <textarea type="password" placeholder="Confirm Password" id="confirmpassword" class="confirmpass"></textarea>
     <button onclick="handlesignup()" class="signup-button">Sign Up</button>
