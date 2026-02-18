@@ -32,6 +32,15 @@ function handlesignin(){
     const password = document.getElementById("password").value;
     if(email === "nanabenyin57@gmail.com" && password === "nana1234"){
         window.location.href = "report.html";
+        let userRole = "guest";
+
+if (emailInput === "yourname@email.com") {
+    userRole = "admin";
+    sessionStorage.setItem("userRole", "admin"); // Save it for the next page
+} else {
+    userRole = "teacher";
+    sessionStorage.setItem("userRole", "teacher");
+}
     }
     else{
         alert("Invalid email or password. Please try again.");
