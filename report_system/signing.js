@@ -27,3 +27,29 @@ function signup_page(){
     </div>
     `
 }
+function handlesignin(){
+    const email = document.getElementById("email").value;
+    const password = document.getElementById("password").value;
+    if(email === "nanabenyin57@gmail.com" && password === "nana1234"){
+        window.location.href = "report.html";
+    }
+    else{
+        alert("Invalid email or password. Please try again.");
+    }
+}
+function handlesignup(){
+    const firstname = document.getElementById("firstname").value;      
+    const lastname = document.getElementById("lastname").value;
+    const email = document.getElementById("email").value;
+    const password = document.getElementById("password").value;
+    const confirmpassword = document.getElementById("confirmpassword").value;
+    if(password !== confirmpassword){
+        alert("Passwords do not match. Please try again.");
+    }   
+    else if(password.length < 8 || !/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/[0-9]/.test(password)){
+        alert("Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, and one number.");
+    }   
+    else{
+        window.location.href = "report.html";
+    }
+}
