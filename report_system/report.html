@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Report Page</title>
+    <link rel="stylesheet" href="report.css">
+    </head>
+    <body>
+        <header>
+            <nav>
+                <button class="navigation" id="navigation" onclick="toggleMenu()"> &#9776; </button>
+                <div class="logo">K_TAWIAH</div>
+                    <div class="nav_overlay" id="navover">
+                        <ul class="links">
+                            <li> 
+                                <a href="class assessment.html" target="_blank" onclick="toggleMenu()">
+                                    Class Assessment</a>
+                                 </li>
+
+                        </ul>
+                    </div>
+             </nav>
+            <div class="headercontent">
+                <span class="title">K_Tawiah Student Report System</span>
+            </div>
+            <div class="tableheadgen">
+                <label for="department" class="theadgen">
+                    Choose your department.
+                </label>
+                <select id="department" name="departments" onchange="table_head()">
+                    <option value="choose_a_department" selected>CHOOSE A DEPARTMENT</option>
+                    <option value="Preschool" >PRESCHOOL</option>
+                    <option value="LowerPrimary" >LOWER PRIMARY</option>
+                    <option value="UpperPrimary" >UPPER PRIMARY</option>
+                    <option value="JuniorHigh" >JUNIOR HIGH</option>
+                </select>
+            </div>
+            <div class =generate>
+            <label for="studentcount">How many students are in the class?</label>
+            <input type="number" id="studentcount" name="studentnumber" min="1" value="1">
+            <button type="button" onclick="genrows()">Generate Report</button>
+        </div>
+        </header>
+        <article>
+        <form id="MyForm">
+            <table id="report_table" border="1">
+                <thead>
+                    <tr id="headerrow">
+                         <!--your table head appears here. -->
+                    </tr> 
+                </thead>
+                <tbody id="tablebody">
+                    <!-- Rows will be generated here -->
+                </tbody>
+            </table>
+        </form>
+        <button type="button" onclick="downloadCSV()">Download Results</button>
+        </article>
+        <footer>
+            <p>© 2026 K_Tawiah Student Report System</p>
+        </footer>
+        <script src="report.js"></script>
+    </body>
+</html>
+
+
