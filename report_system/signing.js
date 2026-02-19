@@ -53,7 +53,7 @@ window.handlesignin = async function() {
     const password = document.getElementById('password').value;
     try {
         await signInWithEmailAndPassword(window.auth, email, password);
-        window.location.href = "assessment.html";
+        window.location.href = "report.html";
     } catch (error) {
         alert("Login Error: " + error.message);
     }
@@ -85,7 +85,7 @@ window.handlesignup = async function() {
         });
 
         alert("Success!");
-        window.location.href = "assessment.html";
+        window.location.href = "report.html";
     } catch (error) {
         alert("Sign Up Error: " + error.message);
     }

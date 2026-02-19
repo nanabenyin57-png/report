@@ -1,4 +1,58 @@
-console.log("Report script is loaded and active!");
+// 1. ALWAYS PUT IMPORTS AT THE TOP
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { getFirestore, doc, setDoc, getDoc, } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+// 2. PASTE YOUR FIREBASE CONFIG HERE
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyBmlZD5EHWgt8DsocsPVZcf4MJVjeuC0Fw",
+  authDomain: "reportbase-669ff.firebaseapp.com",
+  projectId: "reportbase-669ff",
+  storageBucket: "reportbase-669ff.firebasestorage.app",
+  messagingSenderId: "244941864396",
+  appId: "1:244941864396:web:aebc946e160a0172edf169",
+  measurementId: "G-KBTRR8YZFJ"
+};
+const app = initializeApp(firebaseConfig);
+window.auth = getAuth(app);
+window.db = getFirestore(app);
+// This runs as soon as the page loads
+onAuthStateChanged(window.auth, async (user) => {
+    if (user) {
+        // 1. Get the user's document from Firestore
+        const userDoc = await getDoc(doc(window.db, "users", user.uid));
+        
+        if (userDoc.exists()) {
+            const userData = userDoc.data();
+            console.log("Welcome,", userData.firstName, "Role:", userData.role);
+
+            // 2. Handle the UI based on role
+            if (userData.role === "admin") {
+                showAdminDashboard();
+            } else {
+                showStudentView(user.uid);
+            }
+        }
+    } else {
+        // No user is signed in, send them back to login
+        window.location.href = "index.html";
+    }
+});
+
+function showAdminDashboard() {
+    // Make the grading form visible
+    document.getElementById("admin-section").style.display = "block";
+    document.getElementById("status-msg").innerText = "Admin Access Granted";
+}
+
+function showStudentView(uid) {
+    // Hide the grading form, show only the report card
+    document.getElementById("admin-section").style.display = "none";
+    document.getElementById("status-msg").innerText = "Student View";
+    // Function to fetch this specific student's grades
+    loadStudentGrades(uid);
+}console.log("Report script is loaded and active!");
 // The function to generat the table head
 function table_head(){
     var tablehead= document.getElementById("department").value;
