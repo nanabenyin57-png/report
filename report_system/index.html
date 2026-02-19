@@ -20,6 +20,41 @@
         <div class ="signpage" id="signingpage">
             
         </div>
-        <script src="signing.js"></script>
+        <script type="module" src ="signing.js">
+  // Import the functions you need from the SDKs you need
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js";
+  import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-analytics.js";
+  // TODO: Add SDKs for Firebase products that you want to use
+  // https://firebase.google.com/docs/web/setup#available-libraries
+
+  // Your web app's Firebase configuration
+  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+  const firebaseConfig = {
+    apiKey: "AIzaSyBmlZD5EHWgt8DsocsPVZcf4MJVjeuC0Fw",
+    authDomain: "reportbase-669ff.firebaseapp.com",
+    projectId: "reportbase-669ff",
+    storageBucket: "reportbase-669ff.firebasestorage.app",
+    messagingSenderId: "244941864396",
+    appId: "1:244941864396:web:aebc946e160a0172edf169",
+    measurementId: "G-KBTRR8YZFJ"
+  };
+
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+  const analytics = getAnalytics(app);
+  // Inside your <script type="module">
+
+function signup_page() {
+    window.location.href = "signup.html";
+}
+
+function signin_page() {
+    window.location.href = "signin.html";
+}
+
+// THIS IS THE KEY: Manually attach them to the 'window' object
+window.signup_page = signup_page;
+window.signin_page = signin_page;
+</script>
     </body>
     </html>
