@@ -39,13 +39,13 @@ onAuthStateChanged(window.auth, async (user) => {
         window.location.href = "index.html";
     }
 });
-
+/*
 function showAdminDashboard() {
     // Make the grading form visible
     document.getElementById("admin-section").style.display = "block";
     document.getElementById("status-msg").innerText = "Admin Access Granted";
 }
-
+*/
 function showStudentView(uid) {
     // Hide the grading form, show only the report card
     document.getElementById("admin-section").style.display = "none";
@@ -220,3 +220,9 @@ document.addEventListener("keydown", function(e) {
         }
     }
 }, true);
+
+window.genrows= genrows;
+window.table_head= table_head;
+window.toggleMenu= toggleMenu;
+window.downloadCSV= downloadCSV;
+window.calculateRowTotal= calculateRowTotal;
