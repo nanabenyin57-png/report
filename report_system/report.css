@@ -140,7 +140,26 @@ input:focus {
     border: 2px solid #fbc02d;
     outline: none;
 }
-
+h2{
+    color: white;
+    font-size: 1rem;
+    margin-top: 10px;
+}
+.admin{
+    position: absolute;
+    top: 250px;
+    left: 200px;
+    background-color: rgba(0, 0, 0, 0.5);
+    color: rgb(70, 42, 42);
+    height: auto;
+    width: 800px;
+    text-align: center;
+    line-height: 50px;
+    font-size: 40px;
+    font-weight: bold;
+    border-radius: 10px;
+    display: none;
+}
 
 
 
