@@ -203,6 +203,30 @@ window.saveReport = async function() {
         alert("Failed to save. Please try again.");
     }
 };
+async function viewMyReport(studentName) {
+    const dbRef = ref(getDatabase());
+    // We search under the department the student belongs to
+    const studentDept = "JuniorHigh"; 
+
+    try {
+        const snapshot = await get(child(dbRef, `reports/${studentDept}`));
+        if (snapshot.exists()) {
+            const allReports = snapshot.val();
+            
+            // Look through all timestamps to find this student
+            for (let timestamp in allReports) {
+                const report = allReports[timestamp].scores;
+                if (report[studentName]) {
+                    displayGrades(report[studentName]); // Show grades on screen
+                    return;
+                }
+            }
+            alert("Report not found yet.");
+        }
+    } catch (error) {
+        console.error("Error fetching student report:", error);
+    }
+}
 
 // 7. KEYBOARD NAVIGATION (Excel Style)
 document.addEventListener("keydown", (e) => {
