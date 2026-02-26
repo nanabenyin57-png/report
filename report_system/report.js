@@ -140,6 +140,69 @@ function toggleMenu() {
     document.getElementById("navover")?.classList.toggle("open");
     document.getElementById("navigation")?.classList.toggle("is-active");
 }
+// This is to ensure that the student data is saved to firebase in a structured way, with metadata for easy retrieval and analysis later on. The function also includes error handling to manage potential issues during the save process.
+
+window.saveReport = async function() {
+    const db = getDatabase(); // Get your initialized database
+    const department = document.getElementById("department").value;
+    const tableBody = document.getElementById("tablebody");
+    const rows = tableBody.querySelectorAll("tr");
+    const statusMsg = document.getElementById("status-msg");
+
+    // 1. Validation
+    if (department === "choose_a_department") {
+        alert("Please select a department before saving.");
+        return;
+    }
+
+    // 2. Transform Table Rows into a Key-Value Object
+    const reportData = {};
+    
+    rows.forEach((row, index) => {
+        const inputs = row.querySelectorAll("input");
+        if (inputs.length > 0) {
+            // We assume the first input is the Student Name or ID
+            const studentKey = inputs[0].value.trim() || `Student_${index + 1}`;
+            const studentGrades = {};
+
+            inputs.forEach(input => {
+                if (input.name) {
+                    studentGrades[input.name] = input.value;
+                }
+            });
+
+            // Map the grades to that specific student's name
+            reportData[studentKey] = studentGrades;
+        }
+    });
+
+    try {
+        statusMsg.innerText = "Uploading to K_Tawiah Cloud...";
+        
+        // 3. Define the path: reports > Department > Timestamp
+        // This keeps your data organized by date
+        const timestamp = new Date().toISOString().replace(/[.#$\[\]]/g, "_"); 
+        const reportRef = ref(db, `reports/${department}/${timestamp}`);
+
+        // 4. Save to Firebase
+        await set(reportRef, {
+            metadata: {
+                studentCount: rows.length,
+                date: new Date().toLocaleDateString(),
+                department: department
+            },
+            scores: reportData
+        });
+
+        statusMsg.innerText = "Data Synced Successfully!";
+        alert("Report saved to Firebase!");
+
+    } catch (error) {
+        console.error("Firebase Save Error:", error);
+        statusMsg.innerText = "Error: Check Internet Connection";
+        alert("Failed to save. Please try again.");
+    }
+};
 
 // 7. KEYBOARD NAVIGATION (Excel Style)
 document.addEventListener("keydown", (e) => {
@@ -160,5 +223,6 @@ window.table_head = table_head;
 window.toggleMenu = toggleMenu;
 window.downloadCSV = downloadCSV;
 window.calculateRowTotal = calculateRowTotal;
+window.saveReport = saveReport;
 
 console.log("Report script refined and ready.");
