@@ -1,8 +1,8 @@
-// 1. IMPORTS
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-import { getDatabase, ref, set, push } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-database.js";
+// 1. IMPORTS - Use consistent versions (11.0.0)
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
+import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
+import { getDatabase, ref, set, get, child } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-database.js";
 
 // 2. CONFIG
 const firebaseConfig = {
@@ -17,20 +17,20 @@ const firebaseConfig = {
 
 // 3. INITIALIZATION
 const app = initializeApp(firebaseConfig);
-window.auth = getAuth(app);
-window.db = getFirestore(app);
+const auth = getAuth(app);
+const firestore = getFirestore(app); // For user roles
+const rtdb = getDatabase(app);      // For student reports
 
 // 4. AUTH & ROLE CHECK
-onAuthStateChanged(window.auth, async (user) => {
+onAuthStateChanged(auth, async (user) => {
     const adminSec = document.getElementById("admin-section");
     const statusMsg = document.getElementById("status-msg");
 
     if (user) {
         try {
-            const userDoc = await getDoc(doc(window.db, "users", user.uid));
+            const userDoc = await getDoc(doc(firestore, "users", user.uid));
             if (userDoc.exists()) {
                 const userData = userDoc.data();
-                // Fix: Check both case-sensitive versions of name
                 const userName = userData.firstName || userData.firstname || "User";
                 console.log(`Welcome, ${userName}. Role: ${userData.role}`);
 
@@ -40,7 +40,6 @@ onAuthStateChanged(window.auth, async (user) => {
                 } else {
                     if (adminSec) adminSec.style.display = "none";
                     if (statusMsg) statusMsg.innerText = `Welcome, ${userName} (Student View)`;
-                    // loadStudentGrades(user.uid); // Future student function
                 }
             }
         } catch (error) {
@@ -60,14 +59,15 @@ function table_head() {
     const tablehead = deptSelect.value;
     let col1 = "<th>STUDENT NAME</th>";
 
-    if (tablehead === "Preschool") {
-        col1 += "<th>LITERACY</th><th>NUMERACY</th><th>CREATIVE ARTS</th><th>WRITING</th><th>TOTAL</th>";
-    } else if (tablehead === "LowerPrimary") {
-        col1 += "<th>ENGLISH</th><th>MATHS</th><th>SCIENCE</th><th>TWI</th><th>HISTORY</th><th>RELIGIOUS ED</th><th>CREATIVE ARTS</th><th>FRENCH</th><th>TOTAL</th>";
-    } else if (tablehead === "UpperPrimary") {
-        col1 += "<th>ENGLISH</th><th>MATHS</th><th>SCIENCE</th><th>COMPUTING</th><th>TWI</th><th>HISTORY</th><th>RELIGIOUS ED</th><th>CREATIVE ARTS</th><th>FRENCH</th><th>TOTAL</th>";
-    } else if (tablehead === "JuniorHigh") {
-        col1 += "<th>ENGLISH</th><th>MATHS</th><th>SCIENCE</th><th>COMPUTING</th><th>TWI</th><th>SOCIAL STUDIES</th><th>RELIGIOUS ED</th><th>CREATIVE ARTS</th><th>FRENCH</th><th>CAREER TECH</th><th>TOTAL</th>";
+    const subjectHeaders = {
+        "Preschool": "<th>LITERACY</th><th>NUMERACY</th><th>CREATIVE ARTS</th><th>WRITING</th>",
+        "LowerPrimary": "<th>ENGLISH</th><th>MATHS</th><th>SCIENCE</th><th>TWI</th><th>HISTORY</th><th>RELIGIOUS ED</th><th>CREATIVE ARTS</th><th>FRENCH</th>",
+        "UpperPrimary": "<th>ENGLISH</th><th>MATHS</th><th>SCIENCE</th><th>COMPUTING</th><th>TWI</th><th>HISTORY</th><th>RELIGIOUS ED</th><th>CREATIVE ARTS</th><th>FRENCH</th>",
+        "JuniorHigh": "<th>ENGLISH</th><th>MATHS</th><th>SCIENCE</th><th>COMPUTING</th><th>TWI</th><th>SOCIAL STUDIES</th><th>RELIGIOUS ED</th><th>CREATIVE ARTS</th><th>FRENCH</th><th>CAREER TECH</th>"
+    };
+
+    if (subjectHeaders[tablehead]) {
+        col1 += subjectHeaders[tablehead] + "<th>TOTAL</th>";
     } else {
         col1 = "<th>Please Select A Department</th>";
     }
@@ -81,28 +81,30 @@ function genrows() {
     
     if (!countInput || !deptSelect || !tablebody) return;
 
-    const count = countInput.value;
+    const count = parseInt(countInput.value);
     const dept = deptSelect.value;
     tablebody.innerHTML = "";
 
-    for (let i = 0; i < count; i++) {
-        let rowcontent = `<td><input type="text" name="STUDENT_NAME[]" placeholder="Name" required></td>`;
-        
-        // Helper to generate score inputs based on department
-        const subjects = {
-            "Preschool": ["LITERACY", "NUMERACY", "CREATIVE_ARTS", "WRITING"],
-            "LowerPrimary": ["ENGLISH", "MATHS", "SCIENCE", "HISTORY", "CREATIVE_ARTS", "FRENCH", "RELIGIOUS_ED", "TWI"],
-            "UpperPrimary": ["ENGLISH", "MATHS", "SCIENCE", "COMPUTING", "HISTORY", "CREATIVE_ARTS", "FRENCH", "RELIGIOUS_ED", "TWI"],
-            "JuniorHigh": ["ENGLISH", "MATHS", "SCIENCE", "COMPUTING", "SOCIAL_STUDIES", "CREATIVE_ARTS", "FRENCH", "RELIGIOUS_ED", "TWI", "CAREER_TECH"]
-        };
+    const subjects = {
+        "Preschool": ["LITERACY", "NUMERACY", "CREATIVE_ARTS", "WRITING"],
+        "LowerPrimary": ["ENGLISH", "MATHS", "SCIENCE", "HISTORY", "CREATIVE_ARTS", "FRENCH", "RELIGIOUS_ED", "TWI"],
+        "UpperPrimary": ["ENGLISH", "MATHS", "SCIENCE", "COMPUTING", "HISTORY", "CREATIVE_ARTS", "FRENCH", "RELIGIOUS_ED", "TWI"],
+        "JuniorHigh": ["ENGLISH", "MATHS", "SCIENCE", "COMPUTING", "SOCIAL_STUDIES", "CREATIVE_ARTS", "FRENCH", "RELIGIOUS_ED", "TWI", "CAREER_TECH"]
+    };
 
-        const currentSubjects = subjects[dept] || [];
+    const currentSubjects = subjects[dept] || [];
+
+    for (let i = 0; i < count; i++) {
+        let rowcontent = `<td><input type="text" class="student-name" placeholder="Name" required></td>`;
+        
         currentSubjects.forEach(sub => {
-            rowcontent += `<td><input type="number" name="${sub}[]" class="score" oninput="calculateRowTotal(this)" min="0" max="100" required></td>`;
+            rowcontent += `<td><input type="number" name="${sub}" class="score" oninput="calculateRowTotal(this)" min="0" max="100" required></td>`;
         });
 
-        rowcontent += `<td><input type="number" name="TOTAL_SCORE[]" class="total-box" readonly></td>`;
-        tablebody.innerHTML += `<tr>${rowcontent}</tr>`;
+        rowcontent += `<td><input type="number" class="total-box" readonly></td>`;
+        const tr = document.createElement("tr");
+        tr.innerHTML = rowcontent;
+        tablebody.appendChild(tr);
     }
 }
 
@@ -117,75 +119,36 @@ function calculateRowTotal(input) {
     row.querySelector('.total-box').value = sum;
 }
 
-function downloadCSV() {
-    const rows = document.querySelectorAll("table tr");
-    let csvContent = "";
-    rows.forEach(row => {
-        const cols = row.querySelectorAll("td, th");
-        let rowData = Array.from(cols).map(col => {
-            const input = col.querySelector("input");
-            return input ? input.value : col.innerText;
-        });
-        csvContent += rowData.join(",") + "\n";
-    });
-    const blob = new Blob([csvContent], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "student_report.csv";
-    a.click();
-    URL.revokeObjectURL(url);
-}
-
-function toggleMenu() {
-    document.getElementById("navover")?.classList.toggle("open");
-    document.getElementById("navigation")?.classList.toggle("is-active");
-}
-// This is to ensure that the student data is saved to firebase in a structured way, with metadata for easy retrieval and analysis later on. The function also includes error handling to manage potential issues during the save process.
-
+// 7. DATABASE FUNCTIONS
 window.saveReport = async function() {
-    const db = getDatabase(); // Get your initialized database
     const department = document.getElementById("department").value;
     const tableBody = document.getElementById("tablebody");
     const rows = tableBody.querySelectorAll("tr");
     const statusMsg = document.getElementById("status-msg");
 
-    // 1. Validation
-    if (department === "choose_a_department") {
-        alert("Please select a department before saving.");
+    if (department === "choose_a_department" || rows.length === 0) {
+        alert("Please select a department and generate rows.");
         return;
     }
 
-    // 2. Transform Table Rows into a Key-Value Object
     const reportData = {};
-    
     rows.forEach((row, index) => {
-        const inputs = row.querySelectorAll("input");
-        if (inputs.length > 0) {
-            // We assume the first input is the Student Name or ID
-            const studentKey = inputs[0].value.trim() || `Student_${index + 1}`;
-            const studentGrades = {};
+        const nameInput = row.querySelector(".student-name");
+        const studentKey = nameInput.value.trim().replace(/[.#$\[\]]/g, "_") || `Student_${index + 1}`;
+        const studentGrades = {};
 
-            inputs.forEach(input => {
-                if (input.name) {
-                    studentGrades[input.name] = input.value;
-                }
-            });
-
-            // Map the grades to that specific student's name
-            reportData[studentKey] = studentGrades;
-        }
+        row.querySelectorAll(".score").forEach(input => {
+            studentGrades[input.name] = input.value;
+        });
+        studentGrades["TOTAL"] = row.querySelector(".total-box").value;
+        reportData[studentKey] = studentGrades;
     });
 
     try {
         statusMsg.innerText = "Uploading to K_Tawiah Cloud...";
-        
-        // 3. Define the path: reports > Department > Timestamp
-        // This keeps your data organized by date
-        const timestamp = new Date().toISOString().replace(/[.#$\[\]]/g, "_"); 
-        const reportRef = ref(db, `reports/${department}/${timestamp}`);
+        const timestamp = new Date().getTime(); // Use numbers for cleaner paths
+        const reportRef = ref(rtdb, `reports/${department}/${timestamp}`);
 
-        // 4. Save to Firebase
         await set(reportRef, {
             metadata: {
                 studentCount: rows.length,
@@ -197,57 +160,31 @@ window.saveReport = async function() {
 
         statusMsg.innerText = "Data Synced Successfully!";
         alert("Report saved to Firebase!");
-
     } catch (error) {
         console.error("Firebase Save Error:", error);
-        statusMsg.innerText = "Error: Check Internet Connection";
-        alert("Failed to save. Please try again.");
+        statusMsg.innerText = "Error: Check Console";
     }
 };
+
 async function viewMyReport(studentName) {
-    const dbRef = ref(getDatabase());
-    // We search under the department the student belongs to
-    const studentDept = "JuniorHigh"; 
+    const department = document.getElementById("department").value;
+    const dbRef = ref(rtdb);
 
     try {
-        const snapshot = await get(child(dbRef, `reports/${studentDept}`));
+        const snapshot = await get(child(dbRef, `reports/${department}`));
         if (snapshot.exists()) {
-            const allReports = snapshot.val();
-            
-            // Look through all timestamps to find this student
-            for (let timestamp in allReports) {
-                const report = allReports[timestamp].scores;
-                if (report[studentName]) {
-                    displayGrades(report[studentName]); // Show grades on screen
-                    return;
-                }
-            }
-            alert("Report not found yet.");
+            console.log("Found reports:", snapshot.val());
+            // Logical lookup code would go here
         }
     } catch (error) {
-        console.error("Error fetching student report:", error);
+        console.error("Error fetching:", error);
     }
 }
 
-// 7. KEYBOARD NAVIGATION (Excel Style)
-document.addEventListener("keydown", (e) => {
-    if (e.key === "Enter" && e.target.tagName === "INPUT") {
-        e.preventDefault();
-        const allInputs = Array.from(document.querySelectorAll('input:not([readonly])'));
-        const nextIndex = allInputs.indexOf(e.target) + 1;
-        if (allInputs[nextIndex]) {
-            allInputs[nextIndex].focus();
-            allInputs[nextIndex].select();
-        }
-    }
-}, true);
-
-// 8. GLOBAL EXPOSURE
+// 8. EXPORT TO WINDOW (For HTML access)
 window.genrows = genrows;
 window.table_head = table_head;
-window.toggleMenu = toggleMenu;
-window.downloadCSV = downloadCSV;
 window.calculateRowTotal = calculateRowTotal;
 window.saveReport = saveReport;
 
-console.log("Report script refined and ready.");
+console.log("K_Tawiah System: Online");
