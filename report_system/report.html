@@ -14,10 +14,10 @@
             <div class="nav_overlay" id="navover">
                 <ul class="links">
                     <li> 
-                        <a href="index.html" onclick="toggleMenu()">Sign Out</a>
+                        <a href="index.html">Sign Out</a>
                     </li>
                     <li>
-                        <a href="class assessment.html" onclick="toggleMenu()">Class Assessment</a>
+                        <a href="class assessment.html">Class Assessment</a>
                     </li>
                 </ul>
             </div>
@@ -41,7 +41,7 @@
             <div class="generate">
                 <label for="studentcount">How many students are in the class?</label>
                 <input type="number" id="studentcount" name="studentnumber" min="1" value="1">
-                <button type="button" onclick="genrows()">Generate Report</button>
+                <button type="button" id="btnGenerate">Generate Report</button>
             </div>
         </div>
     </header>
@@ -50,15 +50,13 @@
         <form id="MyForm">
             <table id="report_table" border="1">
                 <thead>
-                    <tr id="headerrow">
-                        </tr> 
+                    <tr id="headerrow"></tr> 
                 </thead>
-                <tbody id="tablebody">
-                    </tbody>
+                <tbody id="tablebody"></tbody>
             </table>
         </form>
-        <button type="button" onclick="downloadCSV()" class="download-btn">Download Results</button>
-        <button type="button" onclick="saveReport()" class="save-btn">Save Report</button>
+        <button type="button" id="btnDownload" class="download-btn">Download Results</button>
+        <button type="button" id="btnSave" class="save-btn">Save Report</button>
     </article>
 
     <footer>
