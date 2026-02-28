@@ -190,6 +190,10 @@ async function saveReport() {
     }
 }
 
+// 9. GLOBAL EXPOSURE
+window.table_head = table_head;
+window.toggleMenu = toggleMenu;
+window.calculateRowTotal = calculateRowTotal;
 // 8. BRIDGE: EVENT LISTENERS
 document.addEventListener("DOMContentLoaded", () => {
     // Buttons must have these IDs in HTML
@@ -198,7 +202,3 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("btnDownload")?.addEventListener("click", downloadCSV);
 });
 
-// 9. GLOBAL EXPOSURE
-window.table_head = table_head;
-window.toggleMenu = toggleMenu;
-window.calculateRowTotal = calculateRowTotal;
