@@ -1,4 +1,4 @@
-// 1. IMPORTS - Use consistent versions (11.0.0)
+// 1. IMPORTS
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
 import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
@@ -18,8 +18,8 @@ const firebaseConfig = {
 // 3. INITIALIZATION
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
-const firestore = getFirestore(app); // For user roles
-const rtdb = getDatabase(app);      // For student reports
+const firestore = getFirestore(app); // For User Roles
+const rtdb = getDatabase(app);      // For Student Reports
 
 // 4. AUTH & ROLE CHECK
 onAuthStateChanged(auth, async (user) => {
@@ -32,8 +32,7 @@ onAuthStateChanged(auth, async (user) => {
             if (userDoc.exists()) {
                 const userData = userDoc.data();
                 const userName = userData.firstName || userData.firstname || "User";
-                console.log(`Welcome, ${userName}. Role: ${userData.role}`);
-
+                
                 if (userData.role === "admin" || userData.role === "teacher") {
                     if (adminSec) adminSec.style.display = "block";
                     if (statusMsg) statusMsg.innerText = `Welcome, ${userName} (Admin Access)`;
@@ -43,7 +42,7 @@ onAuthStateChanged(auth, async (user) => {
                 }
             }
         } catch (error) {
-            console.error("Error fetching user role:", error);
+            console.error("Auth error:", error);
         }
     } else {
         window.location.href = "index.html";
@@ -116,11 +115,36 @@ function calculateRowTotal(input) {
     scores.forEach(score => {
         sum += Number(score.value) || 0;
     });
-    row.querySelector('.total-box').value = sum;
+    const totalBox = row.querySelector('.total-box');
+    if (totalBox) totalBox.value = sum;
 }
 
-// 7. DATABASE FUNCTIONS
-window.saveReport = async function() {
+function downloadCSV() {
+    const rows = document.querySelectorAll("table tr");
+    let csvContent = "";
+    rows.forEach(row => {
+        const cols = row.querySelectorAll("td, th");
+        let rowData = Array.from(cols).map(col => {
+            const input = col.querySelector("input");
+            return input ? input.value : col.innerText;
+        });
+        csvContent += rowData.join(",") + "\n";
+    });
+    const blob = new Blob([csvContent], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "student_report.csv";
+    a.click();
+}
+
+function toggleMenu() {
+    document.getElementById("navover")?.classList.toggle("open");
+    document.getElementById("navigation")?.classList.toggle("is-active");
+}
+
+// 7. SAVE TO FIREBASE
+async function saveReport() {
     const department = document.getElementById("department").value;
     const tableBody = document.getElementById("tablebody");
     const rows = tableBody.querySelectorAll("tr");
@@ -145,8 +169,8 @@ window.saveReport = async function() {
     });
 
     try {
-        statusMsg.innerText = "Uploading to K_Tawiah Cloud...";
-        const timestamp = new Date().getTime(); // Use numbers for cleaner paths
+        statusMsg.innerText = "Syncing with K_Tawiah Cloud...";
+        const timestamp = new Date().getTime(); 
         const reportRef = ref(rtdb, `reports/${department}/${timestamp}`);
 
         await set(reportRef, {
@@ -164,38 +188,17 @@ window.saveReport = async function() {
         console.error("Firebase Save Error:", error);
         statusMsg.innerText = "Error: Check Console";
     }
-};
-
-async function viewMyReport(studentName) {
-    const department = document.getElementById("department").value;
-    const dbRef = ref(rtdb);
-
-    try {
-        const snapshot = await get(child(dbRef, `reports/${department}`));
-        if (snapshot.exists()) {
-            console.log("Found reports:", snapshot.val());
-            // Logical lookup code would go here
-        }
-    } catch (error) {
-        console.error("Error fetching:", error);
-    }
 }
-// 8. BRIDGE: Connect HTML buttons to JS functions
+
+// 8. BRIDGE: EVENT LISTENERS
 document.addEventListener("DOMContentLoaded", () => {
-    // Connect Generate Button
-    const genBtn = document.getElementById("btnGenerate");
-    if (genBtn) genBtn.addEventListener("click", genrows);
-
-    // Connect Save Button
-    const saveBtn = document.getElementById("btnSave");
-    if (saveBtn) saveBtn.addEventListener("click", saveReport);
-
-    // Connect Download Button
-    const dlBtn = document.getElementById("btnDownload");
-    if (dlBtn) dlBtn.addEventListener("click", downloadCSV);
+    // Buttons must have these IDs in HTML
+    document.getElementById("btnGenerate")?.addEventListener("click", genrows);
+    document.getElementById("btnSave")?.addEventListener("click", saveReport);
+    document.getElementById("btnDownload")?.addEventListener("click", downloadCSV);
 });
 
-// 9. EXPOSE TO WINDOW (Optional backup)
-window.toggleMenu = toggleMenu;
+// 9. GLOBAL EXPOSURE
 window.table_head = table_head;
+window.toggleMenu = toggleMenu;
 window.calculateRowTotal = calculateRowTotal;
