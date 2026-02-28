@@ -8,6 +8,8 @@ import { getDatabase, ref, set, get, child } from "https://www.gstatic.com/fireb
 const firebaseConfig = {
   apiKey: "AIzaSyBmlZD5EHWgt8DsocsPVZcf4MJVjeuC0Fw",
   authDomain: "reportbase-669ff.firebaseapp.com",
+  // ADD THIS LINE BELOW:
+  databaseURL: "https://reportbase-669ff-default-rtdb.firebaseio.com", 
   projectId: "reportbase-669ff",
   storageBucket: "reportbase-669ff.firebasestorage.app",
   messagingSenderId: "244941864396",
@@ -194,6 +196,22 @@ async function saveReport() {
 window.table_head = table_head;
 window.toggleMenu = toggleMenu;
 window.calculateRowTotal = calculateRowTotal;
+// Excel-style Enter key navigation
+document.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && e.target.tagName === "INPUT") {
+        e.preventDefault(); // Stop the form from submitting
+        
+        // Find all inputs in the table
+        const allInputs = Array.from(document.querySelectorAll('#tablebody input'));
+        const currentIndex = allInputs.indexOf(e.target);
+        const nextInput = allInputs[currentIndex + 1];
+
+        if (nextInput) {
+            nextInput.focus();
+            nextInput.select(); // Highlight the text for easy typing
+        }
+    }
+});
 // 8. BRIDGE: EVENT LISTENERS
 document.addEventListener("DOMContentLoaded", () => {
     // Buttons must have these IDs in HTML
