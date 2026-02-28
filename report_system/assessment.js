@@ -1,160 +1,116 @@
-console.log("Report script is loaded and active!");
-function toggleMenu(){
-    const overlay = document.getElementById("navover");
-    const humburger= document.getElementById("navigation");
-    overlay.classList.toggle("open");
-    humburger.classList.toggle("is-active");
- }
- function departmentchange(){
-    const department= document.getElementById("category").value;
-    const subjectlist= document.getElementById("subjects");
-    let options=`<option value="">Select Subject</option>`;
-    if(department==="Preschool"){
-        options+= `<option value="LITERACY">LITERACY</option>
-        <option value="NUMERACY">NUMERACY</option>
-        <option value="CREATIVE_ARTS">CREATIVE ARTS</option>
-        <option value="WRITING">WRITING</option>`;
-    }
-    else if(department==="LowerPrimary"){
-        options+= `<option value="ENGLISH">ENGLISH</option>
-        <option value="MATHS">MATHS</option>
-        <option value="SCIENCE">SCIENCE</option>
-        <option value="HISTORY">HISTORY</option>
-        <option value="RELIGIOUS_EDUCATION">RELIGIOUS EDUCATION</option>
-        <option value="CREATIVE_ARTS">CREATIVE ARTS</option>
-        <option value="FRENCH">FRENCH</option>
-        <option value="TWI">TWI</option>`;
-    }   
-    else if(department==="UpperPrimary"){
-        options+= `<option value="ENGLISH">ENGLISH</option>
-        <option value="MATHS">MATHS</option>
-        <option value="SCIENCE">SCIENCE</option>
-        <option value="COMPUTING">COMPUTING</option>
-        <option value="HISTORY">HISTORY</option>
-        <option value="RELIGIOUS_EDUCATION">RELIGIOUS EDUCATION</option>
-        <option value="CREATIVE_ARTS">CREATIVE ARTS</option>
-        <option value="FRENCH">FRENCH</option>
-        <option value="TWI">TWI</option>`;
-    }
-    else if(department==="JuniorHigh"){
-        options+= `<option value="ENGLISH">ENGLISH</option>
-        <option value="MATHS">MATHS</option>
-        <option value="SCIENCE">SCIENCE</option>
-        <option value="COMPUTING">COMPUTING</option>
-        <option value="SOCIAL_STUDIES">SOCIAL STUDIES</option>
-        <option value="RELIGIOUS_EDUCATION">RELIGIOUS EDUCATION</option>
-        <option value="CREATIVE_ARTS">CREATIVE ARTS</option>
-        <option value="FRENCH">FRENCH</option>
-        <option value="TWI">TWI</option>
-        <option value="CAREER_TECHNOLOGY">CAREER TECHNOLOGY</option>`;
-    }
-    else{
-        options=`<option value="">Select Department First</option>`;
-    }
-    subjectlist.innerHTML= options;
- }
- function SBA() {
-    const subjectlist = document.getElementById("subjects");
-    if (!subjectlist || subjectlist.selectedIndex === -1) return;
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
+import { getFirestore, collection, query, where, getDocs, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
 
-    const count = document.getElementById("studentcount").value || 0;
-    const thead = document.getElementById("assessment_headerrow");
-    const tbody = document.getElementById("assessment_tablebody");
+// --- 1. FIREBASE SETUP ---
+const firebaseConfig = {
+    apiKey: "AIzaSyBmlZD5EHWgt8DsocsPVZcf4MJVjeuC0Fw",
+    authDomain: "reportbase-669ff.firebaseapp.com",
+    projectId: "reportbase-669ff",
+    storageBucket: "reportbase-669ff.firebasestorage.app",
+    messagingSenderId: "244941864396",
+    appId: "1:244941864396:web:aebc946e160a0172edf169"
+};
 
-    // Set Header
-    thead.innerHTML = `<tr>
-        <th>STUDENT NAME</th>
-        <th>CLASS SCORE</th>
-        <th>GROUP WORK</th>
-        <th>CLASS TEST</th>
-        <th>PROJECT WORK</th>
-        <th>TOTAL</th>
-        <th>60 TO 50</th>
-    </tr>`;
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const firestore = getFirestore(app);
 
-    // Build the rows in a single variable
-    let allRows = "";
-    if (subjectlist.value !== "") {
-        for (let i = 0; i < count; i++) {
-            allRows += `<tr>
-                <td><input type="text" id="student_name_${i}" name="STUDENT_NAME[]" required></td>
-                <td><input type="number" id="class_score_${i}" name="CLASS_SCORE[]" class="score" oninput="calculateRowTotal(this)" min="0" max="15" required></td>
-                <td><input type="number" id="group_work_${i}" name="GROUP_WORK[]" class="score" oninput="calculateRowTotal(this)" min="0" max="15" required></td>
-                <td><input type="number" id="class_test_${i}" name="CLASS_TEST[]" class="score" oninput="calculateRowTotal(this)" min="0" max="15" required></td>
-                <td><input type="number" id="project_work_${i}" name="PROJECT_WORK[]" class="score" oninput="calculateRowTotal(this)" min="0" max="15" required></td>
-                <td><input type="number" id="total_${i}" name="TOTAL[]" class="total-box" readonly ></td>
-                <td><input type="number" id="convertbox_${i}" name="convertbox[]" class="convertbox" readonly></td>
-            </tr>`;
-        }
-        tbody.innerHTML = allRows;
+let allStudents = [];
+
+// --- 2. AUTH & STUDENT FETCH ---
+onAuthStateChanged(auth, async (user) => {
+    if (user) {
+        // Fetch students to populate the rows later
+        const q = query(collection(firestore, "users"), where("role", "==", "student"));
+        const querySnapshot = await getDocs(q);
+        allStudents = querySnapshot.docs.map(doc => ({
+            uid: doc.id,
+            name: `${doc.data().firstName || ''} ${doc.data().lastName || ''}`.trim()
+        }));
     } else {
-        tbody.innerHTML = `<tr><td colspan="6">Please Select A Subject</td></tr>`;
+        window.location.href = "index.html";
+    }
+});
+
+// --- 3. DYNAMIC SUBJECTS ---
+window.departmentchange = function() {
+    const dept = document.getElementById("category").value;
+    const subjectSelect = document.getElementById("subjects");
+    subjectSelect.innerHTML = '<option value="">-- Select Subject --</option>';
+
+    const subjects = {
+        "Preschool": ["Numeracy", "Literacy", "Creative Arts", "Our World"],
+        "LowerPrimary": ["English", "Maths", "Science", "History", "Our World", "RME", "Twi"],
+        "UpperPrimary": ["English", "Maths", "Science", "History", "Computing", "RME", "Twi"],
+        "JuniorHigh": ["English", "Maths", "Science", "Social Studies", "Computing", "Pre-Tech", "Home Ec", "RME", "Twi"]
+    };
+
+    if (subjects[dept]) {
+        subjects[dept].forEach(sub => {
+            let opt = document.createElement("option");
+            opt.value = sub;
+            opt.innerText = sub;
+            subjectSelect.appendChild(opt);
+        });
     }
 };
 
- //function to calculate total score for each row
-    function calculateRowTotal(input) {
-    const row = input.closest('tr');
-    if (!row) return;
+// --- 4. TABLE GENERATION ---
+window.SBA = function() {
+    const count = document.getElementById("studentcount").value;
+    const header = document.getElementById("assessment_headerrow");
+    const body = document.getElementById("assessment_tablebody");
 
-    const scores = row.querySelectorAll('.score');
-    let sum = 0;
+    // Create Header
+    header.innerHTML = `
+        <th>Student Name</th>
+        <th>Class Score (50)</th>
+        <th>Exams Score (50)</th>
+        <th>Total (100)</th>
+        <th>Grade</th>
+    `;
 
-    scores.forEach((score) => {
-        sum += Number(score.value) || 0;
-    });
-
-    // 1. Find the elements first
-    const totalBox = row.querySelector('.total-box');
-    const convertBox = row.querySelector('.convertbox');
-
-    // 2. ONLY set the value if the element actually exists
-    if (totalBox) {
-        totalBox.value = sum;
-    } else {
-        console.error("Could not find an element with class 'total-box' in this row.");
-    }
-
-    if (convertBox) {
-        const conversion = (sum / 60) * 50;
-        convertBox.value = conversion.toFixed(2);
-    } else {
-        console.error("Could not find an element with class 'convertbox' in this row.");
-    }
-}
-
-
-document.addEventListener("keydown", function(e) {
-    if (e.key === "Enter") {
-        const currentInput = e.target;
-        if (currentInput.tagName !== "INPUT") return;
-
-        const table = currentInput.closest("table");
-        if (!table) return;
-
-        // Block the default "Form Submit/Reload"
-        e.preventDefault();
-
-        // 1. Get every single input in this table
-        const allInputs = Array.from(table.querySelectorAll('input:not([readonly])'));
+    // Create Rows
+    body.innerHTML = "";
+    for (let i = 0; i < count; i++) {
+        let studentOptions = allStudents.map(s => `<option value="${s.uid}">${s.name}</option>`).join('');
         
-        // 2. Find the index of the input we are currently in
-        const currentIndex = allInputs.indexOf(currentInput);
-
-        // 3. How many columns are there? (Usually 5 for your SBA)
-        // We find this by looking at the first row of the table
-        const columnsCount = table.querySelector('tr').querySelectorAll('th, td').length;
-
-        // 4. Move to the input exactly one row below (currentIndex + total columns)
-        const nextInput = allInputs[currentIndex + 1]; 
-
-        /* Note: To move DOWN like Excel, use: allInputs[currentIndex + columnsCount - 1]
-           To move NEXT (sideways then down), use: allInputs[currentIndex + 1]
-        */
-
-        if (nextInput) {
-            nextInput.focus();
-            nextInput.select();
-        }
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+            <td>
+                <select class="student-uid-select">${studentOptions}</select>
+            </td>
+            <td><input type="number" class="c-score" oninput="calculateSBA(this)" max="50"></td>
+            <td><input type="number" class="e-score" oninput="calculateSBA(this)" max="50"></td>
+            <td><input type="number" class="t-score" readonly></td>
+            <td><input type="text" class="g-score" readonly style="width:50px; text-align:center;"></td>
+        `;
+        body.appendChild(tr);
     }
-}, true);
+};
+
+// --- 5. CALCULATIONS ---
+window.calculateSBA = function(input) {
+    const row = input.closest('tr');
+    const classScore = parseFloat(row.querySelector('.c-score').value) || 0;
+    const examScore = parseFloat(row.querySelector('.e-score').value) || 0;
+    const total = classScore + examScore;
+    
+    const totalField = row.querySelector('.t-score');
+    const gradeField = row.querySelector('.g-score');
+    
+    totalField.value = total;
+
+    // Ghanaian Grading System Example
+    if (total >= 80) gradeField.value = "1";
+    else if (total >= 70) gradeField.value = "2";
+    else if (total >= 60) gradeField.value = "3";
+    else if (total >= 50) gradeField.value = "4";
+    else gradeField.value = "9";
+};
+
+// --- 6. UI TOGGLE ---
+window.toggleMenu = function() {
+    document.getElementById("navover").classList.toggle("open");
+};
