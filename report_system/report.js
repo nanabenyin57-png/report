@@ -134,7 +134,7 @@ function toggleMenu() {
         navBtn.classList.toggle("is-active");
     }
 }
-
+window.toggleMenu = toggleMenu; // Expose to global for onclick
 // 7. SAVE TO FIRESTORE (UID Linked)
 async function saveReport() {
     const dept = document.getElementById("department").value;
@@ -190,6 +190,6 @@ document.addEventListener("DOMContentLoaded", () => {
 // 9. GLOBAL EXPOSURE (Fixes the Toggle & Dropdown issues)
 window.table_head = table_head;
 window.genrows = genrows;
-window.toggleMenu = toggleMenu;
+
 window.calculateRowTotal = calculateRowTotal;
 window.saveReport = saveReport;
