@@ -1,4 +1,4 @@
-// 1. CLEAN IMPORTS (No Realtime Database here)
+// 1. CLEAN IMPORTS
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
 import { 
@@ -10,7 +10,7 @@ import {
     serverTimestamp 
 } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
 
-// 2. CONFIG (Simplified)
+// 2. CONFIG
 const firebaseConfig = {
   apiKey: "AIzaSyBmlZD5EHWgt8DsocsPVZcf4MJVjeuC0Fw",
   authDomain: "reportbase-669ff.firebaseapp.com",
@@ -24,7 +24,7 @@ const firebaseConfig = {
 // 3. INITIALIZATION
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
-const firestore = getFirestore(app); // Only Firestore!
+const firestore = getFirestore(app);
 
 // 4. AUTH & ROLE CHECK
 onAuthStateChanged(auth, async (user) => {
@@ -38,12 +38,14 @@ onAuthStateChanged(auth, async (user) => {
                 const userData = userDoc.data();
                 const userName = userData.firstName || userData.firstname || "User";
                 
+                // If Teacher or Admin, show the input tools
                 if (userData.role === "admin" || userData.role === "teacher") {
                     if (adminSec) adminSec.style.display = "block";
                     if (statusMsg) statusMsg.innerText = `Welcome, ${userName} (Admin Access)`;
                 } else {
+                    // If Student, hide tools (they should go to a viewing page)
                     if (adminSec) adminSec.style.display = "none";
-                    if (statusMsg) statusMsg.innerText = `Welcome, ${userName} (Student View)`;
+                    if (statusMsg) statusMsg.innerText = `Welcome, ${userName}. Please visit the Results page to see your scores.`;
                 }
             }
         } catch (error) {
@@ -146,7 +148,7 @@ function toggleMenu() {
     document.getElementById("navigation")?.classList.toggle("is-active");
 }
 
-// 7. SAVE TO FIRESTORE
+// 7. SAVE TO FIRESTORE (Updated & Fixed)
 async function saveReport() {
     const department = document.getElementById("department").value;
     const tableBody = document.getElementById("tablebody");
@@ -159,23 +161,35 @@ async function saveReport() {
     }
 
     const reportEntries = [];
+    
+    // Process each row to create an object for each student
     rows.forEach((row) => {
         const nameInput = row.querySelector(".student-name");
+        
         const studentGrades = {
-            studentName: nameInput.value.trim() || "Unknown"
+            studentName: nameInput.value.trim() || "Unknown",
+            teacherUid: auth.currentUser ? auth.currentUser.uid : "Anonymous"
         };
+
+        // Collect scores dynamically based on the input 'name' attribute
         row.querySelectorAll(".score").forEach(input => {
-            studentGrades[input.name] = input.value;
+            studentGrades[input.name] = input.value || "0";
         });
-        studentGrades["TOTAL"] = row.querySelector(".total-box").value;
+
+        // Add the total calculated value
+        const totalBox = row.querySelector(".total-box");
+        studentGrades["TOTAL"] = totalBox ? totalBox.value : "0";
+
         reportEntries.push(studentGrades);
     });
 
     try {
         statusMsg.innerText = "Syncing with K_Tawiah Cloud...";
-        // This saves to the "reports" collection in Firestore
+        
+        // Save the collection of student scores as one report document
         await addDoc(collection(firestore, "reports"), {
             department: department,
+            createdBy: auth.currentUser.uid, 
             timestamp: serverTimestamp(),
             studentCount: rows.length,
             scores: reportEntries,
@@ -190,13 +204,13 @@ async function saveReport() {
     }
 }
 
-// 8. BRIDGE: EVENT LISTENERS & ENTER KEY
+// 8. BRIDGE: EVENT LISTENERS & NAVIGATION
 document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("btnGenerate")?.addEventListener("click", genrows);
     document.getElementById("btnSave")?.addEventListener("click", saveReport);
     document.getElementById("btnDownload")?.addEventListener("click", downloadCSV);
 
-    // Dynamic Enter Key Navigation
+    // Dynamic Enter Key Navigation (Excel-style)
     const tableBody = document.getElementById("tablebody");
     if (tableBody) {
         tableBody.addEventListener("keydown", (e) => {
@@ -215,7 +229,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 });
 
-// 9. GLOBAL EXPOSURE
+// 9. GLOBAL EXPOSURE (For HTML event attributes)
 window.table_head = table_head;
 window.toggleMenu = toggleMenu;
 window.calculateRowTotal = calculateRowTotal;
