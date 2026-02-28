@@ -1,4 +1,94 @@
 .subject{
     width: 400px;
     height: 200px;
+}/* --- 1. HEADER LAYOUT --- */
+header {
+    min-height: 450px;
+    padding: 80px 20px 20px 20px; /* Space for the fixed nav */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background-image: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), url("reportimages/hbg.jpg");
+    background-size: cover;
+    background-attachment: fixed;
+}
+
+/* --- 2. THE SELECTION BOXES (Department & Subject) --- */
+.subject, .assessment {
+    position: static !important; /* This breaks the absolute positioning */
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 20px;
+    border-radius: 15px;
+    width: 90%;
+    max-width: 800px;
+    margin: 10px auto;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    justify-content: center;
+    align-items: center;
+}
+
+/* --- 3. FORM ELEMENTS --- */
+label {
+    font-weight: bold;
+    color: #ffe4b5; /* Moccasin */
+    font-size: 0.9rem;
+    display: block;
+    margin-bottom: 5px;
+}
+
+select, input[type="number"] {
+    background: rgba(0, 0, 0, 0.6);
+    color: white;
+    border: 1px solid #4db8ff;
+    padding: 10px;
+    border-radius: 8px;
+    outline: none;
+    min-width: 200px;
+}
+
+input[type="number"] {
+    width: 80px;
+    min-width: 80px;
+}
+
+/* --- 4. TABLE STYLING --- */
+article {
+    margin: 30px auto;
+    width: 95%;
+    max-width: 1200px;
+    background: rgba(0, 0, 0, 0.8);
+    border-radius: 12px;
+    padding: 20px;
+    overflow-x: auto;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    color: white;
+}
+
+th {
+    background-color: #4db8ff;
+    color: #1a1a2e;
+    padding: 12px;
+    text-transform: uppercase;
+}
+
+td {
+    padding: 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* --- 5. FOOTER --- */
+footer {
+    text-align: center;
+    padding: 20px;
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 0.8rem;
 }

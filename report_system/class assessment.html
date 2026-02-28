@@ -1,63 +1,78 @@
 <!DOCTYPE html>
 <html lang="en">
-    <head>
-        <meta charset="UTF-8">
+<head>
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Class Assessment</title>
+    <title>K_Tawiah | Class Assessment</title>
     <link rel="stylesheet" href="report.css">
     <link rel="stylesheet" href="assessment.css">
-    </head>
-    <body>
-<header>
-      <nav>
-                <button type="button" class="navigation" id="navigation" onclick="toggleMenu()"> &#9776; </button>
-                <div class="logo">K_TAWIAH</div>
-                    <div class="nav_overlay" id="navover">
-                        <ul class="links">
-                            <li><a href="index.html" target="_blank" onclick="toggleMenu()">Report System</a> </li>
+</head>
+<body>
 
-                        </ul>
-                    </div>
-    <div class="subject">
-        <label for="category">CHOOSE A DEPARTMENT</label>
-        <select id="category" name="category" onchange="departmentchange()">
-            <option value="Choose_A_Department" selected>CHOOSE A DEPARTMENT</option>
-            <option value="Preschool" >PRESCHOOL</option>  
-            <option value="LowerPrimary" >LOWER PRIMARY</option>
-            <option value="UpperPrimary" >UPPER PRIMARY</option>
-            <option value="JuniorHigh" >JUNIOR HIGH</option>
-        </select>
-         <label for="studentcount">How many students are in the class?</label>
-            <input type="number" id="studentcount" name="studentnumber" min="1" value="1">
+    <header class="assessment-header">
+        <nav>
+            <button type="button" class="nav-btn" id="navigation" onclick="toggleMenu()"> &#9776; </button>
+            <div class="logo">K_TAWIAH ASSESSMENT</div>
+            
+            <div class="nav_overlay" id="navover">
+                <ul class="links">
+                    <li><a href="report.html">Teacher Dashboard</a></li>
+                    <li><a href="student_report.html">Student View</a></li>
+                    <li><a href="index.html" style="color: #ff4d4d;">Logout</a></li>
+                </ul>
+            </div>
+        </nav>
 
-       
-    </div>
+        <div class="header-content">
+            <h1>Class Performance Entry</h1>
+            <p>Select department and subject to record SBA scores</p>
 
-    <div class="assessment" id="assessment" >
- <section class="subjectchoice" id="subjectchoice">
-            <label for="subjects">Choose Subjects</label>
-            <select id="subjects" name="subjects"  onchange="SBA()"> 
-            <!-- Subject options will be populated here based on department selection -->
-            </select>
-        </section>
-        
-    </div>
-</header>
-<article>
-<table id="assessment_table" border="1">
-            <thead>
-                <tr id="assessment_headerrow">
-                     <!--your table head appears here. -->
-                </tr> 
-            </thead>
-            <tbody id="assessment_tablebody">
-                <!-- Rows will be generated here -->
-            </tbody>
-        </table>
-</article>
-<footer>
-            <p>© 2026 K_Tawiah Student Report System</p>
-        </footer>
-<script type="module" src="assessment.js"></script>
-    </body>
+            <div class="controls-grid">
+                <div class="control-group glass-panel">
+                    <label for="category">DEPARTMENT</label>
+                    <select id="category" name="category" onchange="departmentchange()">
+                        <option value="Choose_A_Department" selected>-- Select Department --</option>
+                        <option value="Preschool">PRESCHOOL</option>  
+                        <option value="LowerPrimary">LOWER PRIMARY</option>
+                        <option value="UpperPrimary">UPPER PRIMARY</option>
+                        <option value="JuniorHigh">JUNIOR HIGH</option>
+                    </select>
+                </div>
+
+                <div class="control-group glass-panel">
+                    <label for="studentcount">NO. OF STUDENTS</label>
+                    <input type="number" id="studentcount" name="studentnumber" min="1" value="1">
+                </div>
+
+                <div class="control-group glass-panel" id="assessment">
+                    <label for="subjects">CHOOSE SUBJECT</label>
+                    <select id="subjects" name="subjects" onchange="SBA()"> 
+                        <option value="">-- Waiting for Dept --</option>
+                        </select>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="table-section">
+        <article class="glass-card">
+            <div class="table-wrapper">
+                <table id="assessment_table">
+                    <thead>
+                        <tr id="assessment_headerrow">
+                             </tr> 
+                    </thead>
+                    <tbody id="assessment_tablebody">
+                        </tbody>
+                </table>
+            </div>
+        </article>
+    </main>
+
+    <footer>
+        <p>&copy; 2026 K_Tawiah Education System | Data Secured by Firebase</p>
+    </footer>
+
+    <script type="module" src="assessment.js"></script>
+</body>
 </html>
