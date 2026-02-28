@@ -2,12 +2,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
 import { 
-    getFirestore, 
-    doc, 
-    getDoc, 
-    collection, 
-    addDoc, 
-    serverTimestamp 
+    getFirestore, doc, getDoc, getDocs, collection, query, where, addDoc, serverTimestamp 
 } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
 
 // 2. CONFIG
@@ -26,7 +21,9 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const firestore = getFirestore(app);
 
-// 4. AUTH & ROLE CHECK
+let allStudents = []; // Global list to hold student data
+
+// 4. AUTH & STUDENT FETCH
 onAuthStateChanged(auth, async (user) => {
     const adminSec = document.getElementById("admin-section");
     const statusMsg = document.getElementById("status-msg");
@@ -36,200 +33,136 @@ onAuthStateChanged(auth, async (user) => {
             const userDoc = await getDoc(doc(firestore, "users", user.uid));
             if (userDoc.exists()) {
                 const userData = userDoc.data();
-                const userName = userData.firstName || userData.firstname || "User";
-                
-                // If Teacher or Admin, show the input tools
                 if (userData.role === "admin" || userData.role === "teacher") {
                     if (adminSec) adminSec.style.display = "block";
-                    if (statusMsg) statusMsg.innerText = `Welcome, ${userName} (Admin Access)`;
+                    statusMsg.innerText = `Welcome, ${userData.firstName} (Admin)`;
+                    
+                    // NEW: Fetch all students so we can populate the dropdowns later
+                    const q = query(collection(firestore, "users"), where("role", "==", "student"));
+                    const querySnapshot = await getDocs(q);
+                    allStudents = querySnapshot.docs.map(doc => ({
+                        uid: doc.id,
+                        name: `${doc.data().firstName} ${doc.data().lastName}`
+                    }));
                 } else {
-                    // If Student, hide tools (they should go to a viewing page)
-                    if (adminSec) adminSec.style.display = "none";
-                    if (statusMsg) statusMsg.innerText = `Welcome, ${userName}. Please visit the Results page to see your scores.`;
+                    window.location.href = "student_view.html"; // Redirect students
                 }
             }
-        } catch (error) {
-            console.error("Auth error:", error);
-        }
-    } else {
-        window.location.href = "index.html";
-    }
+        } catch (error) { console.error("Auth error:", error); }
+    } else { window.location.href = "index.html"; }
 });
 
-// 5. UI GENERATION FUNCTIONS
+// 5. UI GENERATION
 function table_head() {
-    const deptSelect = document.getElementById("department");
+    const dept = document.getElementById("department").value;
     const header = document.getElementById("headerrow");
-    if (!deptSelect || !header) return;
+    let cols = "<th>SELECT STUDENT</th>";
 
-    const tablehead = deptSelect.value;
-    let col1 = "<th>STUDENT NAME</th>";
-
-    const subjectHeaders = {
-        "Preschool": "<th>LITERACY</th><th>NUMERACY</th><th>CREATIVE ARTS</th><th>WRITING</th>",
-        "LowerPrimary": "<th>ENGLISH</th><th>MATHS</th><th>SCIENCE</th><th>TWI</th><th>HISTORY</th><th>RELIGIOUS ED</th><th>CREATIVE ARTS</th><th>FRENCH</th>",
-        "UpperPrimary": "<th>ENGLISH</th><th>MATHS</th><th>SCIENCE</th><th>COMPUTING</th><th>TWI</th><th>HISTORY</th><th>RELIGIOUS ED</th><th>CREATIVE ARTS</th><th>FRENCH</th>",
-        "JuniorHigh": "<th>ENGLISH</th><th>MATHS</th><th>SCIENCE</th><th>COMPUTING</th><th>TWI</th><th>SOCIAL STUDIES</th><th>RELIGIOUS ED</th><th>CREATIVE ARTS</th><th>FRENCH</th><th>CAREER TECH</th>"
+    const subjects = {
+        "Preschool": "<th>LIT</th><th>NUM</th><th>ARTS</th><th>WRIT</th>",
+        "LowerPrimary": "<th>ENG</th><th>MAT</th><th>SCI</th><th>TWI</th><th>HIS</th><th>RME</th><th>ART</th><th>FRE</th>",
+        "UpperPrimary": "<th>ENG</th><th>MAT</th><th>SCI</th><th>COMP</th><th>TWI</th><th>HIS</th><th>RME</th><th>ART</th><th>FRE</th>",
+        "JuniorHigh": "<th>ENG</th><th>MAT</th><th>SCI</th><th>COMP</th><th>TWI</th><th>SOC</th><th>RME</th><th>ART</th><th>FRE</th><th>TECH</th>"
     };
 
-    if (subjectHeaders[tablehead]) {
-        col1 += subjectHeaders[tablehead] + "<th>TOTAL</th>";
-    } else {
-        col1 = "<th>Please Select A Department</th>";
-    }
-    header.innerHTML = col1;
+    if (subjects[dept]) cols += subjects[dept] + "<th>TOTAL</th>";
+    header.innerHTML = cols;
 }
 
 function genrows() {
-    const countInput = document.getElementById("studentcount");
-    const deptSelect = document.getElementById("department");
+    const count = parseInt(document.getElementById("studentcount").value);
+    const dept = document.getElementById("department").value;
     const tablebody = document.getElementById("tablebody");
-    
-    if (!countInput || !deptSelect || !tablebody) return;
-
-    const count = parseInt(countInput.value);
-    const dept = deptSelect.value;
     tablebody.innerHTML = "";
 
-    const subjects = {
-        "Preschool": ["LITERACY", "NUMERACY", "CREATIVE_ARTS", "WRITING"],
-        "LowerPrimary": ["ENGLISH", "MATHS", "SCIENCE", "HISTORY", "CREATIVE_ARTS", "FRENCH", "RELIGIOUS_ED", "TWI"],
-        "UpperPrimary": ["ENGLISH", "MATHS", "SCIENCE", "COMPUTING", "HISTORY", "CREATIVE_ARTS", "FRENCH", "RELIGIOUS_ED", "TWI"],
-        "JuniorHigh": ["ENGLISH", "MATHS", "SCIENCE", "COMPUTING", "SOCIAL_STUDIES", "CREATIVE_ARTS", "FRENCH", "RELIGIOUS_ED", "TWI", "CAREER_TECH"]
+    const subjectMap = {
+        "Preschool": ["LITERACY", "NUMERACY", "ARTS", "WRITING"],
+        "LowerPrimary": ["ENGLISH", "MATHS", "SCIENCE", "TWI", "HISTORY", "RME", "ARTS", "FRENCH"],
+        "UpperPrimary": ["ENGLISH", "MATHS", "SCIENCE", "COMPUTING", "TWI", "HISTORY", "RME", "ARTS", "FRENCH"],
+        "JuniorHigh": ["ENGLISH", "MATHS", "SCIENCE", "COMPUTING", "TWI", "SOCIAL", "RME", "ARTS", "FRENCH", "TECH"]
     };
 
-    const currentSubjects = subjects[dept] || [];
+    const currentSubs = subjectMap[dept] || [];
 
     for (let i = 0; i < count; i++) {
-        let rowcontent = `<td><input type="text" class="student-name" placeholder="Name" required></td>`;
-        currentSubjects.forEach(sub => {
-            rowcontent += `<td><input type="number" name="${sub}" class="score" oninput="calculateRowTotal(this)" min="0" max="100" required></td>`;
-        });
-        rowcontent += `<td><input type="number" class="total-box" readonly></td>`;
         const tr = document.createElement("tr");
-        tr.innerHTML = rowcontent;
+        
+        // Create Student Dropdown
+        let studentOptions = `<option value="">-- Select Student --</option>`;
+        allStudents.forEach(s => {
+            studentOptions += `<option value="${s.uid}">${s.name}</option>`;
+        });
+
+        let rowHTML = `<td><select class="student-select" required>${studentOptions}</select></td>`;
+        
+        currentSubs.forEach(sub => {
+            rowHTML += `<td><input type="number" name="${sub}" class="score" oninput="calculateRowTotal(this)" min="0" max="100" required></td>`;
+        });
+        
+        rowHTML += `<td><input type="number" class="total-box" readonly></td>`;
+        tr.innerHTML = rowHTML;
         tablebody.appendChild(tr);
     }
 }
 
-// 6. UTILITY FUNCTIONS
+// 6. CALCULATIONS
 function calculateRowTotal(input) {
     const row = input.closest('tr');
     const scores = row.querySelectorAll('.score');
     let sum = 0;
-    scores.forEach(score => {
-        sum += Number(score.value) || 0;
-    });
-    const totalBox = row.querySelector('.total-box');
-    if (totalBox) totalBox.value = sum;
+    scores.forEach(s => sum += Number(s.value) || 0);
+    row.querySelector('.total-box').value = sum;
 }
 
-function downloadCSV() {
-    const rows = document.querySelectorAll("table tr");
-    let csvContent = "";
-    rows.forEach(row => {
-        const cols = row.querySelectorAll("td, th");
-        let rowData = Array.from(cols).map(col => {
-            const input = col.querySelector("input");
-            return input ? input.value : col.innerText;
-        });
-        csvContent += rowData.join(",") + "\n";
-    });
-    const blob = new Blob([csvContent], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "student_report.csv";
-    a.click();
-}
-
-function toggleMenu() {
-    document.getElementById("navover")?.classList.toggle("open");
-    document.getElementById("navigation")?.classList.toggle("is-active");
-}
-
-// 7. SAVE TO FIRESTORE (Updated & Fixed)
+// 7. SAVE TO FIRESTORE (The UID version)
 async function saveReport() {
-    const department = document.getElementById("department").value;
-    const tableBody = document.getElementById("tablebody");
-    const rows = tableBody.querySelectorAll("tr");
+    const dept = document.getElementById("department").value;
+    const rows = document.querySelectorAll("#tablebody tr");
     const statusMsg = document.getElementById("status-msg");
 
-    if (department === "choose_a_department" || rows.length === 0) {
-        alert("Please select a department and generate rows.");
-        return;
-    }
-
-    const reportEntries = [];
-    
-    // Process each row to create an object for each student
-    rows.forEach((row) => {
-        const nameInput = row.querySelector(".student-name");
-        
-        const studentGrades = {
-            studentName: nameInput.value.trim() || "Unknown",
-            teacherUid: auth.currentUser ? auth.currentUser.uid : "Anonymous"
-        };
-
-        // Collect scores dynamically based on the input 'name' attribute
-        row.querySelectorAll(".score").forEach(input => {
-            studentGrades[input.name] = input.value || "0";
-        });
-
-        // Add the total calculated value
-        const totalBox = row.querySelector(".total-box");
-        studentGrades["TOTAL"] = totalBox ? totalBox.value : "0";
-
-        reportEntries.push(studentGrades);
-    });
+    if (dept === "choose_a_department" || rows.length === 0) return alert("Setup table first!");
 
     try {
-        statusMsg.innerText = "Syncing with K_Tawiah Cloud...";
+        statusMsg.innerText = "Syncing with Cloud...";
         
-        // Save the collection of student scores as one report document
-        await addDoc(collection(firestore, "reports"), {
-            department: department,
-            createdBy: auth.currentUser.uid, 
-            timestamp: serverTimestamp(),
-            studentCount: rows.length,
-            scores: reportEntries,
-            date: new Date().toLocaleDateString()
-        });
+        // Loop through each row and save as an INDIVIDUAL document
+        // This makes it much easier for students to query their own specific UID
+        for (let row of rows) {
+            const studentUid = row.querySelector(".student-select").value;
+            const studentName = row.querySelector(".student-select").options[row.querySelector(".student-select").selectedIndex].text;
+            
+            if (!studentUid) continue;
 
-        statusMsg.innerText = "Data Saved Successfully!";
-        alert("Report saved to Cloud!");
+            const grades = {};
+            row.querySelectorAll(".score").forEach(input => {
+                grades[input.name] = input.value;
+            });
+
+            await addDoc(collection(firestore, "reports"), {
+                studentUid: studentUid,     // <--- THE DIRECT UID
+                studentName: studentName,
+                teacherUid: auth.currentUser.uid,
+                department: dept,
+                scores: grades,
+                total: row.querySelector(".total-box").value,
+                timestamp: serverTimestamp(),
+                date: new Date().toLocaleDateString()
+            });
+        }
+
+        statusMsg.innerText = "All Student Results Saved!";
+        alert("Success! Each student now has their own linked record.");
     } catch (error) {
-        console.error("Firestore Save Error:", error);
-        statusMsg.innerText = "Error: Check Firestore Rules";
+        console.error("Save Error:", error);
+        statusMsg.innerText = "Error Saving Data.";
     }
 }
 
-// 8. BRIDGE: EVENT LISTENERS & NAVIGATION
+// 8. BRIDGE
 document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("btnGenerate")?.addEventListener("click", genrows);
     document.getElementById("btnSave")?.addEventListener("click", saveReport);
-    document.getElementById("btnDownload")?.addEventListener("click", downloadCSV);
-
-    // Dynamic Enter Key Navigation (Excel-style)
-    const tableBody = document.getElementById("tablebody");
-    if (tableBody) {
-        tableBody.addEventListener("keydown", (e) => {
-            if (e.key === "Enter" && e.target.tagName === "INPUT") {
-                e.preventDefault();
-                const allInputs = Array.from(tableBody.querySelectorAll('input:not([readonly])'));
-                const currentIndex = allInputs.indexOf(e.target);
-                const nextInput = allInputs[currentIndex + 1];
-
-                if (nextInput) {
-                    nextInput.focus();
-                    nextInput.select();
-                }
-            }
-        });
-    }
 });
 
-// 9. GLOBAL EXPOSURE (For HTML event attributes)
 window.table_head = table_head;
-window.toggleMenu = toggleMenu;
 window.calculateRowTotal = calculateRowTotal;
