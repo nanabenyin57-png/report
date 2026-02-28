@@ -1,111 +1,94 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
-import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
-import { getFirestore, collection, query, where, getDocs, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
+import { getAuth } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
+import { getFirestore } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
 
-// --- 1. FIREBASE SETUP ---
+// --- 1. FIREBASE CONFIG (Add yours here) ---
 const firebaseConfig = {
-    apiKey: "AIzaSyBmlZD5EHWgt8DsocsPVZcf4MJVjeuC0Fw",
-    authDomain: "reportbase-669ff.firebaseapp.com",
-    projectId: "reportbase-669ff",
-    storageBucket: "reportbase-669ff.firebasestorage.app",
-    messagingSenderId: "244941864396",
-    appId: "1:244941864396:web:aebc946e160a0172edf169"
+  apiKey: "AIzaSyBmlZD5EHWgt8DsocsPVZcf4MJVjeuC0Fw",
+  authDomain: "reportbase-669ff.firebaseapp.com",
+  projectId: "reportbase-669ff",
+  storageBucket: "reportbase-669ff.firebasestorage.app",
+  messagingSenderId: "244941864396",
+  appId: "1:244941864396:web:aebc946e160a0172edf169"
 };
-
 const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
 const firestore = getFirestore(app);
 
-let allStudents = [];
-
-// --- 2. AUTH & STUDENT FETCH ---
-onAuthStateChanged(auth, async (user) => {
-    if (user) {
-        // Fetch students to populate the rows later
-        const q = query(collection(firestore, "users"), where("role", "==", "student"));
-        const querySnapshot = await getDocs(q);
-        allStudents = querySnapshot.docs.map(doc => ({
-            uid: doc.id,
-            name: `${doc.data().firstName || ''} ${doc.data().lastName || ''}`.trim()
-        }));
-    } else {
-        window.location.href = "index.html";
-    }
-});
-
-// --- 3. DYNAMIC SUBJECTS ---
+// --- 2. DYNAMIC SUBJECT POPULATION ---
 window.departmentchange = function() {
-    const dept = document.getElementById("category").value;
-    const subjectSelect = document.getElementById("subjects");
-    subjectSelect.innerHTML = '<option value="">-- Select Subject --</option>';
+    const category = document.getElementById("category").value;
+    const subjects = document.getElementById("subjects");
+    
+    subjects.innerHTML = '<option value="">-- Choose Subject --</option>';
 
-    const subjects = {
+    const subjectData = {
         "Preschool": ["Numeracy", "Literacy", "Creative Arts", "Our World"],
         "LowerPrimary": ["English", "Maths", "Science", "History", "Our World", "RME", "Twi"],
         "UpperPrimary": ["English", "Maths", "Science", "History", "Computing", "RME", "Twi"],
-        "JuniorHigh": ["English", "Maths", "Science", "Social Studies", "Computing", "Pre-Tech", "Home Ec", "RME", "Twi"]
+        "JuniorHigh": ["English", "Maths", "Science", "Social Studies", "Computing", "Pre-Tech", "RME", "Twi"]
     };
 
-    if (subjects[dept]) {
-        subjects[dept].forEach(sub => {
-            let opt = document.createElement("option");
-            opt.value = sub;
-            opt.innerText = sub;
-            subjectSelect.appendChild(opt);
+    if (subjectData[category]) {
+        subjectData[category].forEach(opt => {
+            const el = document.createElement("option");
+            el.value = opt;
+            el.textContent = opt;
+            subjects.appendChild(el);
         });
     }
 };
 
-// --- 4. TABLE GENERATION ---
+// --- 3. TABLE ROW GENERATION ---
 window.SBA = function() {
-    const count = document.getElementById("studentcount").value;
-    const header = document.getElementById("assessment_headerrow");
-    const body = document.getElementById("assessment_tablebody");
+    const studentCount = document.getElementById("studentcount").value;
+    const tableHeader = document.getElementById("assessment_headerrow");
+    const tableBody = document.getElementById("assessment_tablebody");
 
-    // Create Header
-    header.innerHTML = `
+    tableHeader.innerHTML = `
         <th>Student Name</th>
-        <th>Class Score (50)</th>
-        <th>Exams Score (50)</th>
-        <th>Total (100)</th>
-        <th>Grade</th>
+        <th>Exercise (15)</th>
+        <th>Test (15)</th>
+        <th>Project (15)</th>
+        <th>Group (15)</th>
+        <th>Total (60)</th>
+        <th>Scale (50)</th>
     `;
 
-    // Create Rows
-    body.innerHTML = "";
-    for (let i = 0; i < count; i++) {
-        let studentOptions = allStudents.map(s => `<option value="${s.uid}">${s.name}</option>`).join('');
-        
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-            <td>
-                <select class="student-uid-select">${studentOptions}</select>
-            </td>
-            <td><input type="number" class="c-score" oninput="calculateSBA(this)" max="50"></td>
-            <td><input type="number" class="e-score" oninput="calculateSBA(this)" max="50"></td>
-            <td><input type="number" class="t-score" readonly></td>
-            <td><input type="text" class="g-score" readonly style="width:50px; text-align:center;"></td>
+    tableBody.innerHTML = "";
+    for (let i = 0; i < studentCount; i++) {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+            <td><input type="text" placeholder="Enter Name" class="student-name"></td>
+            <td><input type="number" class="class-exercise" oninput="calculate(this)" max="15"></td>
+            <td><input type="number" class="class-test" oninput="calculate(this)" max="15"></td>
+            <td><input type="number" class="project-work" oninput="calculate(this)" max="15"></td>
+            <td><input type="number" class="group-work" oninput="calculate(this)" max="15"></td>
+            <td><input type="number" class="total-score" readonly></td>
+            <td><input type="text" class="scale-score" readonly></td>
         `;
-        body.appendChild(tr);
+        tableBody.appendChild(row);
     }
 };
 
-// --- 5. CALCULATIONS ---
-window.calculateSBA = function(input) {
-    const row = input.closest('tr');
-    const classScore = parseFloat(row.querySelector('.c-score').value) || 0;
-    const examScore = parseFloat(row.querySelector('.e-score').value) || 0;
-    const total = classScore + examScore;
+// --- 4. CALCULATIONS (Total & Scale) ---
+window.calculate = function(element) {
+    const row = element.closest('tr');
     
-    const totalField = row.querySelector('.t-score');
-    const gradeField = row.querySelector('.g-score');
-    
-    totalField.value = total;
+    const exercise = parseFloat(row.querySelector('.class-exercise').value) || 0;
+    const test = parseFloat(row.querySelector('.class-test').value) || 0;
+    const project = parseFloat(row.querySelector('.project-work').value) || 0;
+    const group = parseFloat(row.querySelector('.group-work').value) || 0;
 
-    
+    const total = exercise + test + project + group;
+    // Scaling formula: (Total / 60) * 50
+    const scale = (total / 60) * 50;
+
+    row.querySelector('.total-score').value = total.toFixed(1);
+    row.querySelector('.scale-score').value = scale.toFixed(1);
 };
 
-// --- 6. UI TOGGLE ---
+// --- 5. TOGGLE MENU ---
 window.toggleMenu = function() {
-    document.getElementById("navover").classList.toggle("open");
+    const nav = document.getElementById("navover");
+    if (nav) nav.classList.toggle("open");
 };
