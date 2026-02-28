@@ -1,4 +1,4 @@
-// 1. IMPORTS (Now strictly using Firestore)
+// 1. CLEAN IMPORTS (No Realtime Database here)
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
 import { 
@@ -10,7 +10,7 @@ import {
     serverTimestamp 
 } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
 
-// 2. CONFIG (No databaseURL needed for Firestore)
+// 2. CONFIG (Simplified)
 const firebaseConfig = {
   apiKey: "AIzaSyBmlZD5EHWgt8DsocsPVZcf4MJVjeuC0Fw",
   authDomain: "reportbase-669ff.firebaseapp.com",
@@ -24,7 +24,7 @@ const firebaseConfig = {
 // 3. INITIALIZATION
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
-const firestore = getFirestore(app);
+const firestore = getFirestore(app); // Only Firestore!
 
 // 4. AUTH & ROLE CHECK
 onAuthStateChanged(auth, async (user) => {
