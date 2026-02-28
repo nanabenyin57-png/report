@@ -92,3 +92,12 @@ footer {
     color: rgba(255, 255, 255, 0.5);
     font-size: 0.8rem;
 }
+.c-score, .e-score, .t-score {
+    width: 80px;
+    padding: 5px;
+    text-align: center;
+    border-radius: 4px;
+    border: 1px solid var(--primary-blue);
+    background: rgba(0,0,0,0.3);
+    color: white;
+}
