@@ -1,15 +1,19 @@
-// 1. IMPORTS
+// 1. IMPORTS (Now strictly using Firestore)
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
-import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
-import { getDatabase, ref, set, get, child } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-database.js";
+import { 
+    getFirestore, 
+    doc, 
+    getDoc, 
+    collection, 
+    addDoc, 
+    serverTimestamp 
+} from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
 
-// 2. CONFIG
+// 2. CONFIG (No databaseURL needed for Firestore)
 const firebaseConfig = {
   apiKey: "AIzaSyBmlZD5EHWgt8DsocsPVZcf4MJVjeuC0Fw",
   authDomain: "reportbase-669ff.firebaseapp.com",
-  // ADD THIS LINE BELOW:
-  databaseURL: "https://reportbase-669ff-default-rtdb.firebaseio.com", 
   projectId: "reportbase-669ff",
   storageBucket: "reportbase-669ff.firebasestorage.app",
   messagingSenderId: "244941864396",
@@ -20,8 +24,7 @@ const firebaseConfig = {
 // 3. INITIALIZATION
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
-const firestore = getFirestore(app); // For User Roles
-const rtdb = getDatabase(app);      // For Student Reports
+const firestore = getFirestore(app);
 
 // 4. AUTH & ROLE CHECK
 onAuthStateChanged(auth, async (user) => {
@@ -97,11 +100,9 @@ function genrows() {
 
     for (let i = 0; i < count; i++) {
         let rowcontent = `<td><input type="text" class="student-name" placeholder="Name" required></td>`;
-        
         currentSubjects.forEach(sub => {
             rowcontent += `<td><input type="number" name="${sub}" class="score" oninput="calculateRowTotal(this)" min="0" max="100" required></td>`;
         });
-
         rowcontent += `<td><input type="number" class="total-box" readonly></td>`;
         const tr = document.createElement("tr");
         tr.innerHTML = rowcontent;
@@ -145,7 +146,7 @@ function toggleMenu() {
     document.getElementById("navigation")?.classList.toggle("is-active");
 }
 
-// 7. SAVE TO FIREBASE
+// 7. SAVE TO FIRESTORE
 async function saveReport() {
     const department = document.getElementById("department").value;
     const tableBody = document.getElementById("tablebody");
@@ -157,66 +158,64 @@ async function saveReport() {
         return;
     }
 
-    const reportData = {};
-    rows.forEach((row, index) => {
+    const reportEntries = [];
+    rows.forEach((row) => {
         const nameInput = row.querySelector(".student-name");
-        const studentKey = nameInput.value.trim().replace(/[.#$\[\]]/g, "_") || `Student_${index + 1}`;
-        const studentGrades = {};
-
+        const studentGrades = {
+            studentName: nameInput.value.trim() || "Unknown"
+        };
         row.querySelectorAll(".score").forEach(input => {
             studentGrades[input.name] = input.value;
         });
         studentGrades["TOTAL"] = row.querySelector(".total-box").value;
-        reportData[studentKey] = studentGrades;
+        reportEntries.push(studentGrades);
     });
 
     try {
         statusMsg.innerText = "Syncing with K_Tawiah Cloud...";
-        const timestamp = new Date().getTime(); 
-        const reportRef = ref(rtdb, `reports/${department}/${timestamp}`);
-
-        await set(reportRef, {
-            metadata: {
-                studentCount: rows.length,
-                date: new Date().toLocaleDateString(),
-                department: department
-            },
-            scores: reportData
+        // This saves to the "reports" collection in Firestore
+        await addDoc(collection(firestore, "reports"), {
+            department: department,
+            timestamp: serverTimestamp(),
+            studentCount: rows.length,
+            scores: reportEntries,
+            date: new Date().toLocaleDateString()
         });
 
-        statusMsg.innerText = "Data Synced Successfully!";
-        alert("Report saved to Firebase!");
+        statusMsg.innerText = "Data Saved Successfully!";
+        alert("Report saved to Cloud!");
     } catch (error) {
-        console.error("Firebase Save Error:", error);
-        statusMsg.innerText = "Error: Check Console";
+        console.error("Firestore Save Error:", error);
+        statusMsg.innerText = "Error: Check Firestore Rules";
     }
 }
+
+// 8. BRIDGE: EVENT LISTENERS & ENTER KEY
+document.addEventListener("DOMContentLoaded", () => {
+    document.getElementById("btnGenerate")?.addEventListener("click", genrows);
+    document.getElementById("btnSave")?.addEventListener("click", saveReport);
+    document.getElementById("btnDownload")?.addEventListener("click", downloadCSV);
+
+    // Dynamic Enter Key Navigation
+    const tableBody = document.getElementById("tablebody");
+    if (tableBody) {
+        tableBody.addEventListener("keydown", (e) => {
+            if (e.key === "Enter" && e.target.tagName === "INPUT") {
+                e.preventDefault();
+                const allInputs = Array.from(tableBody.querySelectorAll('input:not([readonly])'));
+                const currentIndex = allInputs.indexOf(e.target);
+                const nextInput = allInputs[currentIndex + 1];
+
+                if (nextInput) {
+                    nextInput.focus();
+                    nextInput.select();
+                }
+            }
+        });
+    }
+});
 
 // 9. GLOBAL EXPOSURE
 window.table_head = table_head;
 window.toggleMenu = toggleMenu;
 window.calculateRowTotal = calculateRowTotal;
-// Excel-style Enter key navigation
-document.addEventListener("keydown", (e) => {
-    if (e.key === "Enter" && e.target.tagName === "INPUT") {
-        e.preventDefault(); // Stop the form from submitting
-        
-        // Find all inputs in the table
-        const allInputs = Array.from(document.querySelectorAll('#tablebody input'));
-        const currentIndex = allInputs.indexOf(e.target);
-        const nextInput = allInputs[currentIndex + 1];
-
-        if (nextInput) {
-            nextInput.focus();
-            nextInput.select(); // Highlight the text for easy typing
-        }
-    }
-});
-// 8. BRIDGE: EVENT LISTENERS
-document.addEventListener("DOMContentLoaded", () => {
-    // Buttons must have these IDs in HTML
-    document.getElementById("btnGenerate")?.addEventListener("click", genrows);
-    document.getElementById("btnSave")?.addEventListener("click", saveReport);
-    document.getElementById("btnDownload")?.addEventListener("click", downloadCSV);
-});
-
