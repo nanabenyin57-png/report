@@ -115,33 +115,37 @@ function calculateRowTotal(input) {
     row.querySelector('.total-box').value = sum;
 }
 
-// 7. SAVE TO FIRESTORE (The UID version)
+// 7. SAVE TO FIRESTORE (Individual UID Linking)
 async function saveReport() {
     const dept = document.getElementById("department").value;
     const rows = document.querySelectorAll("#tablebody tr");
     const statusMsg = document.getElementById("status-msg");
 
-    if (dept === "choose_a_department" || rows.length === 0) return alert("Setup table first!");
+    if (dept === "choose_a_department" || rows.length === 0) {
+        alert("Please generate rows first!");
+        return;
+    }
 
     try {
-        statusMsg.innerText = "Syncing with Cloud...";
+        statusMsg.innerText = "Syncing with K_Tawiah Cloud...";
         
-        // Loop through each row and save as an INDIVIDUAL document
-        // This makes it much easier for students to query their own specific UID
+        // Loop through each row to save a unique document for each student
         for (let row of rows) {
-            const studentUid = row.querySelector(".student-select").value;
-            const studentName = row.querySelector(".student-select").options[row.querySelector(".student-select").selectedIndex].text;
+            const studentDropdown = row.querySelector(".student-select");
+            const studentUid = studentDropdown.value; // This is the UID from the <option>
+            const studentName = studentDropdown.options[studentDropdown.selectedIndex].text;
             
-            if (!studentUid) continue;
+            if (!studentUid) continue; // Skip if no student was selected
 
             const grades = {};
             row.querySelectorAll(".score").forEach(input => {
-                grades[input.name] = input.value;
+                grades[input.name] = input.value || "0";
             });
 
+            // This creates a NEW document for EACH student
             await addDoc(collection(firestore, "reports"), {
-                studentUid: studentUid,     // <--- THE DIRECT UID
-                studentName: studentName,
+                studentUid: studentUid,     // The "Key" that links to the student
+                studentName: studentName,   // Saved for display purposes
                 teacherUid: auth.currentUser.uid,
                 department: dept,
                 scores: grades,
@@ -151,11 +155,11 @@ async function saveReport() {
             });
         }
 
-        statusMsg.innerText = "All Student Results Saved!";
-        alert("Success! Each student now has their own linked record.");
+        statusMsg.innerText = "All Student Results Linked & Saved!";
+        alert("Success! Each student's report is now linked to their UID.");
     } catch (error) {
-        console.error("Save Error:", error);
-        statusMsg.innerText = "Error Saving Data.";
+        console.error("Firestore Linking Error:", error);
+        statusMsg.innerText = "Error: Check Firestore Rules";
     }
 }
 
