@@ -102,12 +102,7 @@ window.calculateSBA = function(input) {
     
     totalField.value = total;
 
-    // Ghanaian Grading System Example
-    if (total >= 80) gradeField.value = "1";
-    else if (total >= 70) gradeField.value = "2";
-    else if (total >= 60) gradeField.value = "3";
-    else if (total >= 50) gradeField.value = "4";
-    else gradeField.value = "9";
+    
 };
 
 // --- 6. UI TOGGLE ---
