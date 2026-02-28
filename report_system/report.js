@@ -21,7 +21,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const firestore = getFirestore(app);
 
-let allStudents = []; // Global list to hold student data
+let allStudents = []; // Global list to hold student data for the dropdowns
 
 // 4. AUTH & STUDENT FETCH
 onAuthStateChanged(auth, async (user) => {
@@ -35,30 +35,36 @@ onAuthStateChanged(auth, async (user) => {
                 const userData = userDoc.data();
                 if (userData.role === "admin" || userData.role === "teacher") {
                     if (adminSec) adminSec.style.display = "block";
-                    statusMsg.innerText = `Welcome, ${userData.firstName} (Admin)`;
+                    statusMsg.innerText = `Welcome, ${userData.firstName} (Staff)`;
                     
-                    // NEW: Fetch all students so we can populate the dropdowns later
+                    // Fetch all students to populate dropdowns
                     const q = query(collection(firestore, "users"), where("role", "==", "student"));
                     const querySnapshot = await getDocs(q);
                     allStudents = querySnapshot.docs.map(doc => ({
                         uid: doc.id,
-                        name: `${doc.data().firstName} ${doc.data().lastName}`
+                        name: `${doc.data().firstName || ''} ${doc.data().lastName || ''}`.trim()
                     }));
                 } else {
-    // This matches your folder structure in the screenshot
-    window.location.href = "student_report.html"; 
+                    // Redirect students to their specific view
+                    window.location.href = "student_report.html"; 
                 }
             }
-        } catch (error) { console.error("Auth error:", error); }
-    } else { window.location.href = "index.html"; }
+        } catch (error) { 
+            console.error("Auth error:", error); 
+            if (statusMsg) statusMsg.innerText = "Permission Denied: Update Firestore Rules.";
+        }
+    } else { 
+        window.location.href = "index.html"; 
+    }
 });
 
 // 5. UI GENERATION
 function table_head() {
     const dept = document.getElementById("department").value;
     const header = document.getElementById("headerrow");
-    let cols = "<th>SELECT STUDENT</th>";
+    if (!header) return;
 
+    let cols = "<th>SELECT STUDENT</th>";
     const subjects = {
         "Preschool": "<th>LIT</th><th>NUM</th><th>ARTS</th><th>WRIT</th>",
         "LowerPrimary": "<th>ENG</th><th>MAT</th><th>SCI</th><th>TWI</th><th>HIS</th><th>RME</th><th>ART</th><th>FRE</th>",
@@ -71,9 +77,14 @@ function table_head() {
 }
 
 function genrows() {
-    const count = parseInt(document.getElementById("studentcount").value);
-    const dept = document.getElementById("department").value;
+    const countInput = document.getElementById("studentcount");
+    const deptSelect = document.getElementById("department");
     const tablebody = document.getElementById("tablebody");
+    
+    if (!countInput || !deptSelect || !tablebody) return;
+
+    const count = parseInt(countInput.value);
+    const dept = deptSelect.value;
     tablebody.innerHTML = "";
 
     const subjectMap = {
@@ -88,13 +99,12 @@ function genrows() {
     for (let i = 0; i < count; i++) {
         const tr = document.createElement("tr");
         
-        // Create Student Dropdown
         let studentOptions = `<option value="">-- Select Student --</option>`;
         allStudents.forEach(s => {
             studentOptions += `<option value="${s.uid}">${s.name}</option>`;
         });
 
-        let rowHTML = `<td><select class="student-select" required>${studentOptions}</select></td>`;
+        let rowHTML = `<td><select class="student-select" style="width:100%" required>${studentOptions}</select></td>`;
         
         currentSubs.forEach(sub => {
             rowHTML += `<td><input type="number" name="${sub}" class="score" oninput="calculateRowTotal(this)" min="0" max="100" required></td>`;
@@ -106,46 +116,54 @@ function genrows() {
     }
 }
 
-// 6. CALCULATIONS
+// 6. CALCULATIONS & TOGGLE
 function calculateRowTotal(input) {
     const row = input.closest('tr');
     const scores = row.querySelectorAll('.score');
     let sum = 0;
     scores.forEach(s => sum += Number(s.value) || 0);
-    row.querySelector('.total-box').value = sum;
+    const totalBox = row.querySelector('.total-box');
+    if (totalBox) totalBox.value = sum;
 }
 
-// 7. SAVE TO FIRESTORE (Individual UID Linking)
+function toggleMenu() {
+    const navOver = document.getElementById("navover");
+    const navBtn = document.getElementById("navigation");
+    if (navOver && navBtn) {
+        navOver.classList.toggle("open");
+        navBtn.classList.toggle("is-active");
+    }
+}
+
+// 7. SAVE TO FIRESTORE (UID Linked)
 async function saveReport() {
     const dept = document.getElementById("department").value;
     const rows = document.querySelectorAll("#tablebody tr");
     const statusMsg = document.getElementById("status-msg");
 
     if (dept === "choose_a_department" || rows.length === 0) {
-        alert("Please generate rows first!");
+        alert("Setup the table and select students first!");
         return;
     }
 
     try {
-        statusMsg.innerText = "Syncing with K_Tawiah Cloud...";
+        statusMsg.innerText = "Uploading to K_Tawiah Cloud...";
         
-        // Loop through each row to save a unique document for each student
         for (let row of rows) {
             const studentDropdown = row.querySelector(".student-select");
-            const studentUid = studentDropdown.value; // This is the UID from the <option>
+            const studentUid = studentDropdown.value;
             const studentName = studentDropdown.options[studentDropdown.selectedIndex].text;
             
-            if (!studentUid) continue; // Skip if no student was selected
+            if (!studentUid) continue; // Safety skip
 
             const grades = {};
             row.querySelectorAll(".score").forEach(input => {
                 grades[input.name] = input.value || "0";
             });
 
-            // This creates a NEW document for EACH student
             await addDoc(collection(firestore, "reports"), {
-                studentUid: studentUid,     // The "Key" that links to the student
-                studentName: studentName,   // Saved for display purposes
+                studentUid: studentUid,
+                studentName: studentName,
                 teacherUid: auth.currentUser.uid,
                 department: dept,
                 scores: grades,
@@ -155,19 +173,23 @@ async function saveReport() {
             });
         }
 
-        statusMsg.innerText = "All Student Results Linked & Saved!";
-        alert("Success! Each student's report is now linked to their UID.");
+        statusMsg.innerText = "All Student Results Saved!";
+        alert("Success! Students can now view their individual reports.");
     } catch (error) {
-        console.error("Firestore Linking Error:", error);
-        statusMsg.innerText = "Error: Check Firestore Rules";
+        console.error("Save Error:", error);
+        statusMsg.innerText = "Permission Denied. Check Firestore Rules.";
     }
 }
 
-// 8. BRIDGE
+// 8. EVENT LISTENERS
 document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("btnGenerate")?.addEventListener("click", genrows);
     document.getElementById("btnSave")?.addEventListener("click", saveReport);
 });
 
+// 9. GLOBAL EXPOSURE (Fixes the Toggle & Dropdown issues)
 window.table_head = table_head;
+window.genrows = genrows;
+window.toggleMenu = toggleMenu;
 window.calculateRowTotal = calculateRowTotal;
+window.saveReport = saveReport;
