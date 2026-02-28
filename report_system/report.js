@@ -180,11 +180,22 @@ async function viewMyReport(studentName) {
         console.error("Error fetching:", error);
     }
 }
+// 8. BRIDGE: Connect HTML buttons to JS functions
+document.addEventListener("DOMContentLoaded", () => {
+    // Connect Generate Button
+    const genBtn = document.getElementById("btnGenerate");
+    if (genBtn) genBtn.addEventListener("click", genrows);
 
-// 8. EXPORT TO WINDOW (For HTML access)
-window.genrows = genrows;
+    // Connect Save Button
+    const saveBtn = document.getElementById("btnSave");
+    if (saveBtn) saveBtn.addEventListener("click", saveReport);
+
+    // Connect Download Button
+    const dlBtn = document.getElementById("btnDownload");
+    if (dlBtn) dlBtn.addEventListener("click", downloadCSV);
+});
+
+// 9. EXPOSE TO WINDOW (Optional backup)
+window.toggleMenu = toggleMenu;
 window.table_head = table_head;
 window.calculateRowTotal = calculateRowTotal;
-window.saveReport = saveReport;
-
-console.log("K_Tawiah System: Online");
