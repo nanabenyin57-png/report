@@ -45,7 +45,8 @@ onAuthStateChanged(auth, async (user) => {
                         name: `${doc.data().firstName} ${doc.data().lastName}`
                     }));
                 } else {
-                    window.location.href = "student_report.html"; // Redirect students
+    // This matches your folder structure in the screenshot
+    window.location.href = "student_report.html"; 
                 }
             }
         } catch (error) { console.error("Auth error:", error); }
