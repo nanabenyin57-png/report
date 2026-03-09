@@ -48,6 +48,35 @@ window.departmentchange = function() {
         });
     }
 };
+// --- 1. FETCH STUDENTS FROM DATABASE ---
+let allStudents = [];
+
+async function fetchStudents() {
+    try {
+        const q = query(collection(firestore, "users"), where("role", "==", "student"));
+        const querySnapshot = await getDocs(q);
+        
+        // Map the database results into a simple list
+        allStudents = querySnapshot.docs.map(doc => ({
+            id: doc.id, // This is the Index Number (e.g., KT-001)
+            name: `${doc.data().firstName} ${doc.data().lastName}`
+        }));
+        
+        console.log("Students loaded:", allStudents.length);
+    } catch (error) {
+        console.error("Error fetching students:", error);
+    }
+}
+
+// Update the Auth Observer to trigger the fetch
+onAuthStateChanged(auth, async (user) => {
+    if (user) {
+        currentTeacherUid = user.uid;
+        await fetchStudents(); // Load names as soon as teacher is authorized
+    } else {
+        window.location.href = "index.html";
+    }
+});
 
 // --- 3. TABLE ROW GENERATION ---
 window.SBA = function() {
@@ -56,7 +85,7 @@ window.SBA = function() {
     const tableBody = document.getElementById("assessment_tablebody");
 
     tableHeader.innerHTML = `
-        <th>Student Name</th>
+        <th>Select Student</th>
         <th>Ex. (15)</th>
         <th>Test (15)</th>
         <th>Proj. (15)</th>
@@ -67,17 +96,28 @@ window.SBA = function() {
     `;
 
     tableBody.innerHTML = "";
+
+    // Build the dropdown options from the database list
+    let studentOptions = `<option value="">-- Choose Student --</option>`;
+    allStudents.forEach(student => {
+        studentOptions += `<option value="${student.id}">${student.name}</option>`;
+    });
+
     for (let i = 0; i < studentCount; i++) {
         const row = document.createElement("tr");
         row.innerHTML = `
-            <td><input type="text" placeholder="Name" class="student-name"></td>
-            <td><input type="number" class="class-exercise" oninput="calculate(this)" max="15"></td>
-            <td><input type="number" class="class-test" oninput="calculate(this)" max="15"></td>
-            <td><input type="number" class="project-work" oninput="calculate(this)" max="15"></td>
-            <td><input type="number" class="group-work" oninput="calculate(this)" max="15"></td>
+            <td>
+                <select class="student-id-select">
+                    ${studentOptions}
+                </select>
+            </td>
+            <td><input type="number" class="class-exercise" oninput="window.calculate(this)" max="15"></td>
+            <td><input type="number" class="class-test" oninput="window.calculate(this)" max="15"></td>
+            <td><input type="number" class="project-work" oninput="window.calculate(this)" max="15"></td>
+            <td><input type="number" class="group-work" oninput="window.calculate(this)" max="15"></td>
             <td><input type="number" class="total-score" readonly></td>
             <td><input type="text" class="scale-score" readonly></td>
-            <td><button class="save-row-btn" onclick="saveSingleRow(this)">Save</button></td>
+            <td><button class="save-row-btn" onclick="window.saveSingleRow(this)">Save</button></td>
         `;
         tableBody.appendChild(row);
     }
@@ -97,15 +137,19 @@ window.calculate = function(element) {
     row.querySelector('.scale-score').value = scale.toFixed(1);
 };
 
-// --- 5. SAVE FOR A STUDENT ---
+// --- 3. UPDATED SAVE LOGIC ---
 window.saveSingleRow = async function(button) {
     const row = button.closest('tr');
     const dept = document.getElementById("category").value;
     const subject = document.getElementById("subjects").value;
-    const studentName = row.querySelector('.student-name').value;
+    
+    // Get ID and Name from the selected option
+    const studentSelect = row.querySelector('.student-id-select');
+    const studentId = studentSelect.value;
+    const studentName = studentSelect.options[studentSelect.selectedIndex].text;
 
-    if (!studentName || !subject || dept === "Choose_A_Department") {
-        alert("Please ensure Department, Subject, and Student Name are filled!");
+    if (!studentId || !subject || dept === "Choose_A_Department") {
+        alert("Please select a student, department, and subject!");
         return;
     }
 
@@ -115,6 +159,7 @@ window.saveSingleRow = async function(button) {
     try {
         await addDoc(collection(firestore, "assessments"), {
             teacherUid: currentTeacherUid,
+            studentId: studentId, // Links to their database record
             studentName: studentName,
             department: dept,
             subject: subject,
@@ -130,12 +175,12 @@ window.saveSingleRow = async function(button) {
         });
 
         button.innerText = "Saved";
-        button.style.backgroundColor = "#00ff88";
+        button.style.backgroundColor = "rgba(0, 255, 136, 0.3)"; // Translucent green
+        button.style.color = "#00ff88";
     } catch (e) {
-        console.error("Error saving: ", e);
-        alert("Save failed. Check console.");
+        console.error("Save Error:", e);
         button.disabled = false;
-        button.innerText = "Save";
+        button.innerText = "Retry";
     }
 };
 
