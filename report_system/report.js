@@ -2,7 +2,9 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
 import { 
-    getFirestore, doc, getDoc, getDocs, collection, query, where, setDoc, addDoc, serverTimestamp 
+    getFirestore, doc, getDoc, getDocs, collection, query, where, setDoc, 
+    addDoc, 
+    serverTimestamp 
 } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
 
 // 2. CONFIG
@@ -73,7 +75,6 @@ window.registerStudent = async function() {
 
     status.innerText = "Creating Profile...";
     try {
-        // We use setDoc with indexNo as the ID so it matches the student's key
         await setDoc(doc(firestore, "users", indexNo), {
             firstName: fname,
             lastName: lname,
@@ -85,19 +86,18 @@ window.registerStudent = async function() {
         status.style.color = "#00ff88";
         status.innerText = `Success: ${indexNo} Registered`;
         
-        // Reset inputs
         document.getElementById("reg-index").value = "";
         document.getElementById("reg-fname").value = "";
         document.getElementById("reg-lname").value = "";
         
-        await fetchStudents(); // Refresh the list
+        await fetchStudents(); 
     } catch (e) {
         console.error(e);
         status.innerText = "Error: Permission Denied.";
     }
 };
 
-// 7. COMPILATION LOGIC (The 50/50 Join)
+// 7. COMPILATION LOGIC
 window.generateFinalReport = async function() {
     const tablebody = document.getElementById("tablebody");
     const dept = document.getElementById("department").value;
@@ -110,7 +110,6 @@ window.generateFinalReport = async function() {
         let reportHTML = "";
 
         for (let student of allStudents) {
-            // Parallel fetch for SBA and Exams
             const [sbaSnap, examSnap] = await Promise.all([
                 getDocs(query(collection(firestore, "assessments"), where("studentId", "==", student.uid))),
                 getDocs(query(collection(firestore, "exams"), where("studentId", "==", student.uid)))
@@ -144,11 +143,11 @@ window.generateFinalReport = async function() {
         tablebody.innerHTML = reportHTML || "<tr><td colspan='6'>No records found for this department.</td></tr>";
     } catch (e) {
         console.error(e);
-        alert("Compilation failed. Check console for details.");
+        alert("Compilation failed. Check console.");
     }
 };
 
-// 8. GRADING & REMARKS
+// 8. GRADING UTILITY
 function calculateGrade(score) {
     if (score >= 80) return "A1 (Excellent)";
     if (score >= 70) return "B2 (Very Good)";
@@ -159,22 +158,62 @@ function calculateGrade(score) {
     return "F9 (Fail)";
 }
 
-// 9. PUBLISH LOGIC
+// 9. PUBLISH TO STUDENTS
 window.publishToStudents = async function() {
     const rows = document.querySelectorAll("#tablebody tr");
-    if (rows.length < 1) return alert("Generate report first!");
+    const dept = document.getElementById("department").value;
+
+    if (rows.length === 0 || rows[0].cells.length < 2) {
+        return alert("Please generate the report first before publishing!");
+    }
 
     const btn = document.getElementById("btnSave");
-    btn.innerText = "Publishing...";
     btn.disabled = true;
+    btn.innerText = "Publishing...";
 
-    // Logic: In a final system, you would save these merged results to a "final_published" collection
-    // For now, we simulate success as the compilation is already live.
-    setTimeout(() => {
-        alert("Reports published! Students can now see these totals on their dashboards.");
+    try {
+        for (let row of rows) {
+            const cells = row.cells;
+            if (cells.length < 6) continue;
+
+            const studentName = cells[0].innerText;
+            const subject = cells[1].innerText;
+            const sba = cells[2].innerText;
+            const exam = cells[3].innerText;
+            const total = cells[4].innerText;
+            const grade = cells[5].innerText;
+
+            const student = allStudents.find(s => s.name === studentName);
+            const studentId = student ? student.uid : "unknown";
+
+            // Logic to prevent duplicate entries
+            const reportId = `${studentId}_${subject.replace(/\s+/g, '_')}`; 
+            
+            await setDoc(doc(firestore, "published_reports", reportId), {
+                studentId: studentId,
+                studentName: studentName,
+                department: dept,
+                subject: subject,
+                sba50: sba,
+                exam50: exam,
+                total100: total,
+                grade: grade,
+                teacherUid: currentTeacherUid,
+                publishedAt: serverTimestamp()
+            });
+        }
+
+        alert("All results have been published to student dashboards!");
         btn.innerText = "Published Successfully";
-        btn.style.background = "rgba(0, 255, 136, 0.2)";
-    }, 1500);
+        btn.style.background = "rgba(0, 255, 136, 0.3)";
+        btn.style.color = "#00ff88";
+
+    } catch (error) {
+        console.error("Publish Error:", error);
+        alert("Failed to publish. Check your Firestore rules.");
+        btn.disabled = false;
+        btn.innerText = "Publish to Students";
+    }
 };
 
 // 10. UI HANDLERS
@@ -182,9 +221,6 @@ window.toggleMenu = function() {
     const navOverlay = document.getElementById("navover");
     navOverlay.classList.toggle("open");
 };
-
-// EXPOSE TO GLOBAL
-window.calculateGrade = calculateGrade;
 
 // 11. EVENT LISTENERS
 document.addEventListener("DOMContentLoaded", () => {
