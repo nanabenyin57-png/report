@@ -14,15 +14,9 @@
             <div class="logo">K_TAWIAH</div>
             <div class="nav_overlay" id="navover">
                 <ul class="links">
-                    <li> 
-                        <a href="index.html">Sign Out</a>
-                    </li>
-                    <li>
-                        <a href="class assessment.html">Class Assessment</a>
-                    </li>
-                    <li>
-                        <a href="student_report.html">My Results</a>
-                    </li>
+                    <li><a href="index.html">Sign Out</a></li>
+                    <li><a href="class assessment.html">Class Assessment</a></li>
+                    <li><a href="student_report.html">My Results</a></li>
                 </ul>
             </div>
         </nav>
@@ -31,8 +25,19 @@
             <h2 id="status-msg">Checking authorization...</h2>
         </div>
 
-        <div class="admin" id="admin-section">
-            <div class="tableheadgen">
+        <div class="admin" id="admin-section" style="display: none;">
+            <div class="registration-container">
+                <h3>Register New Student Profile</h3>
+                <div class="reg-inputs">
+                    <input type="text" id="reg-index" placeholder="Index Number (e.g. KT-001)">
+                    <input type="text" id="reg-fname" placeholder="First Name">
+                    <input type="text" id="reg-lname" placeholder="Last Name">
+                    <button type="button" id="btnRegisterStudent" class="reg-btn">Create Profile</button>
+                </div>
+                <p id="reg-status"></p>
+            </div>
+
+            <hr> <div class="tableheadgen">
                 <label for="department" class="theadgen">Choose your department.</label>
                 <select id="department" name="departments" onchange="table_head()">
                     <option value="choose_a_department" selected>CHOOSE A DEPARTMENT</option>
@@ -59,8 +64,10 @@
                 <tbody id="tablebody"></tbody>
             </table>
         </form>
-        <button type="button" id="btnDownload" class="download-btn">Download Results</button>
-        <button type="button" id="btnSave" class="save-btn">Save Report</button>
+        <div class="action-buttons">
+            <button type="button" id="btnDownload" class="download-btn">Download Results</button>
+            <button type="button" id="btnSave" class="save-btn">Save Report</button>
+        </div>
     </article>
 
     <footer>
