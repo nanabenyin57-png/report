@@ -116,17 +116,27 @@ onAuthStateChanged(auth, async (user) => {
 });
 
 // ... (Keep existing table_head, genrows, calculateRowTotal, toggleMenu, saveReport)
+// 1. Expose functions to the HTML (fixes the "not defined" errors)
+window.table_head = table_head;
+window.genrows = genrows;
+window.toggleMenu = toggleMenu;
+window.saveReport = saveReport;
+window.calculateRowTotal = calculateRowTotal;
+window.registerStudent = registerStudent;
 
+// 2. Event Listeners for buttons that DON'T use 'onclick' in HTML
+document.addEventListener("DOMContentLoaded", () => {
+    const genBtn = document.getElementById("btnGenerate");
+    const saveBtn = document.getElementById("btnSave");
+    const regBtn = document.getElementById("btnRegisterStudent");
+
+    if (genBtn) genBtn.addEventListener("click", genrows);
+    if (saveBtn) saveBtn.addEventListener("click", saveReport);
+    if (regBtn) regBtn.addEventListener("click", registerStudent);
+});
 // UPDATE EVENT LISTENERS
 document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("btnGenerate")?.addEventListener("click", genrows);
     document.getElementById("btnSave")?.addEventListener("click", saveReport);
     document.getElementById("btnRegisterStudent")?.addEventListener("click", registerStudent);
 });
-
-// GLOBAL EXPOSURE
-window.table_head = table_head;
-window.genrows = genrows;
-window.calculateRowTotal = calculateRowTotal;
-window.saveReport = saveReport;
-window.registerStudent = registerStudent;
