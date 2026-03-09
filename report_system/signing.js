@@ -1,10 +1,19 @@
-// 1. ALWAYS PUT IMPORTS AT THE TOP
+// 1. ALL NECESSARY IMPORTS
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { 
+    getAuth, 
+    signInWithEmailAndPassword, 
+    createUserWithEmailAndPassword 
+} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { 
+    getFirestore, 
+    doc, 
+    getDoc, 
+    setDoc, 
+    updateDoc 
+} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-// 2. PASTE YOUR FIREBASE CONFIG HERE
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+// 2. YOUR FIREBASE CONFIG
 const firebaseConfig = {
   apiKey: "AIzaSyBmlZD5EHWgt8DsocsPVZcf4MJVjeuC0Fw",
   authDomain: "reportbase-669ff.firebaseapp.com",
@@ -17,16 +26,17 @@ const firebaseConfig = {
 
 // 3. INITIALIZE
 const app = initializeApp(firebaseConfig);
-window.auth = getAuth(app);
-window.db = getFirestore(app);
+const auth = getAuth(app);
+const db = getFirestore(app);
 
-// --- UI FUNCTIONS ---
+// 4. UI FUNCTIONS (Attached to 'window' so HTML buttons can see them)
 
 window.signin_page = function() {
     const sign = document.getElementById("signingpage");
     sign.innerHTML = `
     <div class="signin-container">
-        <input type="email" placeholder="User's email" id="email" class="email">
+        <h3>Staff & Student Sign In</h3>
+        <input type="email" placeholder="Email Address" id="email" class="email">
         <input type="password" placeholder="Password" id="password" class="pass">
         <button onclick="handlesignin()" class="signin-button">Sign In</button>
     </div>`;
@@ -36,57 +46,74 @@ window.signup_page = function() {
     const sign = document.getElementById("signingpage");
     sign.innerHTML = `
     <div class="signup-container">
-        <input type="text" placeholder="First Name" id="firstname" class="firstname">
-        <input type="text" placeholder="Last Name" id="lastname" class="lastname">
-        <input type="email" placeholder="Email" id="email" class="email">
-        <p>Password must be 8+ chars (Upper, Lower, Number).</p>
-        <input type="password" placeholder="Password" id="password" class="pass">
-        <input type="password" placeholder="Confirm Password" id="confirmpassword" class="confirmpass">
-        <button onclick="handlesignup()" class="signup-button">Create Account</button>
+        <h3>Create Student Account</h3>
+        <p style="font-size: 0.8rem; color: #666;">Enter your Index Number to sync with teacher records.</p>
+        <input type="text" placeholder="Index Number" id="indexno" class="indexno" required>
+        <input type="text" placeholder="First Name" id="firstname" class="firstname" required>
+        <input type="text" placeholder="Last Name" id="lastname" class="lastname" required>
+        <input type="email" placeholder="Email" id="email" class="email" required>
+        <input type="password" placeholder="Password" id="password" class="pass" required>
+        <input type="password" placeholder="Confirm Password" id="confirmpassword" class="confirmpass" required>
+        <button onclick="handlesignup()" class="signup-button">Sync & Register</button>
     </div>`;
 };
 
-// --- FIREBASE LOGIC FUNCTIONS ---
+// 5. FIREBASE LOGIC FUNCTIONS
 
 window.handlesignin = async function() {
     const email = document.getElementById('email').value;
     const password = document.getElementById('password').value;
     try {
-        await signInWithEmailAndPassword(window.auth, email, password);
-        window.location.href = "report.html";
+        await signInWithEmailAndPassword(auth, email, password);
+        window.location.href = "report.html"; 
     } catch (error) {
         alert("Login Error: " + error.message);
     }
 };
 
 window.handlesignup = async function() {
-    const fname = document.getElementById('firstname').value;
-    const lname = document.getElementById('lastname').value;
-    const email = document.getElementById('email').value;
+    const indexNo = document.getElementById('indexno').value.trim();
+    const fname = document.getElementById('firstname').value.trim();
+    const lname = document.getElementById('lastname').value.trim();
+    const email = document.getElementById('email').value.trim();
     const password = document.getElementById('password').value;
     const confirm = document.getElementById('confirmpassword').value;
 
-    // Validation
-    if (password !== confirm) { return alert("Passwords do not match!"); }
-    if (password.length < 8 || !/[A-Z]/.test(password) || !/[0-9]/.test(password)) {
-        return alert("Password is too weak!");
-    }
+    if (password !== confirm) return alert("Passwords do not match!");
 
     try {
-        const userCredential = await createUserWithEmailAndPassword(window.auth, email, password);
+        // Step A: Create the Login account
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
 
-        // Create the user document in Firestore
-        await setDoc(doc(window.db, "users", user.uid), {
-            firstName: fname,
-            lastName: lname,
-            email: email,
-            role: "student"
-        });
+        // Step B: THE SYNC - Look for the Index Number the teacher added
+        const userRef = doc(db, "users", indexNo);
+        const docSnap = await getDoc(userRef);
 
-        alert("Success!");
+        if (docSnap.exists()) {
+            // Found it! Link the new account to the teacher's data
+            await updateDoc(userRef, {
+                uid: user.uid,
+                email: email,
+                firstName: fname,
+                lastName: lname,
+                accountStatus: "active"
+            });
+            alert("Success! Your account is linked to your school records.");
+        } else {
+            // No record found: Create a fresh profile
+            await setDoc(doc(db, "users", user.uid), {
+                indexNo: indexNo,
+                firstName: fname,
+                lastName: lname,
+                email: email,
+                role: "student",
+                accountStatus: "active"
+            });
+            alert("Account created! (No existing teacher record found).");
+        }
         window.location.href = "report.html";
     } catch (error) {
-        alert("Sign Up Error: " + error.message);
+        alert("Signup Error: " + error.message);
     }
 };
