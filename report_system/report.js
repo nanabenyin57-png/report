@@ -53,15 +53,25 @@ onAuthStateChanged(auth, async (user) => {
     }
 });
 
-// 5. FETCH ALL STUDENTS
+// 5. FETCH ONLY MY STUDENTS
 async function fetchStudents() {
-    const q = query(collection(firestore, "users"), where("role", "==", "student"));
-    const querySnapshot = await getDocs(q);
-    allStudents = querySnapshot.docs.map(doc => ({
-        uid: doc.id, 
-        name: `${doc.data().firstName || ''} ${doc.data().lastName || ''}`.trim()
-    }));
-    console.log("Students loaded:", allStudents.length);
+    try {
+        // We add the second 'where' clause here
+        const q = query(
+            collection(firestore, "users"), 
+            where("role", "==", "student"),
+            where("teacherId", "==", currentTeacherUid) // <--- The Filter
+        );
+        
+        const querySnapshot = await getDocs(q);
+        allStudents = querySnapshot.docs.map(doc => ({
+            uid: doc.id, 
+            name: `${doc.data().firstName || ''} ${doc.data().lastName || ''}`.trim()
+        }));
+        console.log(`Success: Loaded ${allStudents.length} of your students.`);
+    } catch (error) {
+        console.error("Error fetching filtered students:", error);
+    }
 }
 
 // 6. REGISTER NEW STUDENT
@@ -74,27 +84,15 @@ window.registerStudent = async function() {
     if (!indexNo || !fname || !lname) return alert("Please fill all registration fields!");
 
     status.innerText = "Creating Profile...";
-    try {
-        await setDoc(doc(firestore, "users", indexNo), {
-            firstName: fname,
-            lastName: lname,
-            indexNo: indexNo,
-            role: "student",
-            accountStatus: "pending",
-            createdAt: serverTimestamp()
-        });
-        status.style.color = "#00ff88";
-        status.innerText = `Success: ${indexNo} Registered`;
-        
-        document.getElementById("reg-index").value = "";
-        document.getElementById("reg-fname").value = "";
-        document.getElementById("reg-lname").value = "";
-        
-        await fetchStudents(); 
-    } catch (e) {
-        console.error(e);
-        status.innerText = "Error: Permission Denied.";
-    }
+    // Inside window.registerStudent function
+await setDoc(doc(firestore, "users", indexNo), {
+    firstName: fname,
+    lastName: lname,
+    indexNo: indexNo,
+    role: "student",
+    teacherId: currentTeacherUid, // <--- Link the student to this specific teacher
+    createdAt: serverTimestamp()
+});
 };
 
 // 7. COMPILATION LOGIC
