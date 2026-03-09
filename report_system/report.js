@@ -60,6 +60,21 @@ async function fetchStudents() {
         name: `${doc.data().firstName || ''} ${doc.data().lastName || ''}`.trim()
     }));
 }
+// Function to toggle the Dark Glass sidebar
+window.toggleMenu = function() {
+    const navOverlay = document.getElementById("navover");
+    const navBtn = document.getElementById("navigation");
+    
+    // Toggle the 'open' class on the overlay
+    navOverlay.classList.toggle("open");
+    
+    // Optional: Change the hamburger icon to an 'X' when open
+    if (navOverlay.classList.contains("open")) {
+        navBtn.innerHTML = "&times;"; // Multiplications sign (X)
+    } else {
+        navBtn.innerHTML = "&#9776;"; // Hamburger icon
+    }
+};
 
 // UPDATE AUTH OBSERVER
 onAuthStateChanged(auth, async (user) => {

@@ -39,18 +39,72 @@ header {
     border-bottom: 1px solid var(--glass-border);
 }
 
-nav {
+/* --- HIDE NAV BY DEFAULT --- */
+.nav_overlay {
     position: fixed;
     top: 0;
-    width: 100%;
-    padding: 12px 5%;
+    left: -320px; /* Moves it completely off-screen to the left */
+    width: 280px;
+    height: 100%;
+    background: rgba(10, 10, 10, 0.9); /* Dark see-through */
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    padding: 100px 30px;
+    transition: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 2000; /* Stays above everything */
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
     display: flex;
-    align-items: center;
-    background: rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(15px); /* Increased blur for see-through effect */
-    -webkit-backdrop-filter: blur(15px);
-    z-index: 1000;
-    border-bottom: 1px solid var(--glass-border);
+    flex-direction: column;
+}
+
+/* --- SHOW NAV WHEN OPEN --- */
+.nav_overlay.open {
+    left: 0; /* Slides into view */
+}
+
+/* --- THE HAMBURGER BUTTON --- */
+#navigation {
+    position: fixed;
+    top: 15px;
+    left: 15px;
+    z-index: 2100; /* Above the overlay */
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--primary-blue);
+    padding: 10px 15px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1.5rem;
+    transition: 0.3s;
+}
+
+#navigation:hover {
+    background: var(--primary-blue);
+    color: black;
+}
+
+/* --- CLEAN UP THE LINKS --- */
+.links {
+    list-style: none;
+    padding: 0;
+}
+
+.links li {
+    margin-bottom: 25px;
+}
+
+.links li a {
+    color: white;
+    text-decoration: none;
+    font-size: 1.1rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    transition: 0.3s;
+}
+
+.links li a:hover {
+    color: var(--primary-blue);
+    padding-left: 10px;
 }
 
 /* --- 3. REGISTRATION & ADMIN PANEL --- */
