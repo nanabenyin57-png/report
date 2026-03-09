@@ -56,11 +56,10 @@ onAuthStateChanged(auth, async (user) => {
 // 5. FETCH ONLY MY STUDENTS
 async function fetchStudents() {
     try {
-        // We add the second 'where' clause here
         const q = query(
             collection(firestore, "users"), 
             where("role", "==", "student"),
-            where("teacherId", "==", currentTeacherUid) // <--- The Filter
+            where("teacherId", "==", currentTeacherUid) 
         );
         
         const querySnapshot = await getDocs(q);
@@ -84,18 +83,33 @@ window.registerStudent = async function() {
     if (!indexNo || !fname || !lname) return alert("Please fill all registration fields!");
 
     status.innerText = "Creating Profile...";
-    // Inside window.registerStudent function
-await setDoc(doc(firestore, "users", indexNo), {
-    firstName: fname,
-    lastName: lname,
-    indexNo: indexNo,
-    role: "student",
-    teacherId: currentTeacherUid, // <--- Link the student to this specific teacher
-    createdAt: serverTimestamp()
-});
+    try {
+        await setDoc(doc(firestore, "users", indexNo), {
+            firstName: fname,
+            lastName: lname,
+            indexNo: indexNo,
+            role: "student",
+            teacherId: currentTeacherUid, 
+            createdAt: serverTimestamp()
+        });
+        
+        status.style.color = "#00ff88";
+        status.innerText = `Success: ${indexNo} Registered`;
+        
+        // Clear inputs and refresh list
+        document.getElementById("reg-index").value = "";
+        document.getElementById("reg-fname").value = "";
+        document.getElementById("reg-lname").value = "";
+        await fetchStudents(); 
+        
+    } catch (e) {
+        console.error(e);
+        status.style.color = "#ff4d4d";
+        status.innerText = "Error: Check Firestore Rules.";
+    }
 };
 
-// 7. COMPILATION LOGIC
+// 7. COMPILATION LOGIC (50/50 JOIN)
 window.generateFinalReport = async function() {
     const tablebody = document.getElementById("tablebody");
     const dept = document.getElementById("department").value;
@@ -114,10 +128,10 @@ window.generateFinalReport = async function() {
             ]);
 
             const sbaScores = {};
-            sbaSnap.forEach(doc => { sbaScores[doc.data().subject] = parseFloat(doc.data().scaled50); });
+            sbaSnap.forEach(doc => { sbaScores[doc.data().subject] = parseFloat(doc.data().scaled50) || 0; });
 
             const examScores = {};
-            examSnap.forEach(doc => { examScores[doc.data().subject] = parseFloat(doc.data().scaledScore); });
+            examSnap.forEach(doc => { examScores[doc.data().subject] = parseFloat(doc.data().scaledScore) || 0; });
 
             const subjects = [...new Set([...Object.keys(sbaScores), ...Object.keys(examScores)])];
 
@@ -138,10 +152,10 @@ window.generateFinalReport = async function() {
                 `;
             });
         }
-        tablebody.innerHTML = reportHTML || "<tr><td colspan='6'>No records found for this department.</td></tr>";
+        tablebody.innerHTML = reportHTML || "<tr><td colspan='6'>No records found.</td></tr>";
     } catch (e) {
         console.error(e);
-        alert("Compilation failed. Check console.");
+        alert("Compilation failed. Check browser console.");
     }
 };
 
@@ -161,8 +175,8 @@ window.publishToStudents = async function() {
     const rows = document.querySelectorAll("#tablebody tr");
     const dept = document.getElementById("department").value;
 
-    if (rows.length === 0 || rows[0].cells.length < 2) {
-        return alert("Please generate the report first before publishing!");
+    if (rows.length === 0 || rows[0].cells.length < 6) {
+        return alert("Please generate the report first!");
     }
 
     const btn = document.getElementById("btnSave");
@@ -172,8 +186,6 @@ window.publishToStudents = async function() {
     try {
         for (let row of rows) {
             const cells = row.cells;
-            if (cells.length < 6) continue;
-
             const studentName = cells[0].innerText;
             const subject = cells[1].innerText;
             const sba = cells[2].innerText;
@@ -184,7 +196,6 @@ window.publishToStudents = async function() {
             const student = allStudents.find(s => s.name === studentName);
             const studentId = student ? student.uid : "unknown";
 
-            // Logic to prevent duplicate entries
             const reportId = `${studentId}_${subject.replace(/\s+/g, '_')}`; 
             
             await setDoc(doc(firestore, "published_reports", reportId), {
@@ -201,14 +212,12 @@ window.publishToStudents = async function() {
             });
         }
 
-        alert("All results have been published to student dashboards!");
+        alert("All results published!");
         btn.innerText = "Published Successfully";
         btn.style.background = "rgba(0, 255, 136, 0.3)";
-        btn.style.color = "#00ff88";
-
     } catch (error) {
         console.error("Publish Error:", error);
-        alert("Failed to publish. Check your Firestore rules.");
+        alert("Failed to publish.");
         btn.disabled = false;
         btn.innerText = "Publish to Students";
     }
@@ -216,8 +225,7 @@ window.publishToStudents = async function() {
 
 // 10. UI HANDLERS
 window.toggleMenu = function() {
-    const navOverlay = document.getElementById("navover");
-    navOverlay.classList.toggle("open");
+    document.getElementById("navover").classList.toggle("open");
 };
 
 // 11. EVENT LISTENERS
