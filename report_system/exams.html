@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>K_Tawiah | Exam Entry</title>
+    <link rel="stylesheet" href="report.css">
+</head>
+<body>
+
+    <header class="assessment-header">
+        <nav>
+            <button type="button" class="nav-btn" id="navigation" onclick="toggleMenu()"> &#9776; </button>
+            <div class="logo">K_TAWIAH EXAMS</div>
+            <div class="nav_overlay" id="navover">
+                <ul class="links">
+                    <li><a href="report.html">Teacher Dashboard</a></li>
+                    <li><a href="assessment.html">Class Assessment</a></li>
+                    <li><a href="index.html" style="color: #ff4d4d;">Logout</a></li>
+                </ul>
+            </div>
+        </nav>
+
+        <div class="header-content">
+            <h1>End of Term Exams</h1>
+            <p>Enter the raw exam scores (100%) for the final report</p>
+
+            <div class="controls-grid">
+                <div class="control-group glass-panel">
+                    <label>DEPARTMENT</label>
+                    <select id="exam-dept" onchange="window.updateExamSubjects()">
+                        <option value="">-- Select --</option>
+                        <option value="Preschool">PRESCHOOL</option>
+                        <option value="LowerPrimary">LOWER PRIMARY</option>
+                        <option value="UpperPrimary">UPPER PRIMARY</option>
+                        <option value="JuniorHigh">JUNIOR HIGH</option>
+                    </select>
+                </div>
+                <div class="control-group glass-panel">
+                    <label>SUBJECT</label>
+                    <select id="exam-subject">
+                        <option value="">-- Choose Dept First --</option>
+                    </select>
+                </div>
+                <div class="control-group glass-panel">
+                    <button class="action-btn" id="btnLoadExams" style="margin-top: 20px;">Generate List</button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="table-section">
+        <article class="glass-card">
+            <table id="exam-table">
+                <thead>
+                    <tr>
+                        <th>Student Name</th>
+                        <th>Exam Score (100)</th>
+                        <th>Exam 50%</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="exam-body"></tbody>
+            </table>
+        </article>
+    </main>
+
+    <script type="module" src="exams.js"></script>
+</body>
+</html>
