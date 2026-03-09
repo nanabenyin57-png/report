@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Report Page</title>
+    <title>K_Tawiah | Final Reports</title>
     <link rel="stylesheet" href="report.css">
     <link rel="icon" href="data:,">
 </head>
@@ -14,65 +14,75 @@
             <div class="logo">K_TAWIAH</div>
             <div class="nav_overlay" id="navover">
                 <ul class="links">
-                    <li><a href="index.html">Sign Out</a></li>
                     <li><a href="class assessment.html">Class Assessment</a></li>
-                    <li><a href="student_report.html">My Results</a></li>
                     <li><a href="exams.html">Exam Entry</a></li>
+                    <li><a href="student_report.html">My Results</a></li>
+                    <li><a href="index.html" style="color: #ff4d4d;">Sign Out</a></li>
                 </ul>
             </div>
         </nav>
         <div class="headercontent">
-            <span class="title">K_Tawiah Student Report System</span>
-            <h2 id="status-msg">Checking authorization...</h2>
+            <span class="title">Student Performance Summary</span>
+            <h2 id="status-msg">Authenticating...</h2>
         </div>
 
         <div class="admin" id="admin-section" style="display: none;">
-            <div class="registration-container">
-                <h3>Register New Student Profile</h3>
+            <div class="registration-container glass-panel">
+                <h3>Quick Register</h3>
                 <div class="reg-inputs">
-                    <input type="text" id="reg-index" placeholder="Index Number (e.g. KT-001)">
+                    <input type="text" id="reg-index" placeholder="Index (KT-001)">
                     <input type="text" id="reg-fname" placeholder="First Name">
                     <input type="text" id="reg-lname" placeholder="Last Name">
-                    <button type="button" id="btnRegisterStudent" class="reg-btn">Create Profile</button>
+                    <button type="button" id="btnRegisterStudent" class="reg-btn">Add Student</button>
                 </div>
                 <p id="reg-status"></p>
             </div>
 
-            <hr> <div class="tableheadgen">
-                <label for="department" class="theadgen">Choose your department.</label>
-                <select id="department" name="departments" onchange="table_head()">
-                    <option value="choose_a_department" selected>CHOOSE A DEPARTMENT</option>
-                    <option value="Preschool">PRESCHOOL</option>
-                    <option value="LowerPrimary">LOWER PRIMARY</option>
-                    <option value="UpperPrimary">UPPER PRIMARY</option>
-                    <option value="JuniorHigh">JUNIOR HIGH</option>
-                </select>
-            </div>
-            <div class="generate">
-                <label for="studentcount">How many students are in the class?</label>
-                <input type="number" id="studentcount" name="studentnumber" min="1" value="1">
-                <button type="button" id="btnGenerate">Generate Report</button>
+            <div class="controls-grid">
+                <div class="control-group glass-panel">
+                    <label for="department">Select Class / Department</label>
+                    <select id="department" name="departments">
+                        <option value="choose_a_department" selected>-- Select Department --</option>
+                        <option value="Preschool">PRESCHOOL</option>
+                        <option value="LowerPrimary">LOWER PRIMARY</option>
+                        <option value="UpperPrimary">UPPER PRIMARY</option>
+                        <option value="JuniorHigh">JUNIOR HIGH</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <button type="button" id="btnGenerate" class="action-btn">Compile Final Reports</button>
+                </div>
             </div>
         </div>
     </header>
 
-    <article>
-        <form id="MyForm">
-            <table id="report_table" border="1">
+    <article class="table-section">
+        <div class="glass-card">
+            <table id="report_table">
                 <thead>
-                    <tr id="headerrow"></tr> 
+                    <tr id="headerrow">
+                        <th>STUDENT NAME</th>
+                        <th>SUBJECT</th>
+                        <th>SBA (50%)</th>
+                        <th>EXAM (50%)</th>
+                        <th>TOTAL (100%)</th>
+                        <th>GRADE</th>
+                    </tr> 
                 </thead>
-                <tbody id="tablebody"></tbody>
+                <tbody id="tablebody">
+                    <tr><td colspan="6" style="text-align:center; padding: 20px;">Select a department and click 'Compile' to view scores.</td></tr>
+                </tbody>
             </table>
-        </form>
+        </div>
+        
         <div class="action-buttons">
-            <button type="button" id="btnDownload" class="download-btn">Download Results</button>
-            <button type="button" id="btnSave" class="save-btn">Save Report</button>
+            <button type="button" id="btnSave" class="save-btn">Publish to Students</button>
+            <button type="button" id="btnDownload" class="download-btn" onclick="window.print()">Print Summary</button>
         </div>
     </article>
 
     <footer>
-        <p>© 2026 K_Tawiah Student Report System</p>
+        <p>© 2026 K_Tawiah Student Report System | Secured by Firebase</p>
     </footer>
 
     <script type="module" src="report.js"></script>

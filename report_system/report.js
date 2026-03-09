@@ -2,7 +2,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
 import { 
-    getFirestore, doc, getDoc, getDocs, collection, query, where, addDoc, setDoc, serverTimestamp 
+    getFirestore, doc, getDoc, getDocs, collection, query, where, serverTimestamp 
 } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
 
 // 2. CONFIG
@@ -20,10 +20,6 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const firestore = getFirestore(app);
-
-// Attach to window for global access
-window.auth = auth;
-window.firestore = firestore;
 
 let allStudents = []; 
 
@@ -53,36 +49,6 @@ onAuthStateChanged(auth, async (user) => {
     }
 });
 
-// 5. REGISTRATION & FETCHING
-async function registerStudent() {
-    const indexNo = document.getElementById("reg-index").value.trim();
-    const fname = document.getElementById("reg-fname").value.trim();
-    const lname = document.getElementById("reg-lname").value.trim();
-    const status = document.getElementById("reg-status");
-
-    if (!indexNo || !fname || !lname) {
-        alert("Please fill in all registration fields!");
-        return;
-    }
-
-    try {
-        status.innerText = "Processing...";
-        await setDoc(doc(firestore, "users", indexNo), {
-            firstName: fname,
-            lastName: lname,
-            indexNo: indexNo,
-            role: "student",
-            accountStatus: "pending",
-            createdAt: serverTimestamp()
-        });
-        status.style.color = "cyan";
-        status.innerText = `Success! Registered: ${indexNo}`;
-        await fetchStudents(); // Refresh list for dropdowns
-    } catch (error) {
-        status.innerText = "Error: Check Firestore rules.";
-    }
-}
-
 async function fetchStudents() {
     const q = query(collection(firestore, "users"), where("role", "==", "student"));
     const querySnapshot = await getDocs(q);
@@ -92,111 +58,80 @@ async function fetchStudents() {
     }));
 }
 
-// 6. TABLE & UI LOGIC (Now attached to window for HTML visibility)
-
-window.table_head = function() {
-    const dept = document.getElementById("department").value;
-    const header = document.getElementById("headerrow");
-    if (!header) return;
-
-    let cols = "<th>SELECT STUDENT</th>";
-    const subjects = {
-        "Preschool": "<th>LIT</th><th>NUM</th><th>ARTS</th><th>WRIT</th>",
-        "LowerPrimary": "<th>ENG</th><th>MAT</th><th>SCI</th><th>TWI</th><th>HIS</th><th>RME</th><th>ART</th><th>FRE</th>",
-        "UpperPrimary": "<th>ENG</th><th>MAT</th><th>SCI</th><th>COMP</th><th>TWI</th><th>HIS</th><th>RME</th><th>ART</th><th>FRE</th>",
-        "JuniorHigh": "<th>ENG</th><th>MAT</th><th>SCI</th><th>COMP</th><th>TWI</th><th>SOC</th><th>RME</th><th>ART</th><th>FRE</th><th>TECH</th>"
-    };
-
-    if (subjects[dept]) {
-        cols += subjects[dept] + "<th>TOTAL</th>";
-    }
-    header.innerHTML = cols;
-};
-
-window.genrows = function() {
-    const countInput = document.getElementById("studentcount");
-    const deptSelect = document.getElementById("department");
+// 5. THE NEW COMPILATION LOGIC
+window.generateFinalReport = async function() {
     const tablebody = document.getElementById("tablebody");
-
-    if (!countInput || !deptSelect || !tablebody) return;
-
-    const count = parseInt(countInput.value);
-    const dept = deptSelect.value;
-    tablebody.innerHTML = "";
-
-    const subjectMap = {
-        "Preschool": ["LITERACY", "NUMERACY", "ARTS", "WRITING"],
-        "LowerPrimary": ["ENGLISH", "MATHS", "SCIENCE", "TWI", "HISTORY", "RME", "ARTS", "FRENCH"],
-        "UpperPrimary": ["ENGLISH", "MATHS", "SCIENCE", "COMPUTING", "TWI", "HISTORY", "RME", "ARTS", "FRENCH"],
-        "JuniorHigh": ["ENGLISH", "MATHS", "SCIENCE", "COMPUTING", "TWI", "SOCIAL", "RME", "ARTS", "FRENCH", "TECH"]
-    };
-
-    const currentSubs = subjectMap[dept] || [];
-
-    for (let i = 0; i < count; i++) {
-        const tr = document.createElement("tr");
-        
-        let studentOptions = `<option value="">-- Select Student --</option>`;
-        // allStudents must be defined in the global module scope above this
-        allStudents.forEach(s => {
-            studentOptions += `<option value="${s.uid}">${s.name}</option>`;
-        });
-
-        let rowHTML = `<td><select class="student-select">${studentOptions}</select></td>`;
-        
-        currentSubs.forEach(sub => {
-            // Added global window reference to calculateRowTotal for the oninput
-            rowHTML += `<td><input type="number" name="${sub}" class="score" oninput="window.calculateRowTotal(this)"></td>`;
-        });
-        
-        rowHTML += `<td><input type="number" class="total-box" readonly></td>`;
-        tr.innerHTML = rowHTML;
-        tablebody.appendChild(tr);
-    }
-};
-
-window.calculateRowTotal = function(input) {
-    const row = input.closest('tr');
-    const scores = row.querySelectorAll('.score');
-    let sum = 0;
-    scores.forEach(s => {
-        sum += Number(s.value) || 0;
-    });
-    const totalBox = row.querySelector('.total-box');
-    if (totalBox) totalBox.value = sum;
-};
-
-
-async function saveReport() {
-    const rows = document.querySelectorAll("#tablebody tr");
+    const headerrow = document.getElementById("headerrow");
     const dept = document.getElementById("department").value;
+
+    if (dept === "choose_a_department") return alert("Please select a department!");
+
+    tablebody.innerHTML = "<tr><td colspan='6'>Compiling scores from Assessments and Exams...</td></tr>";
+    
+    // Set Header for Final Report
+    headerrow.innerHTML = `
+        <th>STUDENT NAME</th>
+        <th>SUBJECT</th>
+        <th>SBA (50%)</th>
+        <th>EXAM (50%)</th>
+        <th>TOTAL (100%)</th>
+        <th>GRADE</th>
+    `;
 
     try {
-        for (let row of rows) {
-            const studentId = row.querySelector(".student-select").value;
-            if (!studentId) continue;
+        tablebody.innerHTML = ""; // Clear for data
 
-            const scores = {};
-            row.querySelectorAll(".score").forEach(input => {
-                scores[input.name] = input.value;
-            });
+        for (let student of allStudents) {
+            // Fetch SBA and Exams for this student
+            const [sbaSnap, examSnap] = await Promise.all([
+                getDocs(query(collection(firestore, "assessments"), where("studentId", "==", student.uid))),
+                getDocs(query(collection(firestore, "exams"), where("studentId", "==", student.uid)))
+            ]);
 
-            await addDoc(collection(firestore, "reports"), {
-                studentUid: studentId,
-                department: dept,
-                scores: scores,
-                total: row.querySelector(".total-box").value,
-                teacherUid: auth.currentUser.uid,
-                timestamp: serverTimestamp()
+            const sbaScores = {};
+            sbaSnap.forEach(doc => { sbaScores[doc.data().subject] = parseFloat(doc.data().scaled50); });
+
+            const examScores = {};
+            examSnap.forEach(doc => { examScores[doc.data().subject] = parseFloat(doc.data().scaledScore); });
+
+            // Merge subjects
+            const subjects = [...new Set([...Object.keys(sbaScores), ...Object.keys(examScores)])];
+
+            subjects.forEach(sub => {
+                const sba = sbaScores[sub] || 0;
+                const exam = examScores[sub] || 0;
+                const total = sba + exam;
+
+                const tr = document.createElement("tr");
+                tr.innerHTML = `
+                    <td>${student.name}</td>
+                    <td>${sub}</td>
+                    <td>${sba.toFixed(1)}</td>
+                    <td>${exam.toFixed(1)}</td>
+                    <td style="color:cyan; font-weight:bold;">${total.toFixed(1)}</td>
+                    <td>${calculateGrade(total)}</td>
+                `;
+                tablebody.appendChild(tr);
             });
         }
-        alert("Reports Saved Successfully!");
     } catch (e) {
-        alert("Error saving: " + e.message);
+        console.error(e);
+        alert("Error compiling report.");
     }
+};
+
+// 6. GRADING UTILITY
+function calculateGrade(score) {
+    if (score >= 80) return "A1";
+    if (score >= 70) return "B2";
+    if (score >= 60) return "B3";
+    if (score >= 55) return "C4";
+    if (score >= 50) return "C5";
+    if (score >= 45) return "D7"; // Adjusted for Ghanaian scale
+    return "F9";
 }
 
-// 7. MENU & EXPORTS
+// 7. UI & MENU
 window.toggleMenu = function() {
     const navOverlay = document.getElementById("navover");
     const navBtn = document.getElementById("navigation");
@@ -204,16 +139,12 @@ window.toggleMenu = function() {
     navBtn.innerHTML = navOverlay.classList.contains("open") ? "&times;" : "&#9776;";
 };
 
-// EXPOSE TO GLOBAL (Essential for HTML onclicks)
-window.table_head = table_head;
-window.genrows = genrows;
-window.saveReport = saveReport;
-window.calculateRowTotal = calculateRowTotal;
-window.registerStudent = registerStudent;
+// EXPOSE TO GLOBAL
+window.table_head = () => { /* Now handled by generateFinalReport */ };
+window.genrows = window.generateFinalReport; 
+window.toggleMenu = window.toggleMenu;
 
-// 8. EVENT LISTENERS
+// EVENT LISTENERS
 document.addEventListener("DOMContentLoaded", () => {
-    document.getElementById("btnGenerate")?.addEventListener("click", genrows);
-    document.getElementById("btnSave")?.addEventListener("click", saveReport);
-    document.getElementById("btnRegisterStudent")?.addEventListener("click", registerStudent);
+    document.getElementById("btnGenerate")?.addEventListener("click", window.generateFinalReport);
 });
