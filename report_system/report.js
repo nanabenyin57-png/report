@@ -92,8 +92,9 @@ async function fetchStudents() {
     }));
 }
 
-// 6. TABLE & UI LOGIC
-function table_head() {
+// 6. TABLE & UI LOGIC (Now attached to window for HTML visibility)
+
+window.table_head = function() {
     const dept = document.getElementById("department").value;
     const header = document.getElementById("headerrow");
     if (!header) return;
@@ -106,14 +107,21 @@ function table_head() {
         "JuniorHigh": "<th>ENG</th><th>MAT</th><th>SCI</th><th>COMP</th><th>TWI</th><th>SOC</th><th>RME</th><th>ART</th><th>FRE</th><th>TECH</th>"
     };
 
-    if (subjects[dept]) cols += subjects[dept] + "<th>TOTAL</th>";
+    if (subjects[dept]) {
+        cols += subjects[dept] + "<th>TOTAL</th>";
+    }
     header.innerHTML = cols;
-}
+};
 
-function genrows() {
-    const count = parseInt(document.getElementById("studentcount").value);
-    const dept = document.getElementById("department").value;
+window.genrows = function() {
+    const countInput = document.getElementById("studentcount");
+    const deptSelect = document.getElementById("department");
     const tablebody = document.getElementById("tablebody");
+
+    if (!countInput || !deptSelect || !tablebody) return;
+
+    const count = parseInt(countInput.value);
+    const dept = deptSelect.value;
     tablebody.innerHTML = "";
 
     const subjectMap = {
@@ -127,29 +135,37 @@ function genrows() {
 
     for (let i = 0; i < count; i++) {
         const tr = document.createElement("tr");
+        
         let studentOptions = `<option value="">-- Select Student --</option>`;
+        // allStudents must be defined in the global module scope above this
         allStudents.forEach(s => {
             studentOptions += `<option value="${s.uid}">${s.name}</option>`;
         });
 
         let rowHTML = `<td><select class="student-select">${studentOptions}</select></td>`;
+        
         currentSubs.forEach(sub => {
-            rowHTML += `<td><input type="number" name="${sub}" class="score" oninput="calculateRowTotal(this)"></td>`;
+            // Added global window reference to calculateRowTotal for the oninput
+            rowHTML += `<td><input type="number" name="${sub}" class="score" oninput="window.calculateRowTotal(this)"></td>`;
         });
+        
         rowHTML += `<td><input type="number" class="total-box" readonly></td>`;
         tr.innerHTML = rowHTML;
         tablebody.appendChild(tr);
     }
-}
+};
 
-function calculateRowTotal(input) {
+window.calculateRowTotal = function(input) {
     const row = input.closest('tr');
     const scores = row.querySelectorAll('.score');
     let sum = 0;
-    scores.forEach(s => sum += Number(s.value) || 0);
+    scores.forEach(s => {
+        sum += Number(s.value) || 0;
+    });
     const totalBox = row.querySelector('.total-box');
     if (totalBox) totalBox.value = sum;
-}
+};
+
 
 async function saveReport() {
     const rows = document.querySelectorAll("#tablebody tr");
