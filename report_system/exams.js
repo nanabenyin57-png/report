@@ -24,27 +24,35 @@ const firestore = getFirestore(app);
 let allStudents = [];
 let currentTeacherUid = null;
 
-// 4. AUTH & STUDENT FETCHING
+// 4. AUTH & FILTERED STUDENT FETCHING
 onAuthStateChanged(auth, async (user) => {
     if (user) {
         currentTeacherUid = user.uid;
         try {
-            const q = query(collection(firestore, "users"), where("role", "==", "student"));
+            // UPDATED: Added where clause to filter by currentTeacherUid
+            const q = query(
+                collection(firestore, "users"), 
+                where("role", "==", "student"),
+                where("teacherId", "==", currentTeacherUid) 
+            );
+            
             const snap = await getDocs(q);
             allStudents = snap.docs.map(doc => ({ 
                 id: doc.id, 
                 name: `${doc.data().firstName} ${doc.data().lastName}` 
             }));
-            console.log("Students loaded for Exams:", allStudents.length);
+            
+            console.log("Filtered students loaded for Exams:", allStudents.length);
         } catch (error) {
             console.error("Fetch error:", error);
+            // Pro-tip: If you see an Index error in the console, click the link provided!
         }
     } else {
         window.location.href = "index.html";
     }
 });
 
-// 5. DYNAMIC SUBJECTS (Refined)
+// 5. DYNAMIC SUBJECTS (Remains same)
 window.updateExamSubjects = function() {
     const category = document.getElementById("exam-dept").value;
     const subjectsDropdown = document.getElementById("exam-subject");
@@ -79,6 +87,12 @@ window.generateExamRows = function() {
     }
 
     tbody.innerHTML = "";
+    
+    if (allStudents.length === 0) {
+        tbody.innerHTML = "<tr><td colspan='4'>No students found assigned to you.</td></tr>";
+        return;
+    }
+
     allStudents.forEach(student => {
         const tr = document.createElement("tr");
         tr.innerHTML = `
@@ -91,11 +105,10 @@ window.generateExamRows = function() {
     });
 };
 
-// 7. CALCULATION
+// 7. CALCULATION (Remains same)
 window.calcExam = function(input) {
     const row = input.closest('tr');
     const val = parseFloat(input.value) || 0;
-    // Auto-calculates the 50% weight for the final report
     row.querySelector('.half-exam').value = (val * 0.5).toFixed(1);
 };
 
@@ -114,7 +127,7 @@ window.saveExam = async function(studentId, btn) {
 
     try {
         await addDoc(collection(firestore, "exams"), {
-            teacherUid: currentTeacherUid,
+            teacherUid: currentTeacherUid, // Tied to teacher for data ownership
             studentId: studentId,
             department: dept,
             subject: sub,
@@ -130,7 +143,7 @@ window.saveExam = async function(studentId, btn) {
         console.error("Save Error:", e);
         btn.disabled = false;
         btn.innerText = "Retry";
-        alert("Permission denied. Check Firestore rules.");
+        alert("Permission denied. Ensure your Firestore rules allow teacher writes.");
     }
 };
 

@@ -1,16 +1,11 @@
+// 1. IMPORTS
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
 import { 
-    getFirestore, 
-    collection, 
-    addDoc, 
-    getDocs,    /* Added this */
-    query,      /* Added this */
-    where,      /* Added this */
-    serverTimestamp 
+    getFirestore, collection, addDoc, getDocs, query, where, serverTimestamp 
 } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
 
-// --- 1. FIREBASE CONFIG ---
+// 2. FIREBASE CONFIG
 const firebaseConfig = {
   apiKey: "AIzaSyBmlZD5EHWgt8DsocsPVZcf4MJVjeuC0Fw",
   authDomain: "reportbase-669ff.firebaseapp.com",
@@ -19,22 +14,50 @@ const firebaseConfig = {
   messagingSenderId: "244941864396",
   appId: "1:244941864396:web:aebc946e160a0172edf169"
 };
+
+// 3. INITIALIZATION
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const firestore = getFirestore(app);
 
+let allStudents = [];
 let currentTeacherUid = null;
 
-// Track Auth State
-onAuthStateChanged(auth, (user) => {
+// 4. AUTH & FILTERED STUDENT FETCHING
+onAuthStateChanged(auth, async (user) => {
     if (user) {
         currentTeacherUid = user.uid;
+        // Trigger the filtered fetch as soon as we have the teacher's UID
+        await fetchStudents(); 
     } else {
-        window.location.href = "index.html"; // Redirect if not logged in
+        window.location.href = "index.html"; 
     }
 });
 
-// --- 2. DYNAMIC SUBJECT POPULATION ---
+// UPDATED: Fetch students assigned ONLY to the current teacher
+async function fetchStudents() {
+    try {
+        const q = query(
+            collection(firestore, "users"), 
+            where("role", "==", "student"),
+            where("teacherId", "==", currentTeacherUid) // <--- The Ownership Filter
+        );
+        
+        const querySnapshot = await getDocs(q);
+        
+        allStudents = querySnapshot.docs.map(doc => ({
+            id: doc.id, 
+            name: `${doc.data().firstName} ${doc.data().lastName}`
+        }));
+        
+        console.log(`Success: Loaded ${allStudents.length} students assigned to you.`);
+    } catch (error) {
+        console.error("Error fetching filtered students:", error);
+        // Reminder: If you get a "requires an index" error, click the link in your browser console.
+    }
+}
+
+// 5. DYNAMIC SUBJECT POPULATION
 window.departmentchange = function() {
     const category = document.getElementById("category").value;
     const subjects = document.getElementById("subjects");
@@ -56,41 +79,16 @@ window.departmentchange = function() {
         });
     }
 };
-// --- 1. FETCH STUDENTS FROM DATABASE ---
-let allStudents = [];
 
-async function fetchStudents() {
-    try {
-        const q = query(collection(firestore, "users"), where("role", "==", "student"));
-        const querySnapshot = await getDocs(q);
-        
-        // Map the database results into a simple list
-        allStudents = querySnapshot.docs.map(doc => ({
-            id: doc.id, // This is the Index Number (e.g., KT-001)
-            name: `${doc.data().firstName} ${doc.data().lastName}`
-        }));
-        
-        console.log("Students loaded:", allStudents.length);
-    } catch (error) {
-        console.error("Error fetching students:", error);
-    }
-}
-
-// Update the Auth Observer to trigger the fetch
-onAuthStateChanged(auth, async (user) => {
-    if (user) {
-        currentTeacherUid = user.uid;
-        await fetchStudents(); // Load names as soon as teacher is authorized
-    } else {
-        window.location.href = "index.html";
-    }
-});
-
-// --- 3. TABLE ROW GENERATION ---
+// 6. TABLE ROW GENERATION
 window.SBA = function() {
     const studentCount = document.getElementById("studentcount").value;
     const tableHeader = document.getElementById("assessment_headerrow");
     const tableBody = document.getElementById("assessment_tablebody");
+
+    if (allStudents.length === 0) {
+        alert("No students found. Please register students first or check if the index is building.");
+    }
 
     tableHeader.innerHTML = `
         <th>Select Student</th>
@@ -105,7 +103,6 @@ window.SBA = function() {
 
     tableBody.innerHTML = "";
 
-    // Build the dropdown options from the database list
     let studentOptions = `<option value="">-- Choose Student --</option>`;
     allStudents.forEach(student => {
         studentOptions += `<option value="${student.id}">${student.name}</option>`;
@@ -131,7 +128,7 @@ window.SBA = function() {
     }
 };
 
-// --- 4. CALCULATIONS ---
+// 7. CALCULATIONS
 window.calculate = function(element) {
     const row = element.closest('tr');
     const getVal = (cls) => parseFloat(row.querySelector(cls).value) || 0;
@@ -145,13 +142,12 @@ window.calculate = function(element) {
     row.querySelector('.scale-score').value = scale.toFixed(1);
 };
 
-// --- 3. UPDATED SAVE LOGIC ---
+// 8. SAVE LOGIC (Tagged with Teacher ID)
 window.saveSingleRow = async function(button) {
     const row = button.closest('tr');
     const dept = document.getElementById("category").value;
     const subject = document.getElementById("subjects").value;
     
-    // Get ID and Name from the selected option
     const studentSelect = row.querySelector('.student-id-select');
     const studentId = studentSelect.value;
     const studentName = studentSelect.options[studentSelect.selectedIndex].text;
@@ -166,8 +162,8 @@ window.saveSingleRow = async function(button) {
 
     try {
         await addDoc(collection(firestore, "assessments"), {
-            teacherUid: currentTeacherUid,
-            studentId: studentId, // Links to their database record
+            teacherUid: currentTeacherUid, // Data ownership
+            studentId: studentId, 
             studentName: studentName,
             department: dept,
             subject: subject,
@@ -183,15 +179,17 @@ window.saveSingleRow = async function(button) {
         });
 
         button.innerText = "Saved";
-        button.style.backgroundColor = "rgba(0, 255, 136, 0.3)"; // Translucent green
+        button.style.backgroundColor = "rgba(0, 255, 136, 0.3)";
         button.style.color = "#00ff88";
     } catch (e) {
         console.error("Save Error:", e);
         button.disabled = false;
         button.innerText = "Retry";
+        alert("Failed to save. Check browser console for index link.");
     }
 };
 
+// 9. UI HELPERS
 window.toggleMenu = function() {
     const nav = document.getElementById("navover");
     if (nav) nav.classList.toggle("open");
