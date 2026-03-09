@@ -1,4 +1,4 @@
-// 1. IMPORTS (Ensure these match your version)
+// 1. IMPORTS
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
 import { 
@@ -16,18 +16,44 @@ const firebaseConfig = {
   measurementId: "G-KBTRR8YZFJ"
 };
 
-// 3. INITIALIZATION (The Critical Part)
+// 3. INITIALIZATION
 const app = initializeApp(firebaseConfig);
-const auth = getAuth(app); // Define it here
+const auth = getAuth(app);
 const firestore = getFirestore(app);
 
-// Attach them to window so other parts of the script/browser can see them if needed
+// Attach to window for global access
 window.auth = auth;
 window.firestore = firestore;
 
 let allStudents = []; 
 
-// NEW: REGISTRATION LOGIC
+// 4. AUTH OBSERVER
+onAuthStateChanged(auth, async (user) => {
+    const adminSec = document.getElementById("admin-section");
+    const statusMsg = document.getElementById("status-msg");
+
+    if (user) {
+        try {
+            const userDoc = await getDoc(doc(firestore, "users", user.uid));
+            if (userDoc.exists()) {
+                const userData = userDoc.data();
+                if (userData.role === "admin" || userData.role === "teacher") {
+                    if (adminSec) adminSec.style.display = "block";
+                    statusMsg.innerText = `Welcome, ${userData.firstName} (Staff)`;
+                    await fetchStudents(); 
+                } else {
+                    window.location.href = "student_report.html"; 
+                }
+            }
+        } catch (error) {
+            console.error("Auth error:", error);
+        }
+    } else { 
+        window.location.href = "index.html"; 
+    }
+});
+
+// 5. REGISTRATION & FETCHING
 async function registerStudent() {
     const indexNo = document.getElementById("reg-index").value.trim();
     const fname = document.getElementById("reg-fname").value.trim();
@@ -41,100 +67,135 @@ async function registerStudent() {
 
     try {
         status.innerText = "Processing...";
-        
-        // We use setDoc with indexNo as the ID. 
-        // This is the "Middle Man" record the student will search for during signup.
         await setDoc(doc(firestore, "users", indexNo), {
             firstName: fname,
             lastName: lname,
             indexNo: indexNo,
             role: "student",
-            accountStatus: "pending", // Changes to 'active' when student signs up
+            accountStatus: "pending",
             createdAt: serverTimestamp()
         });
-
-        status.style.color = "green";
-        status.innerText = `Success! ${fname} registered with ID: ${indexNo}`;
-        
-        // Clear inputs
-        document.getElementById("reg-index").value = "";
-        document.getElementById("reg-fname").value = "";
-        document.getElementById("reg-lname").value = "";
-
-        // Refresh the student list so they appear in the dropdown immediately
-        fetchStudents(); 
+        status.style.color = "cyan";
+        status.innerText = `Success! Registered: ${indexNo}`;
+        await fetchStudents(); // Refresh list for dropdowns
     } catch (error) {
-        console.error("Reg Error:", error);
-        status.style.color = "red";
         status.innerText = "Error: Check Firestore rules.";
     }
 }
 
-// HELPER: Refactor student fetching into a function so we can call it after registration
 async function fetchStudents() {
     const q = query(collection(firestore, "users"), where("role", "==", "student"));
     const querySnapshot = await getDocs(q);
     allStudents = querySnapshot.docs.map(doc => ({
-        // Use document ID (IndexNo) or the UID if they've signed up already
         uid: doc.id, 
         name: `${doc.data().firstName || ''} ${doc.data().lastName || ''}`.trim()
     }));
 }
-// Function to toggle the Dark Glass sidebar
+
+// 6. TABLE & UI LOGIC
+function table_head() {
+    const dept = document.getElementById("department").value;
+    const header = document.getElementById("headerrow");
+    if (!header) return;
+
+    let cols = "<th>SELECT STUDENT</th>";
+    const subjects = {
+        "Preschool": "<th>LIT</th><th>NUM</th><th>ARTS</th><th>WRIT</th>",
+        "LowerPrimary": "<th>ENG</th><th>MAT</th><th>SCI</th><th>TWI</th><th>HIS</th><th>RME</th><th>ART</th><th>FRE</th>",
+        "UpperPrimary": "<th>ENG</th><th>MAT</th><th>SCI</th><th>COMP</th><th>TWI</th><th>HIS</th><th>RME</th><th>ART</th><th>FRE</th>",
+        "JuniorHigh": "<th>ENG</th><th>MAT</th><th>SCI</th><th>COMP</th><th>TWI</th><th>SOC</th><th>RME</th><th>ART</th><th>FRE</th><th>TECH</th>"
+    };
+
+    if (subjects[dept]) cols += subjects[dept] + "<th>TOTAL</th>";
+    header.innerHTML = cols;
+}
+
+function genrows() {
+    const count = parseInt(document.getElementById("studentcount").value);
+    const dept = document.getElementById("department").value;
+    const tablebody = document.getElementById("tablebody");
+    tablebody.innerHTML = "";
+
+    const subjectMap = {
+        "Preschool": ["LITERACY", "NUMERACY", "ARTS", "WRITING"],
+        "LowerPrimary": ["ENGLISH", "MATHS", "SCIENCE", "TWI", "HISTORY", "RME", "ARTS", "FRENCH"],
+        "UpperPrimary": ["ENGLISH", "MATHS", "SCIENCE", "COMPUTING", "TWI", "HISTORY", "RME", "ARTS", "FRENCH"],
+        "JuniorHigh": ["ENGLISH", "MATHS", "SCIENCE", "COMPUTING", "TWI", "SOCIAL", "RME", "ARTS", "FRENCH", "TECH"]
+    };
+
+    const currentSubs = subjectMap[dept] || [];
+
+    for (let i = 0; i < count; i++) {
+        const tr = document.createElement("tr");
+        let studentOptions = `<option value="">-- Select Student --</option>`;
+        allStudents.forEach(s => {
+            studentOptions += `<option value="${s.uid}">${s.name}</option>`;
+        });
+
+        let rowHTML = `<td><select class="student-select">${studentOptions}</select></td>`;
+        currentSubs.forEach(sub => {
+            rowHTML += `<td><input type="number" name="${sub}" class="score" oninput="calculateRowTotal(this)"></td>`;
+        });
+        rowHTML += `<td><input type="number" class="total-box" readonly></td>`;
+        tr.innerHTML = rowHTML;
+        tablebody.appendChild(tr);
+    }
+}
+
+function calculateRowTotal(input) {
+    const row = input.closest('tr');
+    const scores = row.querySelectorAll('.score');
+    let sum = 0;
+    scores.forEach(s => sum += Number(s.value) || 0);
+    const totalBox = row.querySelector('.total-box');
+    if (totalBox) totalBox.value = sum;
+}
+
+async function saveReport() {
+    const rows = document.querySelectorAll("#tablebody tr");
+    const dept = document.getElementById("department").value;
+
+    try {
+        for (let row of rows) {
+            const studentId = row.querySelector(".student-select").value;
+            if (!studentId) continue;
+
+            const scores = {};
+            row.querySelectorAll(".score").forEach(input => {
+                scores[input.name] = input.value;
+            });
+
+            await addDoc(collection(firestore, "reports"), {
+                studentUid: studentId,
+                department: dept,
+                scores: scores,
+                total: row.querySelector(".total-box").value,
+                teacherUid: auth.currentUser.uid,
+                timestamp: serverTimestamp()
+            });
+        }
+        alert("Reports Saved Successfully!");
+    } catch (e) {
+        alert("Error saving: " + e.message);
+    }
+}
+
+// 7. MENU & EXPORTS
 window.toggleMenu = function() {
     const navOverlay = document.getElementById("navover");
     const navBtn = document.getElementById("navigation");
-    
-    // Toggle the 'open' class on the overlay
     navOverlay.classList.toggle("open");
-    
-    // Optional: Change the hamburger icon to an 'X' when open
-    if (navOverlay.classList.contains("open")) {
-        navBtn.innerHTML = "&times;"; // Multiplications sign (X)
-    } else {
-        navBtn.innerHTML = "&#9776;"; // Hamburger icon
-    }
+    navBtn.innerHTML = navOverlay.classList.contains("open") ? "&times;" : "&#9776;";
 };
 
-// UPDATE AUTH OBSERVER
-onAuthStateChanged(auth, async (user) => {
-    const adminSec = document.getElementById("admin-section");
-    const statusMsg = document.getElementById("status-msg");
-
-    if (user) {
-        const userDoc = await getDoc(doc(firestore, "users", user.uid));
-        if (userDoc.exists() && (userDoc.data().role === "admin" || userDoc.data().role === "teacher")) {
-            if (adminSec) adminSec.style.display = "block";
-            statusMsg.innerText = `Welcome, ${userDoc.data().firstName} (Staff)`;
-            await fetchStudents(); // Load existing students
-        } else {
-            window.location.href = "student_report.html"; 
-        }
-    } else { 
-        window.location.href = "index.html"; 
-    }
-});
-
-// ... (Keep existing table_head, genrows, calculateRowTotal, toggleMenu, saveReport)
-// 1. Expose functions to the HTML (fixes the "not defined" errors)
+// EXPOSE TO GLOBAL (Essential for HTML onclicks)
 window.table_head = table_head;
 window.genrows = genrows;
-window.toggleMenu = toggleMenu;
 window.saveReport = saveReport;
 window.calculateRowTotal = calculateRowTotal;
 window.registerStudent = registerStudent;
 
-// 2. Event Listeners for buttons that DON'T use 'onclick' in HTML
-document.addEventListener("DOMContentLoaded", () => {
-    const genBtn = document.getElementById("btnGenerate");
-    const saveBtn = document.getElementById("btnSave");
-    const regBtn = document.getElementById("btnRegisterStudent");
-
-    if (genBtn) genBtn.addEventListener("click", genrows);
-    if (saveBtn) saveBtn.addEventListener("click", saveReport);
-    if (regBtn) regBtn.addEventListener("click", registerStudent);
-});
-// UPDATE EVENT LISTENERS
+// 8. EVENT LISTENERS
 document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("btnGenerate")?.addEventListener("click", genrows);
     document.getElementById("btnSave")?.addEventListener("click", saveReport);
