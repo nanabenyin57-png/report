@@ -1,11 +1,31 @@
-// 1. UPDATE IMPORTS (Added setDoc)
+// 1. IMPORTS (Ensure these match your version)
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
 import { 
     getFirestore, doc, getDoc, getDocs, collection, query, where, addDoc, setDoc, serverTimestamp 
 } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
 
-// ... (Keep existing config and initialization)
+// 2. CONFIG
+const firebaseConfig = {
+  apiKey: "AIzaSyBmlZD5EHWgt8DsocsPVZcf4MJVjeuC0Fw",
+  authDomain: "reportbase-669ff.firebaseapp.com",
+  projectId: "reportbase-669ff",
+  storageBucket: "reportbase-669ff.firebasestorage.app",
+  messagingSenderId: "244941864396",
+  appId: "1:244941864396:web:aebc946e160a0172edf169",
+  measurementId: "G-KBTRR8YZFJ"
+};
+
+// 3. INITIALIZATION (The Critical Part)
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app); // Define it here
+const firestore = getFirestore(app);
+
+// Attach them to window so other parts of the script/browser can see them if needed
+window.auth = auth;
+window.firestore = firestore;
+
+let allStudents = []; 
 
 // NEW: REGISTRATION LOGIC
 async function registerStudent() {
