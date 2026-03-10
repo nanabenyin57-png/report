@@ -1,11 +1,22 @@
-// 1. IMPORTS
+// 1. CLEAN & INTACT IMPORTS
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
-import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
 import { 
-    getFirestore, doc, getDoc, getDocs, collection, query, where, setDoc, 
+    getAuth, 
+    onAuthStateChanged 
+} from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
+import { 
+    getFirestore, 
+    doc, 
+    getDoc, 
+    getDocs, 
+    collection, 
+    query, 
+    where, 
+    setDoc, 
     addDoc, 
     serverTimestamp 
 } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
+
 
 
 // 2. CONFIG
