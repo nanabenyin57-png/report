@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Profile | K_Tawiah</title>
+    <link rel="stylesheet" href="report.css">
+    <style>
+        .profile-header { text-align: center; padding: 40px; }
+        .results-grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); 
+            gap: 20px; padding: 20px; 
+        }
+        .subject-card { 
+            padding: 20px; border-radius: 15px; 
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .grade-badge { font-size: 1.5rem; color: #00e5ff; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="profile-header glass-card">
+            <h1 id="prof-name">Loading Profile...</h1>
+            <p id="prof-index">Index: --</p>
+            <h3 id="prof-avg">Average: --</h3>
+        </div>
+    </header>
+
+    <main class="results-grid" id="results-container">
+        </main>
+
+    <script type="module" src="profile.js"></script>
+</body>
+</html>
