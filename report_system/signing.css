@@ -47,6 +47,28 @@
     width: 420px;
     height: 550px;
 }
+.role-select {
+    width: 93%; /* Matches your other inputs */
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    color: #ffe4b5;
+    margin-bottom: 10px;
+    cursor: pointer;
+    outline: none;
+}
+
+.role-select option {
+    background: #1a1a1a; /* Dark background so options are readable */
+    color: #ffe4b5;
+}
+
+#indexFieldWrapper p {
+    margin: 5px 0;
+    font-size: 0.85rem;
+    color: rgba(255, 228, 181, 0.7); /* Matching your Moccasin theme */
+}
 
 /* --- THE INPUTS (Textarea/Inputs) --- */
 textarea, input {

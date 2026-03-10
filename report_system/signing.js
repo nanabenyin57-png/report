@@ -46,16 +46,38 @@ window.signup_page = function() {
     const sign = document.getElementById("signingpage");
     sign.innerHTML = `
     <div class="signup-container">
-        <h3>Create Student Account</h3>
-        <p style="font-size: 0.8rem; color: #666;">Enter your Index Number to sync with teacher records.</p>
-        <input type="text" placeholder="Index Number" id="indexno" class="indexno" required>
-        <input type="text" placeholder="First Name" id="firstname" class="firstname" required>
-        <input type="text" placeholder="Last Name" id="lastname" class="lastname" required>
-        <input type="email" placeholder="Email" id="email" class="email" required>
-        <input type="password" placeholder="Password" id="password" class="pass" required>
-        <input type="password" placeholder="Confirm Password" id="confirmpassword" class="confirmpass" required>
-        <button onclick="handlesignup()" class="signup-button">Sync & Register</button>
+        <h3>Create Account</h3>
+        
+        <select id="userRole" onchange="toggleIndexField()" class="role-select">
+            <option value="student">Student Account</option>
+            <option value="teacher">Teacher Account</option>
+        </select>
+
+        <div id="indexFieldWrapper">
+            <p>Enter your Index Number to sync with records.</p>
+            <input type="text" placeholder="Index Number" id="indexno" class="indexno">
+        </div>
+
+        <input type="text" placeholder="First Name" id="firstname" required>
+        <input type="text" placeholder="Last Name" id="lastname" required>
+        <input type="email" placeholder="Email" id="email" required>
+        <input type="password" placeholder="Password" id="password" required>
+        <input type="password" placeholder="Confirm Password" id="confirmpassword" required>
+        
+        <button onclick="handlesignup()" class="signup-button">Register Account</button>
     </div>`;
+};
+
+// This function handles the "Magic" of hiding/showing the Index field
+window.toggleIndexField = function() {
+    const role = document.getElementById('userRole').value;
+    const indexWrapper = document.getElementById('indexFieldWrapper');
+    
+    if (role === 'teacher') {
+        indexWrapper.style.display = 'none';
+    } else {
+        indexWrapper.style.display = 'block';
+    }
 };
 
 // 5. FIREBASE LOGIC FUNCTIONS
