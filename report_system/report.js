@@ -6,7 +6,7 @@ import {
     addDoc, 
     serverTimestamp 
 } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
-import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
 
 // 2. CONFIG
 const firebaseConfig = {
