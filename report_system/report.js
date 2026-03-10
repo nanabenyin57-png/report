@@ -6,6 +6,7 @@ import {
     addDoc, 
     serverTimestamp 
 } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
+import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 // 2. CONFIG
 const firebaseConfig = {
@@ -53,6 +54,27 @@ onAuthStateChanged(auth, async (user) => {
     }
 });
 
+
+async function checkTeacherStatus(user) {
+    const userDocRef = doc(db, "users", user.uid);
+    const userSnap = await getDoc(userDocRef);
+
+    if (userSnap.exists()) {
+        const userData = userSnap.data();
+
+        if (userData.role === "teacher") {
+            if (userData.authorized === true) {
+                // SUCCESS: Show the full glassmorphic dashboard
+                document.getElementById("dashboard-section").style.display = "block";
+                document.getElementById("pending-screen").style.display = "none";
+            } else {
+                // LOCKED: Show the "Wait for Admin" screen
+                document.getElementById("dashboard-section").style.display = "none";
+                document.getElementById("pending-screen").style.display = "flex";
+            }
+        }
+    }
+}
 // 5. FETCH ONLY MY STUDENTS
 async function fetchStudents() {
     try {
