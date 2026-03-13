@@ -17,30 +17,63 @@
                 <ul class="links">
                     <li><a href="student_report.html">My Results</a></li>
                     <li><a href="index.html" style="color: #ff4d4d;">Logout</a></li>
+                    <li><a href="report.html">Teacher's Dashboard</a></li>
                 </ul>
             </div>
         </nav>
     </header>
+<article class="results-card glass-panel">
+    <div class="report-header">
+        <h2>SCHOOL</h2>
+        <p> Kumasi - Ghana</p>
+        <div class="report-title">TERMINAL REPORT</div>
+    </div>
 
-    <main class="container">
-        <section class="welcome-banner">
-            <h2 id="student-welcome">Fetching your profile...</h2>
-            <p>Academic Record - K_Tawiah Education System</p>
-        </section>
+    <div class="student-info-grid">
+        <div class="info-item"><strong>NAME:</strong> <span id="card-name">...</span></div>
+        <div class="info-item"><strong>CLASS:</strong> <span id="card-class">...</span></div>
+        <div class="info-item"><strong>ACADEMIC YEAR:</strong> <span id="card-year">2026</span></div>
+        <div class="info-item"><strong>TERM:</strong> <span id="card-term">ONE</span></div>
+        <div class="info-item"><strong>POSITION:</strong> <span id="card-pos">...</span></div>
+        <div class="info-item"><strong>ROLL:</strong> <span id="card-roll">...</span></div>
+    </div>
 
-        <article class="results-card">
-            <div id="results-container">
-                <div class="loader">
-                    <p>Connecting to database...</p>
-                </div>
-            </div>
-        </article>
-    </main>
+    <table class="report-table">
+        <thead>
+            <tr>
+                <th>SUBJECTS</th>
+                <th>CLASS SCORE (50%)</th>
+                <th>EXAM SCORE (50%)</th>
+                <th>TOTAL SCORE (100%)</th>
+                <th>GRADE</th>
+                <th>TEACHER</th>
+            </tr>
+        </thead>
+        <tbody id="report-body">
+            </tbody>
+    </table>
+
+    <div class="assessment-section">
+        <div class="remark-row"><span>INTEREST:</span> <span id="res-interest" class="underline"></span></div>
+        <div class="remark-row"><span>CONDUCT:</span> <span id="res-conduct" class="underline"></span></div>
+        <div class="remark-row"><span>ATTITUDE:</span> <span id="res-attitude" class="underline"></span></div>
+        <div class="remark-row"><span>CLASS TEACHER'S REMARK:</span> <span id="res-t-remark" class="underline"></span></div>
+        <div class="remark-row"><span>ACADEMIC REMARK:</span> <span id="res-a-remark" class="underline"></span></div>
+    </div>
+
+    <div class="grading-key">
+        <div class="key-box">80-100: A (Advance)</div>
+        <div class="key-box">75-79: P (Proficient)</div>
+        <div class="key-box">70-74: AP (Approaching Proficiency)</div>
+        <div class="key-box">65-69: D (Developing)</div>
+        <div class="key-box">54 & Below: B (Beginning)</div>
+    </div>
+</article>
 
     <footer>
         <p>&copy; 2026 K_Tawiah Student Portal | Secured by Firebase</p>
     </footer>
 
-    <script type="module" src="student_view.js"></script>
+    <script type="module" src="studentREPORT.js"></script>
 </body>
 </html>
