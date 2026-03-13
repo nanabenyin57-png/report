@@ -68,6 +68,6 @@ function getLetterGrade(score) {
     if (score >= 70) return "B";
     if (score >= 60) return "C";
     if (score >= 50) return "D";
-    IF (score >= 40) return "E";
+    if (score >= 40) return "E";
     return "F";
 }
