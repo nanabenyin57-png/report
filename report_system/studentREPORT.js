@@ -2,31 +2,50 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebas
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
 import { getFirestore, doc, getDoc, getDocs, collection, query, where } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
 
-const firebaseConfig = { /* Your Config */ };
+// 1. FULL CONFIG (Must be present in every JS file that uses Firebase)
+const firebaseConfig = {
+  apiKey: "AIzaSyBmlZD5EHWgt8DsocsPVZcf4MJVjeuC0Fw",
+  authDomain: "reportbase-669ff.firebaseapp.com",
+  projectId: "reportbase-669ff",
+  storageBucket: "reportbase-669ff.firebasestorage.app",
+  messagingSenderId: "244941864396",
+  appId: "1:244941864396:web:aebc946e160a0172edf169",
+  measurementId: "G-KBTRR8YZFJ"
+};
+
+// 2. INITIALIZE
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
+// 3. GET ID FROM URL
+const urlParams = new URLSearchParams(window.location.search);
+const studentIdFromUrl = urlParams.get('id');
+
+// 4. AUTH OBSERVER (Only one listener needed)
 onAuthStateChanged(auth, async (user) => {
     if (user) {
-        loadTerminalReport(user.uid);
+        // Use ID from URL (Teacher/Admin view) OR logged-in user (Student view)
+        const targetId = studentIdFromUrl || user.uid;
+        console.log("Loading report for ID:", targetId);
+        loadTerminalReport(targetId);
     } else {
         window.location.href = "index.html";
     }
 });
 
+// 5. CORE FUNCTION
 async function loadTerminalReport(studentId) {
     try {
-        // 1. Fetch Student Profile for Header Data
+        // Fetch Basic Info
         const userDoc = await getDoc(doc(db, "users", studentId));
         if (userDoc.exists()) {
             const userData = userDoc.data();
             document.getElementById("card-name").innerText = `${userData.firstName} ${userData.lastName}`.toUpperCase();
             document.getElementById("card-class").innerText = userData.department || "N/A";
-            document.getElementById("student-welcome").innerText = `Welcome, ${userData.firstName}`;
         }
 
-        // 2. Fetch Remarks & Assessment
+        // Fetch Remarks
         const remarkDoc = await getDoc(doc(db, "student_remarks", studentId));
         if (remarkDoc.exists()) {
             const r = remarkDoc.data();
@@ -38,7 +57,7 @@ async function loadTerminalReport(studentId) {
             document.getElementById("res-a-remark").innerText = r.headRemarks || "---";
         }
 
-        // 3. Fetch Subject Scores
+        // Fetch Scores
         const scoreQuery = query(collection(db, "published_reports"), where("studentId", "==", studentId));
         const scoreSnap = await getDocs(scoreQuery);
         
@@ -51,37 +70,26 @@ async function loadTerminalReport(studentId) {
                     <td>${s.sba50}</td>
                     <td>${s.exam50}</td>
                     <td style="font-weight:bold;">${s.total100}</td>
-                    <td>${getLetterGrade(s.total100)}</td>
+                    <td>${getLetterGrade(parseFloat(s.total100))}</td>
                     <td>STAFF</td>
                 </tr>`;
         });
-        document.getElementById("report-body").innerHTML = reportHTML || "<tr><td colspan='6'>No records found for this term.</td></tr>";
+        
+        const container = document.getElementById("report-body");
+        if (container) {
+            container.innerHTML = reportHTML || "<tr><td colspan='6'>No records found for this term.</td></tr>";
+        }
 
     } catch (error) {
         console.error("Error generating report:", error);
     }
 }
 
-// Helper to match the Image's Grading System
+// 6. GRADING LOGIC
 function getLetterGrade(score) {
-    if (score >= 80) return "A";
-    if (score >= 70) return "B";
-    if (score >= 60) return "C";
-    if (score >= 50) return "D";
-    if (score >= 40) return "E";
-    return "F";
+    if (score >= 80) return "A (Advance)";
+    if (score >= 75) return "P (Proficient)";
+    if (score >= 70) return "AP (Approaching Proficiency)";
+    if (score >= 65) return "D (Developing)";
+    return "B (Beginning)";
 }
-// 1. Get ID from URL (if it exists)
-const urlParams = new URLSearchParams(window.location.search);
-const studentIdFromUrl = urlParams.get('id');
-
-onAuthStateChanged(auth, async (user) => {
-    if (user) {
-        // If there's an ID in the URL, use that (Teacher view)
-        // Otherwise, use the logged-in user's ID (Student view)
-        const targetId = studentIdFromUrl || user.uid;
-        loadTerminalReport(targetId);
-    } else {
-        window.location.href = "index.html";
-    }
-});
