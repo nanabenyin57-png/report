@@ -71,3 +71,17 @@ function getLetterGrade(score) {
     if (score >= 40) return "E";
     return "F";
 }
+// 1. Get ID from URL (if it exists)
+const urlParams = new URLSearchParams(window.location.search);
+const studentIdFromUrl = urlParams.get('id');
+
+onAuthStateChanged(auth, async (user) => {
+    if (user) {
+        // If there's an ID in the URL, use that (Teacher view)
+        // Otherwise, use the logged-in user's ID (Student view)
+        const targetId = studentIdFromUrl || user.uid;
+        loadTerminalReport(targetId);
+    } else {
+        window.location.href = "index.html";
+    }
+});

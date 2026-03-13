@@ -1,4 +1,4 @@
-// 1. CLEAN & INTACT IMPORTS
+// 1. IMPORTS
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
 import { 
     getAuth, 
@@ -13,11 +13,8 @@ import {
     query, 
     where, 
     setDoc, 
-    addDoc, 
     serverTimestamp 
 } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
-
-
 
 // 2. CONFIG
 const firebaseConfig = {
@@ -65,28 +62,7 @@ onAuthStateChanged(auth, async (user) => {
     }
 });
 
-
-async function checkTeacherStatus(user) {
-    const userDocRef = doc(db, "users", user.uid);
-    const userSnap = await getDoc(userDocRef);
-
-    if (userSnap.exists()) {
-        const userData = userSnap.data();
-
-        if (userData.role === "teacher") {
-            if (userData.authorized === true) {
-                // SUCCESS: Show the full glassmorphic dashboard
-                document.getElementById("dashboard-section").style.display = "block";
-                document.getElementById("pending-screen").style.display = "none";
-            } else {
-                // LOCKED: Show the "Wait for Admin" screen
-                document.getElementById("dashboard-section").style.display = "none";
-                document.getElementById("pending-screen").style.display = "flex";
-            }
-        }
-    }
-}
-// 5. FETCH ONLY MY STUDENTS
+// 5. FETCH STUDENTS
 async function fetchStudents() {
     try {
         const q = query(
@@ -100,9 +76,9 @@ async function fetchStudents() {
             uid: doc.id, 
             name: `${doc.data().firstName || ''} ${doc.data().lastName || ''}`.trim()
         }));
-        console.log(`Success: Loaded ${allStudents.length} of your students.`);
+        console.log(`Success: Loaded ${allStudents.length} students.`);
     } catch (error) {
-        console.error("Error fetching filtered students:", error);
+        console.error("Error fetching students:", error);
     }
 }
 
@@ -113,7 +89,7 @@ window.registerStudent = async function() {
     const lname = document.getElementById("reg-lname").value.trim();
     const status = document.getElementById("reg-status");
 
-    if (!indexNo || !fname || !lname) return alert("Please fill all registration fields!");
+    if (!indexNo || !fname || !lname) return alert("Please fill all fields!");
 
     status.innerText = "Creating Profile...";
     try {
@@ -128,17 +104,10 @@ window.registerStudent = async function() {
         
         status.style.color = "#00ff88";
         status.innerText = `Success: ${indexNo} Registered`;
-        
-        // Clear inputs and refresh list
-        document.getElementById("reg-index").value = "";
-        document.getElementById("reg-fname").value = "";
-        document.getElementById("reg-lname").value = "";
         await fetchStudents(); 
-        
     } catch (e) {
         console.error(e);
-        status.style.color = "#ff4d4d";
-        status.innerText = "Error: Check Firestore Rules.";
+        status.innerText = "Registration Error.";
     }
 };
 
@@ -149,10 +118,10 @@ window.generateFinalReport = async function() {
 
     if (dept === "choose_a_department") return alert("Please select a department!");
 
-    tablebody.innerHTML = "<tr><td colspan='6' style='text-align:center;'>Merging Assessment and Exam data...</td></tr>";
+    tablebody.innerHTML = "<tr><td colspan='6' style='text-align:center;'>Merging Data...</td></tr>";
 
     try {
-        let reportHTML = "";
+        let reportHTML = ""; // Defined here to avoid ReferenceError
 
         for (let student of allStudents) {
             const [sbaSnap, examSnap] = await Promise.all([
@@ -175,7 +144,11 @@ window.generateFinalReport = async function() {
 
                 reportHTML += `
                     <tr>
-                        <td>${student.name}</td>
+                        <td>
+                            <button class="view-card-btn" onclick="window.viewReportCard('${student.uid}')">
+                                ${student.name}
+                            </button>
+                        </td>
                         <td>${sub}</td>
                         <td>${sba.toFixed(1)}</td>
                         <td>${exam.toFixed(1)}</td>
@@ -188,7 +161,7 @@ window.generateFinalReport = async function() {
         tablebody.innerHTML = reportHTML || "<tr><td colspan='6'>No records found.</td></tr>";
     } catch (e) {
         console.error(e);
-        alert("Compilation failed. Check browser console.");
+        alert("Compilation failed.");
     }
 };
 
@@ -203,35 +176,14 @@ function calculateGrade(score) {
     return "F9 (Fail)";
 }
 
-// INSIDE your generateFinalReport loop in report.js:
-
-// Find this section:
-reportHTML += `
-    <tr>
-        <td>
-            <button class="view-card-btn" onclick="window.viewReportCard('${student.uid}')">
-                ${student.name}
-            </button>
-        </td>
-        <td>${sub}</td>
-        <td>${sba.toFixed(1)}</td>
-        <td>${exam.toFixed(1)}</td>
-        <td style="color:#00e5ff; font-weight:bold;">${total.toFixed(1)}</td>
-        <td>${calculateGrade(total)}</td>
-    </tr>
-`;
-
 // 9. PUBLISH TO STUDENTS
 window.publishToStudents = async function() {
     const rows = document.querySelectorAll("#tablebody tr");
     const dept = document.getElementById("department").value;
 
-    if (rows.length === 0 || rows[0].cells.length < 6) {
-        return alert("Please generate the report first!");
-    }
+    if (rows.length === 0 || rows[0].cells.length < 6) return alert("Generate report first!");
 
     const btn = document.getElementById("btnSave");
-    btn.disabled = true;
     btn.innerText = "Publishing...";
 
     try {
@@ -246,7 +198,6 @@ window.publishToStudents = async function() {
 
             const student = allStudents.find(s => s.name === studentName);
             const studentId = student ? student.uid : "unknown";
-
             const reportId = `${studentId}_${subject.replace(/\s+/g, '_')}`; 
             
             await setDoc(doc(firestore, "published_reports", reportId), {
@@ -262,21 +213,22 @@ window.publishToStudents = async function() {
                 publishedAt: serverTimestamp()
             });
         }
-
-        alert("All results published!");
+        alert("Published!");
         btn.innerText = "Published Successfully";
-        btn.style.background = "rgba(0, 255, 136, 0.3)";
     } catch (error) {
-        console.error("Publish Error:", error);
-        alert("Failed to publish.");
-        btn.disabled = false;
-        btn.innerText = "Publish to Students";
+        console.error(error);
+        btn.innerText = "Error Publishing";
     }
 };
 
-// 10. UI HANDLERS
+// 10. UI & NAVIGATION HANDLERS
 window.toggleMenu = function() {
     document.getElementById("navover").classList.toggle("open");
+};
+
+window.viewReportCard = function(studentId) {
+    if (!studentId) return alert("Student ID not found.");
+    window.location.href = `student_reportcard.html?id=${studentId}`;
 };
 
 // 11. EVENT LISTENERS

@@ -225,3 +225,18 @@ td {
 ::-webkit-scrollbar-thumb:hover {
     background: var(--primary-blue);
 }
+.view-card-btn {
+    background: none;
+    border: none;
+    color: #ffe4b5; /* Moccasin color to match your theme */
+    text-decoration: underline;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: inherit;
+    padding: 0;
+}
+
+.view-card-btn:hover {
+    color: #00e5ff;
+    text-shadow: 0 0 8px rgba(0, 229, 255, 0.5);
+}
