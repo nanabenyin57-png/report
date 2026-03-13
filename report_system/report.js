@@ -203,6 +203,24 @@ function calculateGrade(score) {
     return "F9 (Fail)";
 }
 
+// INSIDE your generateFinalReport loop in report.js:
+
+// Find this section:
+reportHTML += `
+    <tr>
+        <td>
+            <button class="view-card-btn" onclick="window.viewReportCard('${student.uid}')">
+                ${student.name}
+            </button>
+        </td>
+        <td>${sub}</td>
+        <td>${sba.toFixed(1)}</td>
+        <td>${exam.toFixed(1)}</td>
+        <td style="color:#00e5ff; font-weight:bold;">${total.toFixed(1)}</td>
+        <td>${calculateGrade(total)}</td>
+    </tr>
+`;
+
 // 9. PUBLISH TO STUDENTS
 window.publishToStudents = async function() {
     const rows = document.querySelectorAll("#tablebody tr");
