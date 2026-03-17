@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
-import { getFirestore, doc, getDoc, getDocs, collection, query, where } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
+import { getFirestore, doc, getDoc, setDoc, getDocs, collection, query, where, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
 
 // --- START CONFIG ---
 const firebaseConfig = {
@@ -14,50 +14,61 @@ const firebaseConfig = {
 };
 // --- END CONFIG ---
 
-// Initialize Firebase immediately
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// Check for ID in URL
 const urlParams = new URLSearchParams(window.location.search);
 const studentIdFromUrl = urlParams.get('id');
 
-onAuthStateChanged(auth, (user) => {
+onAuthStateChanged(auth, async (user) => {
     if (user) {
+        // 1. Check if the logged-in user is a Teacher
+        const viewerDoc = await getDoc(doc(db, "users", user.uid));
+        const userData = viewerDoc.data();
+        const isTeacher = userData && (userData.role === "teacher" || userData.role === "admin");
+
+        // 2. Decide whose report card to show
         const targetId = studentIdFromUrl || user.uid;
-        loadTerminalReport(targetId);
+        loadTerminalReport(targetId, isTeacher);
     } else {
-        // Only redirect if we are SURE there is no user
-        console.warn("No user found, redirecting to login...");
         window.location.replace("index.html"); 
     }
 });
 
-
-async function loadTerminalReport(studentId) {
+async function loadTerminalReport(studentId, isTeacher) {
     try {
-        // 1. Student Info
+        // A. Load Student Profile Info
         const userDoc = await getDoc(doc(db, "users", studentId));
         if (userDoc.exists()) {
-            const userData = userDoc.data();
-            document.getElementById("card-name").innerText = `${userData.firstName} ${userData.lastName}`.toUpperCase();
-            document.getElementById("card-class").innerText = userData.department || "N/A";
+            const s = userDoc.data();
+            document.getElementById("card-name").innerText = `${s.firstName} ${s.lastName}`.toUpperCase();
+            document.getElementById("card-class").innerText = s.department || "N/A";
         }
 
-        // 2. Remarks
+        // B. Setup Editing Mode for Teachers
+        if (isTeacher) {
+            enableTeacherEditing(studentId);
+        }
+
+        // C. Load Remarks Data
         const remarkDoc = await getDoc(doc(db, "student_remarks", studentId));
         if (remarkDoc.exists()) {
             const r = remarkDoc.data();
-            document.getElementById("card-pos").innerText = r.position || "---";
-            document.getElementById("card-roll").innerText = r.classSize || "---";
-            document.getElementById("res-interest").innerText = r.interest || "---";
-            document.getElementById("res-conduct").innerText = r.conduct || "---";
-            document.getElementById("res-t-remark").innerText = r.teacherRemarks || "---";
-            document.getElementById("res-a-remark").innerText = r.headRemarks || "---";
+            if (isTeacher) {
+                if(document.getElementById("inp-interest")) document.getElementById("inp-interest").value = r.interest || "";
+                if(document.getElementById("inp-conduct")) document.getElementById("inp-conduct").value = r.conduct || "";
+                if(document.getElementById("inp-t-remark")) document.getElementById("inp-t-remark").value = r.teacherRemarks || "";
+                if(document.getElementById("inp-a-remark")) document.getElementById("inp-a-remark").value = r.headRemarks || "";
+            } else {
+                document.getElementById("res-interest").innerText = r.interest || "---";
+                document.getElementById("res-conduct").innerText = r.conduct || "---";
+                document.getElementById("res-t-remark").innerText = r.teacherRemarks || "---";
+                document.getElementById("res-a-remark").innerText = r.headRemarks || "---";
+            }
         }
 
-        // 3. Scores
+        // D. Load Subject Scores
         const scoreQuery = query(collection(db, "published_reports"), where("studentId", "==", studentId));
         const scoreSnap = await getDocs(scoreQuery);
         
@@ -82,30 +93,65 @@ async function loadTerminalReport(studentId) {
     }
 }
 
-function getLetterGrade(score) {
-    if (score >= 80) return "A";
-    if (score >= 75) return "P";
-    if (score >= 70) return "AP";
-    if (score >= 65) return "D";
-    return "B";
+function enableTeacherEditing(studentId) {
+    // Show the Save button (Make sure this ID exists in your HTML)
+    const saveBtn = document.getElementById("btnSaveRemarks");
+    if(saveBtn) saveBtn.style.display = "block";
+
+    // Convert static spans to Input fields
+    const fields = [
+        { id: "res-interest", inputId: "inp-interest" },
+        { id: "res-conduct", inputId: "inp-conduct" },
+        { id: "res-t-remark", inputId: "inp-t-remark" },
+        { id: "res-a-remark", inputId: "inp-a-remark" }
+    ];
+
+    fields.forEach(field => {
+        const el = document.getElementById(field.id);
+        if (el) {
+            el.innerHTML = `<input type="text" id="${field.inputId}" class="edit-input" placeholder="Type here...">`;
+        }
+    });
+
+    // Save Logic
+    if(saveBtn) {
+        saveBtn.onclick = async () => {
+            saveBtn.innerText = "Saving...";
+            try {
+                await setDoc(doc(db, "student_remarks", studentId), {
+                    interest: document.getElementById("inp-interest").value,
+                    conduct: document.getElementById("inp-conduct").value,
+                    teacherRemarks: document.getElementById("inp-t-remark").value,
+                    headRemarks: document.getElementById("inp-a-remark").value,
+                    lastUpdated: serverTimestamp()
+                }, { merge: true });
+                
+                saveBtn.innerText = "Saved Successfully!";
+                saveBtn.style.background = "var(--secondary-neon)";
+                saveBtn.style.color = "#000";
+            } catch (e) {
+                console.error(e);
+                saveBtn.innerText = "Error Saving";
+            }
+        };
+    }
 }
 
-// UI HANDLER - Toggle Menu
+function getLetterGrade(score) {
+    if (score >= 80) return "A (Advance)";
+    if (score >= 75) return "P (Proficient)";
+    if (score >= 70) return "AP (Approaching Proficiency)";
+    if (score >= 65) return "D (Developing)";
+    return "B (Beginning)";
+}
+
+// NAVIGATION HANDLERS
 window.toggleMenu = function() {
     const nav = document.getElementById("navover");
-    if (nav) {
-        nav.classList.toggle("open");
-    }
+    if (nav) nav.classList.toggle("open");
 };
 
-// Close menu when clicking a link
-document.querySelectorAll('.links a').forEach(link => {
-    link.addEventListener('click', () => {
-        document.getElementById("navover").classList.remove("open");
-    });
-});
 window.viewReportCard = function(studentId) {
     if (!studentId) return alert("Student ID not found.");
-    // This is likely the culprit
     window.location.href = `student_report.html?id=${studentId}`;
 };
