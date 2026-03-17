@@ -51,22 +51,22 @@ async function loadTerminalReport(studentId, isTeacher) {
             enableTeacherEditing(studentId);
         }
 
-        // C. Load Remarks Data
-        const remarkDoc = await getDoc(doc(db, "student_remarks", studentId));
-        if (remarkDoc.exists()) {
-            const r = remarkDoc.data();
-            if (isTeacher) {
-                if(document.getElementById("inp-interest")) document.getElementById("inp-interest").value = r.interest || "";
-                if(document.getElementById("inp-conduct")) document.getElementById("inp-conduct").value = r.conduct || "";
-                if(document.getElementById("inp-t-remark")) document.getElementById("inp-t-remark").value = r.teacherRemarks || "";
-                if(document.getElementById("inp-a-remark")) document.getElementById("inp-a-remark").value = r.headRemarks || "";
-            } else {
-                document.getElementById("res-interest").innerText = r.interest || "---";
-                document.getElementById("res-conduct").innerText = r.conduct || "---";
-                document.getElementById("res-t-remark").innerText = r.teacherRemarks || "---";
-                document.getElementById("res-a-remark").innerText = r.headRemarks || "---";
-            }
-        }
+      // ... inside loadTerminalReport ...
+const remarkDoc = await getDoc(doc(db, "student_remarks", studentId));
+if (remarkDoc.exists()) {
+    const r = remarkDoc.data();
+    if (isTeacher) {
+        document.getElementById("inp-interest").value = r.interest || "";
+        document.getElementById("inp-conduct").value = r.conduct || "";
+        document.getElementById("inp-t-remark").value = r.teacherRemarks || "";
+        document.getElementById("inp-h-remark").value = r.headRemarks || ""; // New
+    } else {
+        document.getElementById("res-interest").innerText = r.interest || "---";
+        document.getElementById("res-conduct").innerText = r.conduct || "---";
+        document.getElementById("res-t-remark").innerText = r.teacherRemarks || "---";
+        document.getElementById("res-h-remark").innerText = r.headRemarks || "---"; // New
+    }
+}
 
         // D. Load Subject Scores
         const scoreQuery = query(collection(db, "published_reports"), where("studentId", "==", studentId));
@@ -92,51 +92,44 @@ async function loadTerminalReport(studentId, isTeacher) {
         console.error("Firebase Error:", error);
     }
 }
-
 function enableTeacherEditing(studentId) {
-    // Show the Save button (Make sure this ID exists in your HTML)
     const saveBtn = document.getElementById("btnSaveRemarks");
     if(saveBtn) saveBtn.style.display = "block";
 
-    // Convert static spans to Input fields
+    // Convert spans to inputs including Head Teacher
     const fields = [
         { id: "res-interest", inputId: "inp-interest" },
         { id: "res-conduct", inputId: "inp-conduct" },
         { id: "res-t-remark", inputId: "inp-t-remark" },
-        { id: "res-a-remark", inputId: "inp-a-remark" }
+        { id: "res-h-remark", inputId: "inp-h-remark" } // Added
     ];
 
     fields.forEach(field => {
         const el = document.getElementById(field.id);
         if (el) {
-            el.innerHTML = `<input type="text" id="${field.inputId}" class="edit-input" placeholder="Type here...">`;
+            el.innerHTML = `<input type="text" id="${field.inputId}" class="edit-input" placeholder="Enter remark...">`;
         }
     });
 
-    // Save Logic
-    if(saveBtn) {
-        saveBtn.onclick = async () => {
-            saveBtn.innerText = "Saving...";
-            try {
-                await setDoc(doc(db, "student_remarks", studentId), {
-                    interest: document.getElementById("inp-interest").value,
-                    conduct: document.getElementById("inp-conduct").value,
-                    teacherRemarks: document.getElementById("inp-t-remark").value,
-                    headRemarks: document.getElementById("inp-a-remark").value,
-                    lastUpdated: serverTimestamp()
-                }, { merge: true });
-                
-                saveBtn.innerText = "Saved Successfully!";
-                saveBtn.style.background = "var(--secondary-neon)";
-                saveBtn.style.color = "#000";
-            } catch (e) {
-                console.error(e);
-                saveBtn.innerText = "Error Saving";
-            }
-        };
-    }
+    saveBtn.onclick = async () => {
+        saveBtn.innerText = "Saving to Firebase...";
+        try {
+            await setDoc(doc(db, "student_remarks", studentId), {
+                interest: document.getElementById("inp-interest").value,
+                conduct: document.getElementById("inp-conduct").value,
+                teacherRemarks: document.getElementById("inp-t-remark").value,
+                headRemarks: document.getElementById("inp-h-remark").value, // Added
+                lastUpdated: serverTimestamp()
+            }, { merge: true });
+            
+            saveBtn.innerText = "REMARKS SAVED!";
+            saveBtn.style.background = "var(--secondary-neon)";
+        } catch (e) {
+            console.error(e);
+            saveBtn.innerText = "Error Saving";
+        }
+    };
 }
-
 function getLetterGrade(score) {
     if (score >= 80) return "A (Excellent)";
     if (score >= 70) return "B (Very Good)";
