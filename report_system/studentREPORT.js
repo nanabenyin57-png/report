@@ -83,7 +83,7 @@ if (remarkDoc.exists()) {
                     <td>${s.exam50}</td>
                     <td style="font-weight:bold;">${total.toFixed(1)}</td>
                     <td>${getLetterGrade(total)}</td>
-                    <td>STAFF</td>
+                    
                 </tr>`;
         });
         document.getElementById("report-body").innerHTML = reportHTML || "<tr><td colspan='6'>No records found.</td></tr>";
