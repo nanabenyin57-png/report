@@ -138,11 +138,12 @@ function enableTeacherEditing(studentId) {
 }
 
 function getLetterGrade(score) {
-    if (score >= 80) return "A (Advance)";
-    if (score >= 75) return "P (Proficient)";
-    if (score >= 70) return "AP (Approaching Proficiency)";
-    if (score >= 65) return "D (Developing)";
-    return "B (Beginning)";
+    if (score >= 80) return "A (Excellent)";
+    if (score >= 70) return "B (Very Good)";
+    if (score >= 60) return "C (Good)";
+    if (score >= 50) return "D (Credit)";
+    if (score >= 40) return "E (Pass)";
+    return "F (Fail)";
 }
 
 // NAVIGATION HANDLERS
