@@ -23,14 +23,17 @@ const db = getFirestore(app);
 const urlParams = new URLSearchParams(window.location.search);
 const studentIdFromUrl = urlParams.get('id');
 
-onAuthStateChanged(auth, async (user) => {
+onAuthStateChanged(auth, (user) => {
     if (user) {
         const targetId = studentIdFromUrl || user.uid;
         loadTerminalReport(targetId);
     } else {
-        window.location.href = "index.html";
+        // Only redirect if we are SURE there is no user
+        console.warn("No user found, redirecting to login...");
+        window.location.replace("index.html"); 
     }
 });
+
 
 async function loadTerminalReport(studentId) {
     try {
@@ -87,6 +90,22 @@ function getLetterGrade(score) {
     return "B";
 }
 
+// UI HANDLER - Toggle Menu
 window.toggleMenu = function() {
-    document.getElementById("navover").classList.toggle("open");
+    const nav = document.getElementById("navover");
+    if (nav) {
+        nav.classList.toggle("open");
+    }
+};
+
+// Close menu when clicking a link
+document.querySelectorAll('.links a').forEach(link => {
+    link.addEventListener('click', () => {
+        document.getElementById("navover").classList.remove("open");
+    });
+});
+window.viewReportCard = function(studentId) {
+    if (!studentId) return alert("Student ID not found.");
+    // This is likely the culprit
+    window.location.href = `student_report.html?id=${studentId}`;
 };

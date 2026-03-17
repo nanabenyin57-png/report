@@ -1,44 +1,196 @@
-.report-card {
-    background: white;
-    color: black;
-    padding: 30px;
-    font-family: 'Times New Roman', serif;
-    border: 2px solid #000;
+:root {
+    --primary-neon: #00e5ff;
+    --secondary-neon: #00ff88;
+    --glass-bg: rgba(0, 0, 0, 0.7); /* Darkened background to make text readable */
+    --glass-border: rgba(0, 229, 255, 0.3);
+    --dark-bg: #050505;
+    --text-main: #ffffff;
 }
 
-.report-header { text-align: center; border-bottom: 2px solid #000; margin-bottom: 20px; }
-.report-title { 
-    background: #000; color: #fff; 
-    display: inline-block; padding: 5px 20px; 
-    margin: 10px 0; font-weight: bold; 
+body {
+    background-image: url("reportimages/graduate.jpg"); 
+    background-size: cover;
+    background-attachment: fixed;
+    background-position: center;
+    background-color: var(--dark-bg);
+    color: var(--text-main);
+    font-family: 'Segoe UI', Arial, sans-serif;
+    margin: 0;
+    padding: 0;
 }
 
+/* 1. THE CARD CONTAINER */
+.results-card {
+    background: var(--glass-bg);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--glass-border);
+    border-radius: 20px;
+    padding: 40px;
+    margin: 40px auto;
+    max-width: 1000px;
+    box-shadow: 0 0 30px rgba(0, 229, 255, 0.2);
+}
+
+.report-header h2 {
+    font-size: 48px; /* Large School Name */
+    color: var(--primary-neon);
+    margin: 0;
+    text-shadow: 2px 2px 10px rgba(0,0,0,0.8);
+}
+
+.report-title {
+    background: linear-gradient(90deg, var(--primary-neon), var(--secondary-neon));
+    color: #000;
+    display: inline-block;
+    padding: 10px 40px;
+    margin: 20px 0;
+    font-weight: 900;
+    border-radius: 50px;
+    text-transform: uppercase;
+    font-size: 32px; /* Increased from 40px for better scale balance */
+}
+
+/* 2. STUDENT INFO GRID - High Contrast */
 .student-info-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 10px;
-    margin-bottom: 20px;
+    gap: 25px;
+    margin-bottom: 40px;
+    background: rgba(0, 0, 0, 0.4);
+    padding: 25px;
+    border-radius: 15px;
+    border: 1px solid var(--glass-border);
 }
 
+.info-item {
+    font-size: 22px; /* Large labels */
+    font-weight: 500;
+}
+
+.info-item strong {
+    color: var(--secondary-neon);
+    margin-right: 15px;
+    text-transform: uppercase;
+}
+
+.info-item span {
+    color: #fff;
+    font-weight: bold;
+    text-shadow: 1px 1px 2px #000;
+}
+
+/* 3. TABLE STYLING */
 .report-table {
     width: 100%;
     border-collapse: collapse;
-    margin-bottom: 20px;
+    margin-bottom: 40px;
+    font-size: 20px; /* Base table font size */
 }
 
-.report-table th, .report-table td {
-    border: 1px solid #000;
-    text-align: center;
-    padding: 8px;
+.report-table th {
+    background: rgba(0, 229, 255, 0.2);
+    color: var(--primary-neon);
+    padding: 20px;
+    font-size: 22px;
+    border: 1px solid var(--glass-border);
 }
 
-.underline { border-bottom: 1px dotted #000; display: inline-block; width: 70%; }
-.remark-row { margin-bottom: 10px; font-weight: bold; }
+.report-table td {
+    padding: 18px;
+    border: 1px solid var(--glass-border);
+    color: #ffffff;
+    font-weight: 500;
+    background: rgba(255, 255, 255, 0.05);
+}
 
+/* Highlighting the Total Score and Grade */
+.report-table td:nth-child(4), 
+.report-table td:nth-child(5) {
+    color: var(--secondary-neon);
+    font-weight: 800;
+    font-size: 24px;
+}
+
+/* 4. REMARK SECTION */
+.remark-row {
+    margin-bottom: 25px;
+    font-size: 20px; /* Increased from 10px */
+    background: rgba(0,0,0,0.3);
+    padding: 15px;
+    border-radius: 8px;
+}
+
+.remark-row span:first-child {
+    color: var(--primary-neon);
+    font-weight: bold;
+    width: 280px;
+}
+
+.underline {
+    border-bottom: 2px solid var(--secondary-neon);
+    width: calc(100% - 300px);
+    color: #fff;
+    font-weight: bold;
+    font-size: 22px;
+}
+
+/* 5. GRADING KEY - Bottom of page */
 .grading-key {
     display: flex;
-    justify-content: space-between;
-    border: 1px solid #000;
-    padding: 10px;
-    font-size: 0.8rem;
+    flex-wrap: wrap;
+    gap: 15px;
+    margin-top: 30px;
+}
+
+.key-box {
+    background: #111;
+    color: var(--secondary-neon);
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-size: 16px; /* Increased from 10px */
+    border: 1px solid var(--primary-neon);
+    font-weight: bold;
+}
+/* Navigation Overlay Style */
+.nav_overlay {
+    position: fixed;
+    top: 0;
+    left: -100%; /* Hidden by default */
+    width: 250px;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.95);
+    backdrop-filter: blur(10px);
+    border-right: 1px solid var(--primary-neon);
+    transition: 0.4s ease-in-out;
+    z-index: 1000;
+    padding: 80px 20px;
+}
+
+/* When JS adds the .open class */
+.nav_overlay.open {
+    left: 0;
+}
+
+.links {
+    list-style: none;
+    padding: 0;
+}
+
+.links li {
+    margin: 25px 0;
+}
+
+.links a {
+    color: white;
+    text-decoration: none;
+    font-size: 22px;
+    font-weight: bold;
+    transition: 0.3s;
+    text-transform: uppercase;
+}
+
+.links a:hover {
+    color: var(--primary-neon);
+    padding-left: 10px;
 }

@@ -3,34 +3,78 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Student Profile | K_Tawiah</title>
-    <link rel="stylesheet" href="report.css">
-    <style>
-        .profile-header { text-align: center; padding: 40px; }
-        .results-grid { 
-            display: grid; 
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); 
-            gap: 20px; padding: 20px; 
-        }
-        .subject-card { 
-            padding: 20px; border-radius: 15px; 
-            border: 1px solid rgba(255,255,255,0.1);
-        }
-        .grade-badge { font-size: 1.5rem; color: #00e5ff; font-weight: bold; }
-    </style>
+    <title>K_Tawiah | Student Results</title>
+    <link rel="stylesheet" href="reportcard.css">
+    <link rel="icon" href="data:,">
 </head>
 <body>
     <header>
-        <div class="profile-header glass-card">
-            <h1 id="prof-name">Loading Profile...</h1>
-            <p id="prof-index">Index: --</p>
-            <h3 id="prof-avg">Average: --</h3>
-        </div>
+        <nav>
+            <button id="navigation" class="nav-btn" onclick="toggleMenu()"> &#9776; </button>
+            <div class="logo">K_TAWIAH CLOUD</div>
+            
+            <div class="nav_overlay" id="navover">
+                <ul class="links">
+                    <li><a href="student_report.html">My Results</a></li>
+                    <li><a href="index.html" style="color: #ff4d4d;">Logout</a></li>
+                    <li><a href="report.html">Teacher's Dashboard</a></li>
+                </ul>
+            </div>
+        </nav>
     </header>
+<article class="results-card glass-panel">
+    <div class="report-header">
+        <h2>SCHOOL</h2>
+        <p> Kumasi - Ghana</p>
+        <div class="report-title">TERMINAL REPORT</div>
+    </div>
 
-    <main class="results-grid" id="results-container">
-        </main>
+    <div class="student-info-grid">
+        <div class="info-item"><strong>NAME:</strong> <span id="card-name">...</span></div>
+        <div class="info-item"><strong>CLASS:</strong> <span id="card-class">...</span></div>
+        <div class="info-item"><strong>ACADEMIC YEAR:</strong> <span id="card-year">2026</span></div>
+        <div class="info-item"><strong>TERM:</strong> <span id="card-term">ONE</span></div>
+        <div class="info-item"><strong>POSITION:</strong> <span id="card-pos">...</span></div>
+        <div class="info-item"><strong>ROLL:</strong> <span id="card-roll">...</span></div>
+    </div>
 
-    <script type="module" src="profile.js"></script>
+    <table class="report-table">
+        <thead>
+            <tr>
+                <th>SUBJECTS</th>
+                <th>CLASS SCORE (50%)</th>
+                <th>EXAM SCORE (50%)</th>
+                <th>TOTAL SCORE (100%)</th>
+                <th>GRADE</th>
+                <th>REMARKS</th>
+            </tr>
+        </thead>
+        <tbody id="report-body">
+            </tbody>
+    </table>
+
+    <div class="assessment-section">
+        <div class="remark-row"><span>INTEREST:</span> <span id="res-interest" class="underline"></span></div>
+        <div class="remark-row"><span>CONDUCT:</span> <span id="res-conduct" class="underline"></span></div>
+        <div class="remark-row"><span>ATTITUDE:</span> <span id="res-attitude" class="underline"></span></div>
+        <div class="remark-row"><span>CLASS TEACHER'S REMARK:</span> <span id="res-t-remark" class="underline"></span></div>
+        <div class="remark-row"><span>ACADEMIC REMARK:</span> <span id="res-a-remark" class="underline"></span></div>
+    </div>
+
+    <div class="grading-key">
+        <div class="key-box">80-100: A (Excellent)</div>
+        <div class="key-box">70-79: B (Very Good)</div>
+        <div class="key-box">60-69: C (Good)</div>
+        <div class="key-box">50-59: D (Credit)</div>
+        <div class="key-box"> 40-49: E (Pass)</div>
+        <div class="key-box"> 0-39: F (Fail)</div>
+    </div>
+</article>
+
+    <footer>
+        <p>&copy; 2026 K_Tawiah Student Portal | Secured by Firebase</p>
+    </footer>
+
+    <script type="module" src="studentREPORT.js"></script>
 </body>
 </html>
