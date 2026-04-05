@@ -166,6 +166,11 @@ window.generateFinalReport = async function() {
         console.error("Compilation Error:", error);
         showNotification(MESSAGES.errors.network, "error");
         tablebody.innerHTML = "<tr><td colspan='6' style='text-align:center; color: #ff4444;'>Error loading data. Please try again.</td></tr>";
+    }
+};
+
+// 8. PUBLISH TO STUDENTS
+window.publishToStudents = async function() {
     const rows = document.querySelectorAll("#tablebody tr");
     const dept = document.getElementById("department").value;
 
