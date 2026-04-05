@@ -4,7 +4,7 @@ import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/
 import { 
     getFirestore, collection, addDoc, getDocs, query, where, serverTimestamp 
 } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
-import { firebaseConfig, DEPARTMENTS, showNotification, MESSAGES } from "./config.js";
+import { firebaseConfig, DEPARTMENTS, CLASSES, STREAM_PATTERNS, generateStreams, showNotification, MESSAGES } from "./config.js";
 
 // 3. INITIALIZATION
 const app = initializeApp(firebaseConfig);
@@ -38,7 +38,10 @@ async function fetchStudents() {
         
         allStudents = querySnapshot.docs.map(doc => ({
             id: doc.id, 
-            name: `${doc.data().firstName} ${doc.data().lastName}`
+            name: `${doc.data().firstName} ${doc.data().lastName}`,
+            department: doc.data().department || '',
+            class: doc.data().class || '',
+            stream: doc.data().stream || ''
         }));
         
         console.log(`Success: Loaded ${allStudents.length} students assigned to you.`);
@@ -48,12 +51,39 @@ async function fetchStudents() {
     }
 }
 
-// 5. DYNAMIC SUBJECT POPULATION
+// 5. DYNAMIC DEPARTMENT, CLASS, AND STREAM POPULATION
 window.departmentchange = function() {
     const category = document.getElementById("category").value;
+    const classSelect = document.getElementById("class-select");
+    const streamCountSelect = document.getElementById("stream-count-select");
+    const streamSelect = document.getElementById("stream-select");
     const subjects = document.getElementById("subjects");
+    
+    // Reset downstream
+    classSelect.innerHTML = '<option value="">-- Select Class --</option>';
+    streamCountSelect.innerHTML = '<option value="">-- Select Streams --</option>';
+    streamSelect.innerHTML = '<option value="">-- Select Stream --</option>';
+    
+    // Populate classes
+    if (CLASSES[category]) {
+        CLASSES[category].forEach(cls => {
+            const el = document.createElement("option");
+            el.value = cls;
+            el.textContent = cls;
+            classSelect.appendChild(el);
+        });
+    }
+    
+    // Populate stream count options
+    for (let i = 1; i <= 5; i++) {
+        const el = document.createElement("option");
+        el.value = i;
+        el.textContent = i + " Stream" + (i > 1 ? "s" : "");
+        streamCountSelect.appendChild(el);
+    }
+    
+    // Populate subjects
     subjects.innerHTML = '<option value="">-- Choose Subject --</option>';
-
     if (DEPARTMENTS[category]) {
         DEPARTMENTS[category].forEach(opt => {
             const el = document.createElement("option");
@@ -64,14 +94,53 @@ window.departmentchange = function() {
     }
 };
 
+// 5a. UPDATE STREAM DROPDOWN WHEN CLASS CHANGES
+window.updateStreamSelect = function() {
+    const classSelect = document.getElementById("class-select");
+    const streamCountSelect = document.getElementById("stream-count-select");
+    const streamSelect = document.getElementById("stream-select");
+    
+    const selectedClass = classSelect.value;
+    const numStreams = parseInt(streamCountSelect.value) || 0;
+    
+    streamSelect.innerHTML = '<option value="">-- Select Stream --</option>';
+    
+    if (selectedClass !== "" && numStreams > 0) {
+        const streams = generateStreams(selectedClass, numStreams);
+        streams.forEach(stream => {
+            const el = document.createElement("option");
+            el.value = stream;
+            el.innerText = stream;
+            streamSelect.appendChild(el);
+        });
+    }
+};
+
 // 6. TABLE ROW GENERATION
 window.SBA = function() {
     const studentCount = document.getElementById("studentcount").value;
+    const dept = document.getElementById("category").value;
+    const cls = document.getElementById("class-select").value;
+    const stream = document.getElementById("stream-select").value;
     const tableHeader = document.getElementById("assessment_headerrow");
     const tableBody = document.getElementById("assessment_tablebody");
 
+    if (!dept || !cls || !stream) {
+        alert("Please select Department, Class, and Stream first!");
+        return;
+    }
+
     if (allStudents.length === 0) {
         alert("No students found. Please register students first or check if the index is building.");
+        return;
+    }
+
+    // Filter students by department, class, and stream
+    const filteredStudents = allStudents.filter(s => s.department === dept && s.class === cls && s.stream === stream);
+    
+    if (filteredStudents.length === 0) {
+        alert("No students found in this department, class, and stream!");
+        return;
     }
 
     tableHeader.innerHTML = `
@@ -88,7 +157,7 @@ window.SBA = function() {
     tableBody.innerHTML = "";
 
     let studentOptions = `<option value="">-- Choose Student --</option>`;
-    allStudents.forEach(student => {
+    filteredStudents.forEach(student => {
         studentOptions += `<option value="${student.id}">${student.name}</option>`;
     });
 
@@ -135,14 +204,16 @@ window.saveSingleRow = async function(button) {
     }
 
     const dept = document.getElementById("category").value;
+    const cls = document.getElementById("class-select").value;
+    const stream = document.getElementById("stream-select").value;
     const subject = document.getElementById("subjects").value;
     const studentSelect = row.querySelector('.student-id-select');
     const studentId = studentSelect ? studentSelect.value : '';
     const studentName = studentSelect ? studentSelect.options[studentSelect.selectedIndex]?.text : '';
 
     // Validation
-    if (!studentId || !subject || dept === "Choose_A_Department") {
-        showNotification("Please select a student, department, and subject!", "error");
+    if (!studentId || !subject || dept === "Choose_A_Department" || !cls || !stream) {
+        showNotification("Please select student, department, class, stream, and subject!", "error");
         return;
     }
 
@@ -167,6 +238,8 @@ window.saveSingleRow = async function(button) {
             studentId: studentId,
             studentName: studentName,
             department: dept,
+            class: cls,
+            stream: stream,
             subject: subject,
             scores: {
                 exercise: exercise,

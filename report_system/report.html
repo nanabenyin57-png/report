@@ -35,6 +35,22 @@
                     <input type="text" id="reg-index" placeholder="Index (KT-001)">
                     <input type="text" id="reg-fname" placeholder="First Name">
                     <input type="text" id="reg-lname" placeholder="Last Name">
+                    <select id="reg-department" onchange="updateRegClassDropdown()">
+                        <option value="" selected>-- Select Department --</option>
+                        <option value="Preschool">PRESCHOOL</option>
+                        <option value="LowerPrimary">LOWER PRIMARY</option>
+                        <option value="UpperPrimary">UPPER PRIMARY</option>
+                        <option value="JuniorHigh">JUNIOR HIGH</option>
+                    </select>
+                    <select id="reg-class" onchange="updateRegStreamCountDropdown()">
+                        <option value="" selected>-- Select Class --</option>
+                    </select>
+                    <select id="reg-stream-count" onchange="updateRegStreamDropdown()">
+                        <option value="" selected>-- Select Streams --</option>
+                    </select>
+                    <select id="reg-stream">
+                        <option value="" selected>-- Select Stream --</option>
+                    </select>
                     <button type="button" id="btnRegisterStudent" class="reg-btn">Add Student</button>
                 </div>
                 <p id="reg-status"></p>
@@ -42,13 +58,36 @@
 
             <div class="controls-grid">
                 <div class="control-group glass-panel">
-                    <label for="department">Select Class / Department</label>
-                    <select id="department" name="departments">
+                    <label for="department">Select Department</label>
+                    <select id="department" name="departments" onchange="updateClassDropdown()">
                         <option value="choose_a_department" selected>-- Select Department --</option>
                         <option value="Preschool">PRESCHOOL</option>
                         <option value="LowerPrimary">LOWER PRIMARY</option>
                         <option value="UpperPrimary">UPPER PRIMARY</option>
                         <option value="JuniorHigh">JUNIOR HIGH</option>
+                    </select>
+                </div>
+                <div class="control-group glass-panel">
+                    <label for="class-select">Select Class</label>
+                    <select id="class-select" name="classes" onchange="updateStreamCountDropdown()">
+                        <option value="choose_a_class" selected>-- Select Class --</option>
+                    </select>
+                </div>
+                <div class="control-group glass-panel">
+                    <label for="stream-count">Number of Streams</label>
+                    <select id="stream-count" name="stream-count" onchange="updateStreamDropdown()">
+                        <option value="" selected>-- Select Streams --</option>
+                        <option value="1">1 Stream</option>
+                        <option value="2">2 Streams</option>
+                        <option value="3">3 Streams</option>
+                        <option value="4">4 Streams</option>
+                        <option value="5">5 Streams</option>
+                    </select>
+                </div>
+                <div class="control-group glass-panel">
+                    <label for="stream-select">Select Stream</label>
+                    <select id="stream-select" name="streams">
+                        <option value="choose_a_stream" selected>-- Select Stream --</option>
                     </select>
                 </div>
                 <div class="control-group">

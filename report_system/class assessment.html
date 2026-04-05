@@ -42,6 +42,32 @@
                 </div>
 
                 <div class="control-group glass-panel">
+                    <label for="class-select">CLASS</label>
+                    <select id="class-select" name="class-select" onchange="departmentchange()">
+                        <option value="" selected>-- Select Class --</option>
+                    </select>
+                </div>
+
+                <div class="control-group glass-panel">
+                    <label for="stream-count-select">NUMBER OF STREAMS</label>
+                    <select id="stream-count-select" name="stream-count-select" onchange="departmentchange()">
+                        <option value="" selected>-- Select Streams --</option>
+                        <option value="1">1 Stream</option>
+                        <option value="2">2 Streams</option>
+                        <option value="3">3 Streams</option>
+                        <option value="4">4 Streams</option>
+                        <option value="5">5 Streams</option>
+                    </select>
+                </div>
+
+                <div class="control-group glass-panel">
+                    <label for="stream-select">SELECT STREAM</label>
+                    <select id="stream-select" name="stream-select" onchange="departmentchange()">
+                        <option value="" selected>-- Select Stream --</option>
+                    </select>
+                </div>
+
+                <div class="control-group glass-panel">
                     <label for="studentcount">NO. OF STUDENTS</label>
                     <input type="number" id="studentcount" name="studentnumber" min="1" value="1">
                 </div>

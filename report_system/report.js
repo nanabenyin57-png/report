@@ -15,7 +15,7 @@ import {
     setDoc,
     serverTimestamp
 } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
-import { firebaseConfig, calculateGrade, showNotification, MESSAGES } from "./config.js";
+import { firebaseConfig, calculateGrade, showNotification, MESSAGES, CLASSES, STREAM_PATTERNS, generateStreams } from "./config.js";
 
 // 2. INITIALIZATION
 const app = initializeApp(firebaseConfig);
@@ -64,7 +64,10 @@ async function fetchStudents() {
         const querySnapshot = await getDocs(q);
         allStudents = querySnapshot.docs.map(doc => ({
             uid: doc.id, 
-            name: `${doc.data().firstName || ''} ${doc.data().lastName || ''}`.trim()
+            name: `${doc.data().firstName || ''} ${doc.data().lastName || ''}`.trim(),
+            department: doc.data().department || '',
+            class: doc.data().class || '',
+            stream: doc.data().stream || ''
         }));
         console.log(`Success: Loaded ${allStudents.length} students.`);
     } catch (error) {
@@ -72,14 +75,81 @@ async function fetchStudents() {
     }
 }
 
+// 5a. UPDATE CLASS DROPDOWN
+window.updateClassDropdown = function() {
+    const deptSelect = document.getElementById("department");
+    const classSelect = document.getElementById("class-select");
+    const streamCountSelect = document.getElementById("stream-count");
+    const streamSelect = document.getElementById("stream-select");
+    
+    const selectedDept = deptSelect.value;
+
+    classSelect.innerHTML = '<option value="choose_a_class">-- Select Class --</option>';
+    streamCountSelect.innerHTML = '<option value="">-- Select Streams --</option>';
+    streamSelect.innerHTML = '<option value="choose_a_stream">-- Select Stream --</option>';
+
+    if (selectedDept !== "choose_a_department" && CLASSES[selectedDept]) {
+        CLASSES[selectedDept].forEach(classOption => {
+            const el = document.createElement("option");
+            el.value = classOption;
+            el.innerText = classOption;
+            classSelect.appendChild(el);
+        });
+    }
+};
+
+// 5b. UPDATE STREAM COUNT DROPDOWN
+window.updateStreamCountDropdown = function() {
+    const streamCountSelect = document.getElementById("stream-count");
+    const streamSelect = document.getElementById("stream-select");
+    
+    streamCountSelect.innerHTML = '<option value="">-- Select Streams --</option>';
+    streamSelect.innerHTML = '<option value="choose_a_stream">-- Select Stream --</option>';
+    
+    for (let i = 1; i <= 5; i++) {
+        const el = document.createElement("option");
+        el.value = i;
+        el.innerText = i + " Stream" + (i > 1 ? "s" : "");
+        streamCountSelect.appendChild(el);
+    }
+};
+
+// 5c. UPDATE STREAM DROPDOWN
+window.updateStreamDropdown = function() {
+    const classSelect = document.getElementById("class-select");
+    const streamCountSelect = document.getElementById("stream-count");
+    const streamSelect = document.getElementById("stream-select");
+    
+    const selectedClass = classSelect.value;
+    const numStreams = parseInt(streamCountSelect.value) || 0;
+    
+    streamSelect.innerHTML = '<option value="choose_a_stream">-- Select Stream --</option>';
+    
+    if (selectedClass !== "choose_a_class" && numStreams > 0) {
+        const streams = generateStreams(selectedClass, numStreams);
+        streams.forEach(stream => {
+            const el = document.createElement("option");
+            el.value = stream;
+            el.innerText = stream;
+            streamSelect.appendChild(el);
+        });
+    }
+};
+
 // 6. REGISTER NEW STUDENT
 window.registerStudent = async function() {
     const indexNo = document.getElementById("reg-index").value.trim();
     const fname = document.getElementById("reg-fname").value.trim();
     const lname = document.getElementById("reg-lname").value.trim();
+    const department = document.getElementById("reg-department").value.trim();
+    const cls = document.getElementById("reg-class").value.trim();
+    const streamCount = document.getElementById("reg-stream-count").value.trim();
+    const stream = document.getElementById("reg-stream").value.trim();
     const status = document.getElementById("reg-status");
 
-    if (!indexNo || !fname || !lname) return alert("Please fill all fields!");
+    if (!indexNo || !fname || !lname || !department || !cls || !streamCount || !stream) {
+        return alert("Please fill all fields including Department, Class, Stream Count, and Stream!");
+    }
 
     status.innerText = "Creating Profile...";
     try {
@@ -88,6 +158,9 @@ window.registerStudent = async function() {
             lastName: lname,
             indexNo: indexNo,
             role: "student",
+            department: department,
+            class: cls,
+            stream: stream,
             teacherId: currentTeacherUid, 
             createdAt: serverTimestamp()
         });
@@ -101,13 +174,76 @@ window.registerStudent = async function() {
     }
 };
 
+// 6a. UPDATE REGISTRATION CLASS DROPDOWN
+window.updateRegClassDropdown = function() {
+    const deptSelect = document.getElementById("reg-department");
+    const classSelect = document.getElementById("reg-class");
+    const streamCountSelect = document.getElementById("reg-stream-count");
+    const streamSelect = document.getElementById("reg-stream");
+    
+    const selectedDept = deptSelect.value;
+
+    classSelect.innerHTML = '<option value="">-- Select Class --</option>';
+    streamCountSelect.innerHTML = '<option value="">-- Select Streams --</option>';
+    streamSelect.innerHTML = '<option value="">-- Select Stream --</option>';
+
+    if (selectedDept !== "" && CLASSES[selectedDept]) {
+        CLASSES[selectedDept].forEach(classOption => {
+            const el = document.createElement("option");
+            el.value = classOption;
+            el.innerText = classOption;
+            classSelect.appendChild(el);
+        });
+    }
+};
+
+// 6b. UPDATE REGISTRATION STREAM COUNT DROPDOWN
+window.updateRegStreamCountDropdown = function() {
+    const streamCountSelect = document.getElementById("reg-stream-count");
+    const streamSelect = document.getElementById("reg-stream");
+    
+    streamCountSelect.innerHTML = '<option value="">-- Select Streams --</option>';
+    streamSelect.innerHTML = '<option value="">-- Select Stream --</option>';
+    
+    for (let i = 1; i <= 5; i++) {
+        const el = document.createElement("option");
+        el.value = i;
+        el.innerText = i + " Stream" + (i > 1 ? "s" : "");
+        streamCountSelect.appendChild(el);
+    }
+};
+
+// 6c. UPDATE REGISTRATION STREAM DROPDOWN
+window.updateRegStreamDropdown = function() {
+    const classSelect = document.getElementById("reg-class");
+    const streamCountSelect = document.getElementById("reg-stream-count");
+    const streamSelect = document.getElementById("reg-stream");
+    
+    const selectedClass = classSelect.value;
+    const numStreams = parseInt(streamCountSelect.value) || 0;
+    
+    streamSelect.innerHTML = '<option value="">-- Select Stream --</option>';
+    
+    if (selectedClass !== "" && numStreams > 0) {
+        const streams = generateStreams(selectedClass, numStreams);
+        streams.forEach(stream => {
+            const el = document.createElement("option");
+            el.value = stream;
+            el.innerText = stream;
+            streamSelect.appendChild(el);
+        });
+    }
+};
+
 // 7. COMPILATION LOGIC (50/50 JOIN)
 window.generateFinalReport = async function() {
     const tablebody = document.getElementById("tablebody");
     const dept = document.getElementById("department").value;
+    const classVal = document.getElementById("class-select").value;
+    const stream = document.getElementById("stream-select").value;
 
-    if (dept === "choose_a_department") {
-        showNotification("Please select a department!", "error");
+    if (dept === "choose_a_department" || classVal === "choose_a_class" || stream === "choose_a_stream") {
+        showNotification("Please select Department, Class, and Stream!", "error");
         return;
     }
 
@@ -117,6 +253,11 @@ window.generateFinalReport = async function() {
         let reportHTML = "";
 
         for (let student of allStudents) {
+            // Filter students by department, class, and stream
+            if (student.department !== dept || student.class !== classVal || student.stream !== stream) {
+                continue;
+            }
+
             const [sbaSnap, examSnap] = await Promise.all([
                 getDocs(query(collection(firestore, "assessments"), where("studentId", "==", student.uid))),
                 getDocs(query(collection(firestore, "exams"), where("studentId", "==", student.uid)))
@@ -173,6 +314,8 @@ window.generateFinalReport = async function() {
 window.publishToStudents = async function() {
     const rows = document.querySelectorAll("#tablebody tr");
     const dept = document.getElementById("department").value;
+    const classVal = document.getElementById("class-select").value;
+    const stream = document.getElementById("stream-select").value;
 
     if (rows.length === 0 || rows[0].cells.length < 6) {
         showNotification("Generate report first!", "error");
@@ -206,6 +349,8 @@ window.publishToStudents = async function() {
                 studentId: student.uid,
                 studentName: studentName,
                 department: dept,
+                class: classVal,
+                stream: stream,
                 subject: subject,
                 sba50: sba.toFixed(1),
                 exam50: exam.toFixed(1),

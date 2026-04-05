@@ -4,7 +4,7 @@ import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/
 import { 
     getFirestore, collection, addDoc, getDocs, query, where, serverTimestamp 
 } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
-import { firebaseConfig, DEPARTMENTS, showNotification, MESSAGES } from "./config.js";
+import { firebaseConfig, DEPARTMENTS, CLASSES, STREAM_PATTERNS, generateStreams, showNotification, MESSAGES } from "./config.js";
 
 // 3. INITIALIZATION
 const app = initializeApp(firebaseConfig);
@@ -29,7 +29,10 @@ onAuthStateChanged(auth, async (user) => {
             const snap = await getDocs(q);
             allStudents = snap.docs.map(doc => ({ 
                 id: doc.id, 
-                name: `${doc.data().firstName} ${doc.data().lastName}` 
+                name: `${doc.data().firstName} ${doc.data().lastName}`,
+                department: doc.data().department || '',
+                class: doc.data().class || '',
+                stream: doc.data().stream || ''
             }));
             
             console.log("Filtered students loaded for Exams:", allStudents.length);
@@ -42,12 +45,51 @@ onAuthStateChanged(auth, async (user) => {
     }
 });
 
-// 5. DYNAMIC SUBJECTS (Remains same)
+// 5. DYNAMIC SUBJECTS AND CLASSES
 window.updateExamSubjects = function() {
     const category = document.getElementById("exam-dept").value;
+    const classDropdown = document.getElementById("exam-class");
+    const streamCountDropdown = document.getElementById("exam-stream-count");
+    const streamDropdown = document.getElementById("exam-stream");
     const subjectsDropdown = document.getElementById("exam-subject");
+    
+    // Update classes
+    classDropdown.innerHTML = '<option value="">-- Select Class --</option>';
+    if (CLASSES[category]) {
+        CLASSES[category].forEach(cls => {
+            const el = document.createElement("option");
+            el.value = cls;
+            el.textContent = cls;
+            classDropdown.appendChild(el);
+        });
+    }
+    
+    // Stream count options
+    streamCountDropdown.innerHTML = '<option value="">-- Select Streams --</option>';
+    for (let i = 1; i <= 5; i++) {
+        const el = document.createElement("option");
+        el.value = i;
+        el.textContent = i + " Stream" + (i > 1 ? "s" : "");
+        streamCountDropdown.appendChild(el);
+    }
+    
+    // Update streams if class and stream count are selected
+    const selectedClass = classDropdown.value;
+    const numStreams = parseInt(streamCountDropdown.value) || 0;
+    
+    streamDropdown.innerHTML = '<option value="">-- Select Stream --</option>';
+    if (selectedClass !== "" && numStreams > 0) {
+        const streams = generateStreams(selectedClass, numStreams);
+        streams.forEach(stream => {
+            const el = document.createElement("option");
+            el.value = stream;
+            el.textContent = stream;
+            streamDropdown.appendChild(el);
+        });
+    }
+    
+    // Update subjects
     subjectsDropdown.innerHTML = '<option value="">-- Choose Subject --</option>';
-
     if (DEPARTMENTS[category]) {
         DEPARTMENTS[category].forEach(opt => {
             const el = document.createElement("option");
@@ -62,21 +104,26 @@ window.updateExamSubjects = function() {
 window.generateExamRows = function() {
     const tbody = document.getElementById("exam-body");
     const dept = document.getElementById("exam-dept").value;
+    const cls = document.getElementById("exam-class").value;
+    const stream = document.getElementById("exam-stream").value;
     const sub = document.getElementById("exam-subject").value;
 
-    if (!dept || !sub) {
-        alert("Please select both Department and Subject first!");
+    if (!dept || !cls || !stream || !sub) {
+        alert("Please select Department, Class, Stream, and Subject first!");
         return;
     }
 
     tbody.innerHTML = "";
     
-    if (allStudents.length === 0) {
-        tbody.innerHTML = "<tr><td colspan='4'>No students found assigned to you.</td></tr>";
+    // Filter students by department, class, and stream
+    const filteredStudents = allStudents.filter(s => s.department === dept && s.class === cls && s.stream === stream);
+    
+    if (filteredStudents.length === 0) {
+        tbody.innerHTML = "<tr><td colspan='4'>No students found in this department, class, and stream.</td></tr>";
         return;
     }
 
-    allStudents.forEach(student => {
+    filteredStudents.forEach(student => {
         const tr = document.createElement("tr");
         tr.innerHTML = `
             <td>${student.name}</td>
@@ -106,6 +153,8 @@ window.saveExam = async function(studentId, btn) {
     const rawScore = parseFloat(row.querySelector('.raw-exam')?.value) || 0;
     const scaledScore = parseFloat(row.querySelector('.half-exam')?.value) || 0;
     const dept = document.getElementById("exam-dept").value;
+    const cls = document.getElementById("exam-class").value;
+    const stream = document.getElementById("exam-stream").value;
     const sub = document.getElementById("exam-subject").value;
 
     // Validation
@@ -114,8 +163,8 @@ window.saveExam = async function(studentId, btn) {
         return;
     }
 
-    if (!dept || !sub) {
-        showNotification("Please select both department and subject!", "error");
+    if (!dept || !cls || !stream || !sub) {
+        showNotification("Please select department, class, stream, and subject!", "error");
         return;
     }
 
@@ -128,6 +177,8 @@ window.saveExam = async function(studentId, btn) {
             teacherUid: currentTeacherUid,
             studentId: studentId,
             department: dept,
+            class: cls,
+            stream: stream,
             subject: sub,
             rawScore: rawScore,
             scaledScore: scaledScore,

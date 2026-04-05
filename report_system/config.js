@@ -11,13 +11,51 @@ export const firebaseConfig = {
     measurementId: "G-KBTRR8YZFJ"
 };
 
-// Department and Subject Data
+// Department and Class Data
 export const DEPARTMENTS = {
     "Preschool": ["Numeracy", "Literacy", "Creative Arts", "Our World"],
     "LowerPrimary": ["English", "Maths", "Science", "History", "Our World", "RME", "Twi"],
     "UpperPrimary": ["English", "Maths", "Science", "History", "Computing", "RME", "Twi"],
     "JuniorHigh": ["English", "Maths", "Science", "Social Studies", "Computing", "Pre-Tech", "RME", "Twi"]
 };
+
+// Department and Classes
+export const CLASSES = {
+    "Preschool": ["Nursery", "Kindergarten1", "Kindergarten2"],
+    "LowerPrimary": ["Basic1", "Basic2", "Basic3"],
+    "UpperPrimary": ["Basic4", "Basic5", "Basic6"],
+    "JuniorHigh": ["JHS1", "JHS2", "JHS3"]
+};
+
+// Stream name patterns for each class
+export const STREAM_PATTERNS = {
+    "Nursery": "N",
+    "Kindergarten1": "K1",
+    "Kindergarten2": "K2",
+    "Basic1": "B1",
+    "Basic2": "B2",
+    "Basic3": "B3",
+    "Basic4": "B4",
+    "Basic5": "B5",
+    "Basic6": "B6",
+    "JHS1": "J1",
+    "JHS2": "J2",
+    "JHS3": "J3"
+};
+
+// Function to generate streams based on class and number of streams
+export function generateStreams(className, numStreams) {
+    const pattern = STREAM_PATTERNS[className];
+    if (!pattern || !numStreams) return [];
+    
+    const streams = [];
+    const letters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+    
+    for (let i = 0; i < Math.min(numStreams, 8); i++) {
+        streams.push(`${pattern}-${letters[i]}`);
+    }
+    return streams;
+}
 
 // Grading Scale
 export const GRADING_SCALE = {
