@@ -221,28 +221,6 @@ window.generateFinalReport = async function() {
         btn.disabled = false;
     }
 };
-            const reportId = `${studentId}_${subject.replace(/\s+/g, '_')}`; 
-            
-            await setDoc(doc(firestore, "published_reports", reportId), {
-                studentId: studentId,
-                studentName: studentName,
-                department: dept,
-                subject: subject,
-                sba50: sba,
-                exam50: exam,
-                total100: total,
-                grade: grade,
-                teacherUid: currentTeacherUid,
-                publishedAt: serverTimestamp()
-            });
-        }
-        alert("Published!");
-        btn.innerText = "Published Successfully";
-    } catch (error) {
-        console.error(error);
-        btn.innerText = "Error Publishing";
-    }
-};
 
 // 10. UI & NAVIGATION HANDLERS
 window.viewReportCard = function(studentId) {
@@ -255,4 +233,4 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("btnGenerate")?.addEventListener("click", window.generateFinalReport);
     document.getElementById("btnRegisterStudent")?.addEventListener("click", window.registerStudent);
     document.getElementById("btnSave")?.addEventListener("click", window.publishToStudents);
-});
+}); 
