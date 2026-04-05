@@ -1,13 +1,3 @@
-// --- 1. GLOBAL EXPOSURE (Move to the very top) ---
-window.toggleMenu = function() {
-    const navOver = document.getElementById("navover");
-    const navBtn = document.getElementById("navigation");
-    if (navOver && navBtn) {
-        navOver.classList.toggle("open");
-        navBtn.classList.toggle("is-active");
-    }
-};
-
 // --- 2. IMPORTS ---
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";

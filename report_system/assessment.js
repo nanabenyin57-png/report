@@ -236,9 +236,3 @@ window.saveSingleRow = async function(button) {
         alert("Failed to save. Check browser console for index link.");
     }
 };
-
-// 9. UI HELPERS
-window.toggleMenu = function() {
-    const nav = document.getElementById("navover");
-    if (nav) nav.classList.toggle("open");
-};

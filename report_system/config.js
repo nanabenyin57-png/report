@@ -98,24 +98,44 @@ export function showNotification(message, type = 'info') {
     const notification = document.createElement('div');
     notification.className = `notification ${type}`;
     notification.textContent = message;
+
+    // Set background color based on type
+    let backgroundColor = '#4444ff'; // default info
+    if (type === 'error') backgroundColor = '#ff4444';
+    else if (type === 'success') backgroundColor = '#44ff44';
+
     notification.style.cssText = `
         position: fixed;
         top: 20px;
         right: 20px;
         padding: 15px 20px;
-        background: ${type === 'error' ? '#ff4444' : type === 'success' ? '#44ff44' : '#4444ff'};
+        background: ${backgroundColor};
         color: white;
         border-radius: 8px;
         z-index: 10000;
         font-weight: bold;
         box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-        animation: slideIn 0.3s ease-out;
+        opacity: 0;
+        transform: translateX(100%);
+        transition: all 0.3s ease;
     `;
 
     document.body.appendChild(notification);
 
+    // Animate in
     setTimeout(() => {
-        notification.style.animation = 'slideOut 0.3s ease-in';
-        setTimeout(() => notification.remove(), 300);
+        notification.style.opacity = '1';
+        notification.style.transform = 'translateX(0)';
+    }, 10);
+
+    // Auto remove after 3 seconds
+    setTimeout(() => {
+        notification.style.opacity = '0';
+        notification.style.transform = 'translateX(100%)';
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+            }
+        }, 300);
     }, 3000);
 }

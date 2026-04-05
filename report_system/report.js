@@ -245,10 +245,6 @@ window.generateFinalReport = async function() {
 };
 
 // 10. UI & NAVIGATION HANDLERS
-window.toggleMenu = function() {
-    document.getElementById("navover").classList.toggle("open");
-};
-
 window.viewReportCard = function(studentId) {
     if (!studentId) return alert("Student ID not found.");
     window.location.href = `student_report.html?id=${studentId}`;

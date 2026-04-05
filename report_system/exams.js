@@ -152,8 +152,6 @@ window.saveExam = async function(studentId, btn) {
 };
 
 // 9. MENU & EVENT LISTENERS
-window.toggleMenu = () => document.getElementById("navover").classList.toggle("open");
-
 document.addEventListener("DOMContentLoaded", () => {
     const loadBtn = document.getElementById("btnLoadExams");
     if (loadBtn) {
