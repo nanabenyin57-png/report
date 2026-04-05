@@ -4,17 +4,7 @@ import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/
 import { 
     getFirestore, collection, addDoc, getDocs, query, where, serverTimestamp 
 } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
-
-// 2. CONFIG
-const firebaseConfig = {
-  apiKey: "AIzaSyBmlZD5EHWgt8DsocsPVZcf4MJVjeuC0Fw",
-  authDomain: "reportbase-669ff.firebaseapp.com",
-  projectId: "reportbase-669ff",
-  storageBucket: "reportbase-669ff.firebasestorage.app",
-  messagingSenderId: "244941864396",
-  appId: "1:244941864396:web:aebc946e160a0172edf169",
-  measurementId: "G-KBTRR8YZFJ"
-};
+import { firebaseConfig, DEPARTMENTS, showNotification, MESSAGES } from "./config.js";
 
 // 3. INITIALIZATION
 const app = initializeApp(firebaseConfig);
@@ -58,15 +48,8 @@ window.updateExamSubjects = function() {
     const subjectsDropdown = document.getElementById("exam-subject");
     subjectsDropdown.innerHTML = '<option value="">-- Choose Subject --</option>';
 
-    const subjectData = {
-        "Preschool": ["Numeracy", "Literacy", "Creative Arts", "Our World"],
-        "LowerPrimary": ["English", "Maths", "Science", "History", "Our World", "RME", "Twi"],
-        "UpperPrimary": ["English", "Maths", "Science", "History", "Computing", "RME", "Twi"],
-        "JuniorHigh": ["English", "Maths", "Science", "Social Studies", "Computing", "Pre-Tech", "RME", "Twi"]
-    };
-
-    if (subjectData[category]) {
-        subjectData[category].forEach(opt => {
+    if (DEPARTMENTS[category]) {
+        DEPARTMENTS[category].forEach(opt => {
             const el = document.createElement("option");
             el.value = opt;
             el.textContent = opt;
@@ -115,35 +98,56 @@ window.calcExam = function(input) {
 // 8. SAVE LOGIC
 window.saveExam = async function(studentId, btn) {
     const row = btn.closest('tr');
-    const rawScore = row.querySelector('.raw-exam').value;
-    const scaledScore = row.querySelector('.half-exam').value;
+    if (!row) {
+        showNotification("Error: Could not find row data", "error");
+        return;
+    }
+
+    const rawScore = parseFloat(row.querySelector('.raw-exam')?.value) || 0;
+    const scaledScore = parseFloat(row.querySelector('.half-exam')?.value) || 0;
     const dept = document.getElementById("exam-dept").value;
     const sub = document.getElementById("exam-subject").value;
 
-    if (!rawScore) return alert("Enter a score before saving!");
+    // Validation
+    if (!rawScore || rawScore < 0 || rawScore > 100) {
+        showNotification("Please enter a valid score between 0-100!", "error");
+        return;
+    }
+
+    if (!dept || !sub) {
+        showNotification("Please select both department and subject!", "error");
+        return;
+    }
 
     btn.disabled = true;
-    btn.innerText = "...";
+    const originalText = btn.innerText;
+    btn.innerText = MESSAGES.loading.saving;
 
     try {
         await addDoc(collection(firestore, "exams"), {
-            teacherUid: currentTeacherUid, // Tied to teacher for data ownership
+            teacherUid: currentTeacherUid,
             studentId: studentId,
             department: dept,
             subject: sub,
-            rawScore: parseFloat(rawScore),
-            scaledScore: parseFloat(scaledScore),
+            rawScore: rawScore,
+            scaledScore: scaledScore,
             timestamp: serverTimestamp()
         });
-        
-        btn.innerText = "Saved";
+
+        btn.innerText = MESSAGES.success.saved;
         btn.style.background = "rgba(0, 255, 136, 0.2)";
         btn.style.color = "#00ff88";
-    } catch (e) {
-        console.error("Save Error:", e);
+        setTimeout(() => {
+            btn.innerText = originalText;
+            btn.disabled = false;
+            btn.style.background = "";
+            btn.style.color = "";
+        }, 2000);
+    } catch (error) {
+        console.error("Save Error:", error);
+        showNotification(MESSAGES.errors.save, "error");
         btn.disabled = false;
         btn.innerText = "Retry";
-        alert("Permission denied. Ensure your Firestore rules allow teacher writes.");
     }
 };
 

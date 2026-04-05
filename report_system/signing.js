@@ -1,28 +1,18 @@
 // 1. ALL NECESSARY IMPORTS
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
 import { 
     getAuth, 
     signInWithEmailAndPassword, 
     createUserWithEmailAndPassword 
-} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+} from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
 import { 
     getFirestore, 
     doc, 
     getDoc, 
     setDoc, 
     updateDoc 
-} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-
-// 2. YOUR FIREBASE CONFIG
-const firebaseConfig = {
-  apiKey: "AIzaSyBmlZD5EHWgt8DsocsPVZcf4MJVjeuC0Fw",
-  authDomain: "reportbase-669ff.firebaseapp.com",
-  projectId: "reportbase-669ff",
-  storageBucket: "reportbase-669ff.firebasestorage.app",
-  messagingSenderId: "244941864396",
-  appId: "1:244941864396:web:aebc946e160a0172edf169",
-  measurementId: "G-KBTRR8YZFJ"
-};
+} from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
+import { firebaseConfig, validateEmail, validatePassword, validateIndexNumber, sanitizeInput, showNotification, MESSAGES } from "./config.js";
 
 // 3. INITIALIZE
 const app = initializeApp(firebaseConfig);
@@ -83,59 +73,130 @@ window.toggleIndexField = function() {
 // 5. FIREBASE LOGIC FUNCTIONS
 
 window.handlesignin = async function() {
-    const email = document.getElementById('email').value;
+    const email = sanitizeInput(document.getElementById('email').value);
     const password = document.getElementById('password').value;
+
+    if (!email || !password) {
+        showNotification("Please fill in all fields", "error");
+        return;
+    }
+
+    if (!validateEmail(email)) {
+        showNotification("Please enter a valid email address", "error");
+        return;
+    }
+
     try {
         await signInWithEmailAndPassword(auth, email, password);
-        window.location.href = "report.html"; 
+        showNotification("Login successful!", "success");
+        window.location.href = "report.html";
     } catch (error) {
-        alert("Login Error: " + error.message);
+        console.error("Login Error:", error);
+        let message = MESSAGES.errors.auth;
+        if (error.code === 'auth/user-not-found') {
+            message = "No account found with this email.";
+        } else if (error.code === 'auth/wrong-password') {
+            message = "Incorrect password.";
+        } else if (error.code === 'auth/too-many-requests') {
+            message = "Too many failed attempts. Please try again later.";
+        }
+        showNotification(message, "error");
     }
 };
 
 window.handlesignup = async function() {
-    const indexNo = document.getElementById('indexno').value.trim();
-    const fname = document.getElementById('firstname').value.trim();
-    const lname = document.getElementById('lastname').value.trim();
-    const email = document.getElementById('email').value.trim();
+    const indexNo = sanitizeInput(document.getElementById('indexno').value.trim());
+    const fname = sanitizeInput(document.getElementById('firstname').value.trim());
+    const lname = sanitizeInput(document.getElementById('lastname').value.trim());
+    const email = sanitizeInput(document.getElementById('email').value.trim());
     const password = document.getElementById('password').value;
     const confirm = document.getElementById('confirmpassword').value;
+    const userRole = document.getElementById('userRole').value;
 
-    if (password !== confirm) return alert("Passwords do not match!");
+    // Validation
+    if (!fname || !lname || !email || !password || !confirm) {
+        showNotification("Please fill in all required fields", "error");
+        return;
+    }
+
+    if (userRole === 'student' && !indexNo) {
+        showNotification("Please enter your Index Number", "error");
+        return;
+    }
+
+    if (!validateEmail(email)) {
+        showNotification("Please enter a valid email address", "error");
+        return;
+    }
+
+    if (!validatePassword(password)) {
+        showNotification("Password must be at least 6 characters and contain uppercase, lowercase, and numbers", "error");
+        return;
+    }
+
+    if (password !== confirm) {
+        showNotification("Passwords do not match", "error");
+        return;
+    }
+
+    if (userRole === 'student' && !validateIndexNumber(indexNo)) {
+        showNotification("Index Number must be in format KT-001", "error");
+        return;
+    }
 
     try {
         // Step A: Create the Login account
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
 
-        // Step B: THE SYNC - Look for the Index Number the teacher added
-        const userRef = doc(db, "users", indexNo);
-        const docSnap = await getDoc(userRef);
+        if (userRole === 'student') {
+            // Step B: THE SYNC - Look for the Index Number the teacher added
+            const userRef = doc(db, "users", indexNo);
+            const docSnap = await getDoc(userRef);
 
-        if (docSnap.exists()) {
-            // Found it! Link the new account to the teacher's data
-            await updateDoc(userRef, {
-                uid: user.uid,
-                email: email,
-                firstName: fname,
-                lastName: lname,
-                accountStatus: "active"
-            });
-            alert("Success! Your account is linked to your school records.");
+            if (docSnap.exists()) {
+                // Found it! Link the new account to the teacher's data
+                await updateDoc(userRef, {
+                    uid: user.uid,
+                    email: email,
+                    firstName: fname,
+                    lastName: lname,
+                    accountStatus: "active"
+                });
+                showNotification("Success! Your account is linked to your school records.", "success");
+            } else {
+                // No record found: Create a fresh profile
+                await setDoc(doc(db, "users", user.uid), {
+                    indexNo: indexNo,
+                    firstName: fname,
+                    lastName: lname,
+                    email: email,
+                    role: "student",
+                    accountStatus: "active"
+                });
+                showNotification("Account created! (No existing teacher record found).", "success");
+            }
         } else {
-            // No record found: Create a fresh profile
+            // Teacher account
             await setDoc(doc(db, "users", user.uid), {
-                indexNo: indexNo,
                 firstName: fname,
                 lastName: lname,
                 email: email,
-                role: "student",
+                role: "teacher",
                 accountStatus: "active"
             });
-            alert("Account created! (No existing teacher record found).");
+            showNotification("Teacher account created successfully!", "success");
         }
+
         window.location.href = "report.html";
     } catch (error) {
-        alert("Signup Error: " + error.message);
+        console.error("Signup Error:", error);
+        let message = MESSAGES.errors.auth;
+        if (error.code === 'auth/email-already-in-use') {
+            message = "An account with this email already exists.";
+        } else if (error.code === 'auth/weak-password') {
+            message = "Password is too weak.";
+        }
+        showNotification(message, "error");
     }
 };

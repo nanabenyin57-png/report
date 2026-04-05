@@ -4,16 +4,7 @@ import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/
 import { 
     getFirestore, collection, addDoc, getDocs, query, where, serverTimestamp 
 } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
-
-// 2. FIREBASE CONFIG
-const firebaseConfig = {
-  apiKey: "AIzaSyBmlZD5EHWgt8DsocsPVZcf4MJVjeuC0Fw",
-  authDomain: "reportbase-669ff.firebaseapp.com",
-  projectId: "reportbase-669ff",
-  storageBucket: "reportbase-669ff.firebasestorage.app",
-  messagingSenderId: "244941864396",
-  appId: "1:244941864396:web:aebc946e160a0172edf169"
-};
+import { firebaseConfig, DEPARTMENTS, showNotification, MESSAGES } from "./config.js";
 
 // 3. INITIALIZATION
 const app = initializeApp(firebaseConfig);
@@ -63,15 +54,8 @@ window.departmentchange = function() {
     const subjects = document.getElementById("subjects");
     subjects.innerHTML = '<option value="">-- Choose Subject --</option>';
 
-    const subjectData = {
-        "Preschool": ["Numeracy", "Literacy", "Creative Arts", "Our World"],
-        "LowerPrimary": ["English", "Maths", "Science", "History", "Our World", "RME", "Twi"],
-        "UpperPrimary": ["English", "Maths", "Science", "History", "Computing", "RME", "Twi"],
-        "JuniorHigh": ["English", "Maths", "Science", "Social Studies", "Computing", "Pre-Tech", "RME", "Twi"]
-    };
-
-    if (subjectData[category]) {
-        subjectData[category].forEach(opt => {
+    if (DEPARTMENTS[category]) {
+        DEPARTMENTS[category].forEach(opt => {
             const el = document.createElement("option");
             el.value = opt;
             el.textContent = opt;
@@ -145,8 +129,72 @@ window.calculate = function(element) {
 // 8. SAVE LOGIC (Tagged with Teacher ID)
 window.saveSingleRow = async function(button) {
     const row = button.closest('tr');
+    if (!row) {
+        showNotification("Error: Could not find row data", "error");
+        return;
+    }
+
     const dept = document.getElementById("category").value;
     const subject = document.getElementById("subjects").value;
+    const studentSelect = row.querySelector('.student-id-select');
+    const studentId = studentSelect ? studentSelect.value : '';
+    const studentName = studentSelect ? studentSelect.options[studentSelect.selectedIndex]?.text : '';
+
+    // Validation
+    if (!studentId || !subject || dept === "Choose_A_Department") {
+        showNotification("Please select a student, department, and subject!", "error");
+        return;
+    }
+
+    // Validate scores
+    const exercise = parseFloat(row.querySelector('.class-exercise')?.value) || 0;
+    const test = parseFloat(row.querySelector('.class-test')?.value) || 0;
+    const project = parseFloat(row.querySelector('.project-work')?.value) || 0;
+    const group = parseFloat(row.querySelector('.group-work')?.value) || 0;
+
+    if (exercise > 15 || test > 15 || project > 15 || group > 15) {
+        showNotification("Individual scores cannot exceed 15 marks!", "error");
+        return;
+    }
+
+    button.disabled = true;
+    const originalText = button.innerText;
+    button.innerText = MESSAGES.loading.saving;
+
+    try {
+        await addDoc(collection(firestore, "assessments"), {
+            teacherUid: currentTeacherUid,
+            studentId: studentId,
+            studentName: studentName,
+            department: dept,
+            subject: subject,
+            scores: {
+                exercise: exercise,
+                test: test,
+                project: project,
+                group: group
+            },
+            total60: row.querySelector('.total-score').value,
+            scaled50: row.querySelector('.scale-score').value,
+            timestamp: serverTimestamp()
+        });
+
+        button.innerText = MESSAGES.success.saved;
+        button.style.backgroundColor = "rgba(0, 255, 136, 0.3)";
+        button.style.color = "#00ff88";
+        setTimeout(() => {
+            button.innerText = originalText;
+            button.disabled = false;
+            button.style.backgroundColor = "";
+            button.style.color = "";
+        }, 2000);
+    } catch (error) {
+        console.error("Save Error:", error);
+        showNotification(MESSAGES.errors.save, "error");
+        button.disabled = false;
+        button.innerText = "Retry";
+    }
+};
     
     const studentSelect = row.querySelector('.student-id-select');
     const studentId = studentSelect.value;

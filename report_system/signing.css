@@ -1,97 +1,112 @@
-/* --- DARK GLASS SIGN-IN --- */
+/* signing.css - Styles for authentication forms */
+
+/* === SIGN IN CONTAINER === */
 .signin-container {
     position: absolute;
     top: 60%;
     left: 50%;
     transform: translate(-50%, -50%);
     display: flex;
-    flex-direction: column; 
+    flex-direction: column;
     align-items: center;
-    justify-content: center; /* Better centering */
+    justify-content: center;
     gap: 20px;
-    
-    /* Dark & See-through */
-    background: rgba(10, 10, 10, 0.75); 
-    backdrop-filter: blur(15px); /* Frosted glass effect */
+    background: var(--glass-bg);
+    backdrop-filter: blur(15px);
     -webkit-backdrop-filter: blur(15px);
-    
-    border: 1px solid rgba(255, 255, 255, 0.08); /* Subtle highlight */
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-    border-radius: 15px; /* Rounded corners for modern look */
-    
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--glass-shadow);
+    border-radius: 15px;
     width: 320px;
-    height: 250px; /* Adjusted slightly for padding */
+    height: 250px;
 }
 
-/* --- DARK GLASS SIGN-UP --- */
+.signin-container h3 {
+    color: var(--primary-blue);
+    font-size: 1.2rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* === SIGN UP CONTAINER === */
 .signup-container {
     position: absolute;
     top: 60%;
     left: 50%;
     transform: translate(-50%, -50%);
     display: flex;
-    flex-direction: column; 
+    flex-direction: column;
     align-items: center;
-    padding: 30px 10px; /* Extra padding for internal spacing */
+    padding: 30px 10px;
     gap: 15px;
-    
-    /* Dark & See-through */
-    background: rgba(10, 10, 10, 0.75);
+    background: var(--glass-bg);
     backdrop-filter: blur(15px);
     -webkit-backdrop-filter: blur(15px);
-    
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--glass-shadow);
     border-radius: 20px;
-    
     width: 420px;
     height: 550px;
 }
+
+.signup-container h3 {
+    color: var(--primary-blue);
+    font-size: 1.2rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
 .role-select {
-    width: 93%; /* Matches your other inputs */
+    width: 93%;
     padding: 12px;
     background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid var(--glass-border);
     border-radius: 8px;
-    color: #ffe4b5;
+    color: var(--text-moccasin);
     margin-bottom: 10px;
     cursor: pointer;
     outline: none;
 }
 
 .role-select option {
-    background: #1a1a1a; /* Dark background so options are readable */
-    color: #ffe4b5;
+    background: #1a1a1a;
+    color: var(--text-moccasin);
 }
 
 #indexFieldWrapper p {
     margin: 5px 0;
     font-size: 0.85rem;
-    color: rgba(255, 228, 181, 0.7); /* Matching your Moccasin theme */
-}
-
-/* --- THE INPUTS (Textarea/Inputs) --- */
-textarea, input {
-    width: 85%;
-    padding: 12px;
-    background: rgba(255, 255, 255, 0.05); /* Transparent input background */
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 8px;
-    color: #ffe4b5; /* Moccasin text for clarity */
-    outline: none;
-    transition: 0.3s ease;
-}
-
-textarea:focus, input:focus {
-    border-color: #4db8ff; /* Your primary blue */
-    background: rgba(255, 255, 255, 0.1);
-    box-shadow: 0 0 8px rgba(77, 184, 255, 0.3);
-}
-
-/* Fix for the p tag in your signup form */
-.signup-container p {
-    font-size: 0.8rem;
-    color: rgba(255, 255, 255, 0.6);
+    color: rgba(255, 228, 181, 0.7);
     text-align: center;
-    padding: 0 20px;
+}
+
+/* === FORM ELEMENTS === */
+.signin-button, .signup-button {
+    background: var(--primary-blue);
+    color: black;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: var(--transition-normal);
+    font-size: 14px;
+}
+
+.signin-button:hover, .signup-button:hover {
+    filter: brightness(1.2);
+    transform: scale(1.02);
+}
+
+/* === RESPONSIVE DESIGN === */
+@media (max-width: 480px) {
+    .signin-container {
+        width: 280px;
+        height: 220px;
+    }
+
+    .signup-container {
+        width: 350px;
+        height: 500px;
+    }
 }

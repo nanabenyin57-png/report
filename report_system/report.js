@@ -1,33 +1,23 @@
 // 1. IMPORTS
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
-import { 
-    getAuth, 
-    onAuthStateChanged 
+import {
+    getAuth,
+    onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
-import { 
-    getFirestore, 
-    doc, 
-    getDoc, 
-    getDocs, 
-    collection, 
-    query, 
-    where, 
-    setDoc, 
-    serverTimestamp 
+import {
+    getFirestore,
+    doc,
+    getDoc,
+    getDocs,
+    collection,
+    query,
+    where,
+    setDoc,
+    serverTimestamp
 } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
+import { firebaseConfig, calculateGrade, showNotification, MESSAGES } from "./config.js";
 
-// 2. CONFIG
-const firebaseConfig = {
-  apiKey: "AIzaSyBmlZD5EHWgt8DsocsPVZcf4MJVjeuC0Fw",
-  authDomain: "reportbase-669ff.firebaseapp.com",
-  projectId: "reportbase-669ff",
-  storageBucket: "reportbase-669ff.firebasestorage.app",
-  messagingSenderId: "244941864396",
-  appId: "1:244941864396:web:aebc946e160a0172edf169",
-  measurementId: "G-KBTRR8YZFJ"
-};
-
-// 3. INITIALIZATION
+// 2. INITIALIZATION
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const firestore = getFirestore(app);
@@ -116,12 +106,15 @@ window.generateFinalReport = async function() {
     const tablebody = document.getElementById("tablebody");
     const dept = document.getElementById("department").value;
 
-    if (dept === "choose_a_department") return alert("Please select a department!");
+    if (dept === "choose_a_department") {
+        showNotification("Please select a department!", "error");
+        return;
+    }
 
     tablebody.innerHTML = "<tr><td colspan='6' style='text-align:center;'>Merging Data...</td></tr>";
 
     try {
-        let reportHTML = ""; // Defined here to avoid ReferenceError
+        let reportHTML = "";
 
         for (let student of allStudents) {
             const [sbaSnap, examSnap] = await Promise.all([
@@ -130,10 +123,20 @@ window.generateFinalReport = async function() {
             ]);
 
             const sbaScores = {};
-            sbaSnap.forEach(doc => { sbaScores[doc.data().subject] = parseFloat(doc.data().scaled50) || 0; });
+            sbaSnap.forEach(doc => {
+                const data = doc.data();
+                if (data.department === dept) {
+                    sbaScores[data.subject] = parseFloat(data.scaled50) || 0;
+                }
+            });
 
             const examScores = {};
-            examSnap.forEach(doc => { examScores[doc.data().subject] = parseFloat(doc.data().scaledScore) || 0; });
+            examSnap.forEach(doc => {
+                const data = doc.data();
+                if (data.department === dept) {
+                    examScores[data.subject] = parseFloat(data.scaledScore) || 0;
+                }
+            });
 
             const subjects = [...new Set([...Object.keys(sbaScores), ...Object.keys(examScores)])];
 
@@ -159,45 +162,65 @@ window.generateFinalReport = async function() {
             });
         }
         tablebody.innerHTML = reportHTML || "<tr><td colspan='6'>No records found.</td></tr>";
-    } catch (e) {
-        console.error(e);
-        alert("Compilation failed.");
-    }
-};
-
-// 8. GRADING UTILITY
-function calculateGrade(score) {
-    if (score >= 80) return "A1 (Excellent)";
-    if (score >= 70) return "B2 (Very Good)";
-    if (score >= 60) return "B3 (Good)";
-    if (score >= 55) return "C4 (Credit)";
-    if (score >= 50) return "C5 (Credit)";
-    if (score >= 45) return "D7 (Pass)";
-    return "F9 (Fail)";
-}
-
-// 9. PUBLISH TO STUDENTS
-window.publishToStudents = async function() {
+    } catch (error) {
+        console.error("Compilation Error:", error);
+        showNotification(MESSAGES.errors.network, "error");
+        tablebody.innerHTML = "<tr><td colspan='6' style='text-align:center; color: #ff4444;'>Error loading data. Please try again.</td></tr>";
     const rows = document.querySelectorAll("#tablebody tr");
     const dept = document.getElementById("department").value;
 
-    if (rows.length === 0 || rows[0].cells.length < 6) return alert("Generate report first!");
+    if (rows.length === 0 || rows[0].cells.length < 6) {
+        showNotification("Generate report first!", "error");
+        return;
+    }
 
     const btn = document.getElementById("btnSave");
-    btn.innerText = "Publishing...";
+    const originalText = btn.innerText;
+    btn.innerText = MESSAGES.loading.publishing;
+    btn.disabled = true;
 
     try {
         for (let row of rows) {
             const cells = row.cells;
+            if (cells.length < 6) continue; // Skip invalid rows
+
             const studentName = cells[0].innerText;
             const subject = cells[1].innerText;
-            const sba = cells[2].innerText;
-            const exam = cells[3].innerText;
-            const total = cells[4].innerText;
+            const sba = parseFloat(cells[2].innerText) || 0;
+            const exam = parseFloat(cells[3].innerText) || 0;
+            const total = parseFloat(cells[4].innerText) || 0;
             const grade = cells[5].innerText;
 
             const student = allStudents.find(s => s.name === studentName);
-            const studentId = student ? student.uid : "unknown";
+            if (!student) {
+                console.warn(`Student not found: ${studentName}`);
+                continue;
+            }
+
+            await setDoc(doc(firestore, "published_reports", `${student.uid}_${subject}_${dept}`), {
+                studentId: student.uid,
+                studentName: studentName,
+                department: dept,
+                subject: subject,
+                sba50: sba.toFixed(1),
+                exam50: exam.toFixed(1),
+                total100: total.toFixed(1),
+                grade: grade,
+                publishedAt: serverTimestamp(),
+                teacherId: currentTeacherUid
+            });
+        }
+
+        showNotification(MESSAGES.success.published, "success");
+        btn.innerText = originalText;
+        btn.disabled = false;
+    } catch (error) {
+        console.error("Publish Error:", error);
+        showNotification(MESSAGES.errors.save, "error");
+        btn.innerText = originalText;
+        btn.disabled = false;
+    }
+};
             const reportId = `${studentId}_${subject.replace(/\s+/g, '_')}`; 
             
             await setDoc(doc(firestore, "published_reports", reportId), {
