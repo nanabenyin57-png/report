@@ -87,6 +87,13 @@
         <p>© 2026 K_Tawiah Student Report System | Secured by Firebase</p>
     </footer>
 
+    <script>
+        // Global navigation function available immediately
+        window.toggleMenu = function() {
+            const nav = document.getElementById("navover");
+            if (nav) nav.classList.toggle("open");
+        };
+    </script>
     <script type="module" src="report.js"></script>
 </body>
 </html>

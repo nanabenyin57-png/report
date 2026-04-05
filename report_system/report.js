@@ -251,7 +251,7 @@ window.toggleMenu = function() {
 
 window.viewReportCard = function(studentId) {
     if (!studentId) return alert("Student ID not found.");
-    window.location.href = `student_reportcard.html?id=${studentId}`;
+    window.location.href = `student_report.html?id=${studentId}`;
 };
 
 // 11. EVENT LISTENERS
