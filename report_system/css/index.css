@@ -10,7 +10,7 @@
 
 /* ── Hero ─────────────────────────────────────────────────── */
 .index-hero {
-    background-image: url("../images/hbg.jpg");
+    background-image: url("images/hbg.jpg");
     background-size: cover;
     background-attachment: fixed;
     padding: 80px 40px 60px 40px;
