@@ -88,7 +88,7 @@ window.toggleIndexField = function () {
 // ============================================================
 //  FIREBASE — Sign In (with role-based redirect)
 // ============================================================
-window.handlesignin = async function () {
+/*window.handlesignin = async function () {
     const email    = sanitizeInput(document.getElementById("email").value);
     const password = document.getElementById("password").value;
 
@@ -155,7 +155,27 @@ window.handlesignin = async function () {
         showNotification(message, "error");
     }
 };
+*/
+// After getting userDocSnap...
+const data = userDocSnap.data();
 
+// Handle role whether it's a string "admin" or an array ["admin", "teacher"]
+const rawRole = data.role;
+const role = Array.isArray(rawRole)
+    ? (rawRole.includes("admin")   ? "admin"
+     : rawRole.includes("teacher") ? "teacher"
+     : rawRole.includes("student") ? "student"
+     : "unknown")
+    : rawRole; // it's already a plain string
+
+// Now redirect as normal
+if (role === "admin") {
+    window.location.href = "admin.html";
+} else if (role === "teacher") {
+    window.location.href = "report.html";
+} else if (role === "student") {
+    window.location.href = "student_view.html";
+}
 // ============================================================
 //  FIREBASE — Sign Up (Student index sync + Teacher registration)
 // ============================================================
