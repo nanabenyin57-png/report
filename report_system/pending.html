@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <meta name="author" content="K_Tawiah">
+    <title>Account Pending — K_Tawiah</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Nunito:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/pending.css">
+</head>
+<body class="pending-body">
+
+    <!-- HERO -->
+    <div class="pending-hero">
+        <div class="pending-hero-content">
+            <span class="header-tag">K_Tawiah Student Report System</span>
+            <h1 class="header-title">Account Review</h1>
+        </div>
+    </div>
+
+    <!-- MAIN CARD -->
+    <div class="pending-wrap">
+        <div class="pending-card">
+
+            <!-- Animated clock icon -->
+            <div class="pending-icon-wrap">
+                <div class="pending-ring"></div>
+                <span class="pending-icon">⏳</span>
+            </div>
+
+            <h2 class="pending-title">Awaiting Approval</h2>
+
+            <p class="pending-msg">
+                Your teacher account has been successfully created and is currently
+                under review by the school administrator.
+            </p>
+
+            <!-- Status Steps -->
+            <div class="pending-steps">
+                <div class="step step-done">
+                    <div class="step-dot">✓</div>
+                    <div class="step-info">
+                        <span class="step-label">Account Created</span>
+                        <span class="step-desc">Your details have been saved</span>
+                    </div>
+                </div>
+                <div class="step-line step-line-done"></div>
+
+                <div class="step step-active">
+                    <div class="step-dot">2</div>
+                    <div class="step-info">
+                        <span class="step-label">Admin Review</span>
+                        <span class="step-desc">Your account is being reviewed</span>
+                    </div>
+                </div>
+                <div class="step-line"></div>
+
+                <div class="step step-pending">
+                    <div class="step-dot">3</div>
+                    <div class="step-info">
+                        <span class="step-label">Approved &amp; Notified</span>
+                        <span class="step-desc">You will receive an email and SMS</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Live status -->
+            <div class="pending-status-bar" id="status-bar">
+                <span class="status-dot"></span>
+                <span id="status-text">Checking your account status...</span>
+            </div>
+
+            <!-- User info display -->
+            <div class="pending-user-info" id="user-info" style="display:none;">
+                <p>Signed in as: <strong id="user-email">—</strong></p>
+            </div>
+
+            <!-- Actions -->
+            <div class="pending-actions">
+                <button class="btn-secondary" id="btn-check-status">
+                    🔄 Check Status
+                </button>
+                <button class="btn-danger" id="btn-sign-out">
+                    Sign Out
+                </button>
+            </div>
+
+            <p class="pending-note">
+                If you have been waiting for a long time, please contact your
+                school administrator directly.
+            </p>
+
+        </div>
+    </div>
+
+    <footer>
+        <p>© 2026 K_Tawiah Student Report System</p>
+    </footer>
+
+    <script type="module" src="pending.js"></script>
+</body>
+</html>
