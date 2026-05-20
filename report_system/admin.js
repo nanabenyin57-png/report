@@ -1,9 +1,7 @@
 // ============================================================
 //  admin.js — K_Tawiah Admin Dashboard
 //  Handles: Auth check, user listing, role change, deletion,
-//           adding new students/teachers via Firebase Admin SDK
-//           (client-side Firestore only — no Auth creation from
-//           client; new users must self-register then be promoted)
+//           adding new students/teachers via isolated Auth instance
 // ============================================================
 
 // 1. IMPORTS
@@ -35,10 +33,15 @@ const firebaseConfig = {
     measurementId: "G-KBTRR8YZFJ"
 };
 
-// 3. INITIALIZE
+// 3. INITIALIZE 
+// Primary app instance handles the logged-in administrator's session
 const app  = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db   = getFirestore(app);
+
+// Secondary isolated instance allows creation of new accounts without shifting admin session
+const secondaryApp  = initializeApp(firebaseConfig, "SecondaryUserCreation");
+const secondaryAuth = getAuth(secondaryApp);
 
 // ── State ──────────────────────────────────────────────────
 let allUsers      = [];   // all user docs from Firestore
@@ -159,12 +162,6 @@ window.switchTab = function(name) {
 };
 
 // ── Add User ───────────────────────────────────────────────
-// NOTE: Firebase client SDK only allows creating auth users while
-// signed in as that new user. To truly create accounts server-side
-// you'd need Cloud Functions / Firebase Admin SDK.
-// This approach: creates the Auth account, stores Firestore doc,
-// then re-signs-in the admin. Works for small schools.
-
 window.addUser = async function(role) {
     const prefix   = role === "student" ? "s" : "t";
     const fname    = document.getElementById(`${prefix}-firstname`).value.trim();
@@ -187,14 +184,11 @@ window.addUser = async function(role) {
     showFormMsg(msgEl, "", "Creating account...");
 
     try {
-        // Save admin's current auth token so we can re-sign them in
-        const adminUser = auth.currentUser;
-
-        // Create new user
-        const cred = await createUserWithEmailAndPassword(auth, email, password);
+        // Create user using secondaryAuth to shield the current admin state
+        const cred = await createUserWithEmailAndPassword(secondaryAuth, email, password);
         const newUid = cred.user.uid;
 
-        // Write Firestore doc
+        // Write user definition into Firestore collection
         await setDoc(doc(db, "users", newUid), {
             firstName: fname,
             lastName:  lname,
@@ -202,17 +196,18 @@ window.addUser = async function(role) {
             role:      role
         });
 
+        // Terminate secondary state session immediately
+        await secondaryAuth.signOut();
+
         showFormMsg(msgEl, "success",
             `✅ ${role.charAt(0).toUpperCase() + role.slice(1)} account created for ${fname}!`);
 
-        // Clear fields
+        // Clear input form fields
         [`${prefix}-firstname`,`${prefix}-lastname`,`${prefix}-email`,`${prefix}-password`]
             .forEach(id => document.getElementById(id).value = "");
 
-        // Firebase automatically signs in the new user — we need to sign
-        // the admin back in. Redirect to force re-auth.
-        alert(`Account created for ${fname} ${lname}.\n\nIMPORTANT: You have been signed out of the new account. Please sign in again as admin.`);
-        window.location.href = "index.html";
+        // Silently reload user grids without crashing the dashboard state
+        await loadAllUsers();
 
     } catch (err) {
         const msgs = {
@@ -238,7 +233,7 @@ window.openDeleteModal = function(uid, name) {
 
     document.getElementById("modal-confirm").onclick = async () => {
         await deleteUser(pendingDelete);
-        closeModal();
+        window.closeModal();
     };
 };
 
@@ -250,9 +245,6 @@ window.closeModal = function() {
 async function deleteUser(uid) {
     try {
         await deleteDoc(doc(db, "users", uid));
-        // Note: Firebase Auth deletion requires Admin SDK or user self-deletion.
-        // This removes the Firestore record (blocks access), which is sufficient
-        // since auth check reads role from Firestore on every page load.
         await loadAllUsers();
         alert("User record removed from the system.");
     } catch (err) {
@@ -270,7 +262,7 @@ window.openRoleModal = function(uid, name, currentRole) {
     document.getElementById("role-confirm").onclick = async () => {
         const newRole = document.getElementById("new-role").value;
         await changeRole(pendingRole.uid, newRole);
-        closeRoleModal();
+        window.closeRoleModal();
     };
 };
 
@@ -297,10 +289,10 @@ window.toggleMenu = function() {
 
 // Close modals on overlay click
 document.getElementById("modal").addEventListener("click", (e) => {
-    if (e.target === document.getElementById("modal")) closeModal();
+    if (e.target === document.getElementById("modal")) window.closeModal();
 });
 document.getElementById("role-modal").addEventListener("click", (e) => {
-    if (e.target === document.getElementById("role-modal")) closeRoleModal();
+    if (e.target === document.getElementById("role-modal")) window.closeRoleModal();
 });
 
 console.log("Admin dashboard ready.");
