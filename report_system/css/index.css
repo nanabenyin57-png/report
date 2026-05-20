@@ -1,0 +1,118 @@
+/* ============================================================
+   index.css — Sign In Page Styles
+   ============================================================ */
+
+.index-body {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+/* ── Hero ─────────────────────────────────────────────────── */
+.index-hero {
+    background-image: url("../images/hbg.jpg");
+    background-size: cover;
+    background-attachment: fixed;
+    padding: 80px 40px 60px 40px;
+    text-align: center;
+    position: relative;
+}
+
+.index-hero::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.35);
+}
+
+.index-hero-content {
+    position: relative;
+    z-index: 1;
+}
+
+/* ── Card Area ────────────────────────────────────────────── */
+.index-card-wrap {
+    flex: 1;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 40px 20px 60px 20px;
+}
+
+.index-card {
+    background: rgba(10, 8, 5, 0.82);
+    border: 1px solid var(--glass-border);
+    border-radius: 20px;
+    padding: 36px;
+    width: 100%;
+    max-width: 440px;
+    backdrop-filter: blur(16px);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    animation: fadeUp 0.4s ease;
+}
+
+.index-card-title {
+    font-family: 'Cinzel', serif;
+    color: moccasin;
+    font-size: 1.4rem;
+    margin: 0 0 6px 0;
+}
+
+.index-card-sub {
+    color: var(--text-muted);
+    font-size: 0.88rem;
+    margin: 0 0 24px 0;
+    line-height: 1.6;
+}
+
+/* ── Role Buttons ─────────────────────────────────────────── */
+.index-role-btns {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin-top: 20px;
+}
+
+.role-btn {
+    background: var(--input-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-lg);
+    padding: 18px 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    transition: all 0.2s;
+    text-align: left;
+    width: 100%;
+}
+
+.role-btn:hover {
+    border-color: var(--gold);
+    background: rgba(201, 168, 76, 0.1);
+    transform: translateY(-2px);
+}
+
+.role-icon  { font-size: 1.8rem; flex-shrink: 0; }
+
+.role-label {
+    display: block;
+    font-family: 'Cinzel', serif;
+    font-size: 0.9rem;
+    color: moccasin;
+    margin-bottom: 3px;
+}
+
+.role-desc {
+    display: block;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+}
+
+/* ── OTP Input ────────────────────────────────────────────── */
+#signin-otp {
+    text-align: center;
+    font-size: 1.4rem;
+    letter-spacing: 0.3em;
+    font-family: 'Cinzel', serif;
+}
