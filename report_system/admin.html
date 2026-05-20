@@ -1,41 +1,253 @@
-<!Doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <meta name="author" content="K_Tawiah">
-    <title> Report | Admin Dashboard</title>
+    <title>Admin Dashboard — K_Tawiah</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Nunito:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="report.css">
     <link rel="stylesheet" href="admin.css">
-    <link rel="stylesheet" href="theme.css">
 </head>
 <body>
-    <header class="admin_header">
+    <!-- HEADER / NAV -->
+    <header class="admin-header">
         <nav>
-            <button type="button" class="nav-btn" id="navigation" onclick="toggleMenu()"> &#9776; </button>
-            <div class="logo">K_TAWIAH EXAMS</div>
+            <button type="button" class="navigation" id="navigation" onclick="toggleMenu()">&#9776;</button>
+            <div class="logo">K_TAWIAH</div>
             <div class="nav_overlay" id="navover">
                 <ul class="links">
-                    <li><a href="report.html">Teacher Dashboard</a></li>
-                    <li><a href="assessment.html">Class Assessment</a></li>
-                    <li><a href="index.html" style="color: #ff4d4d;">Logout</a></li>
+                    <li><a href="report.html" onclick="toggleMenu()">Report System</a></li>
+                    <li><a href="class assessment.html" onclick="toggleMenu()">Class Assessment</a></li>
+                    <li><a href="index.html" onclick="toggleMenu()">Sign Out</a></li>
                 </ul>
             </div>
         </nav>
-        <h1>Admin Dashboard</h1>
-        </header>
-        <section>
-            <div  class="departments_classes">
-                <form action="#" method="get">
-                    <label for="department">Department</label>
-                <select name="department" id="departments">
-                    <option value="Preschool">Preschool</option>
-                    <option value="Lower_Primary">Lower Primary</option>
-                    <option value="Upper_Primary">Upper Primary</option>
-                    <option value="Junior_High">Junior High</option>    
-                </select>
-                </form>
+        <div class="admin-hero">
+            <div class="admin-hero-text">
+                <span class="admin-tag">ADMIN PANEL</span>
+                <h1 class="admin-title">Control Centre</h1>
+                <p class="admin-subtitle" id="admin-welcome">Checking authorization...</p>
+            </div>
+            <!-- Quick Stats Bar -->
+            <div class="stats-bar">
+                <div class="stat-card">
+                    <span class="stat-num" id="total-students">—</span>
+                    <span class="stat-label">Students</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-num" id="total-teachers">—</span>
+                    <span class="stat-label">Teachers</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-num" id="total-admins">—</span>
+                    <span class="stat-label">Admins</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN DASHBOARD -->
+    <main class="dashboard" id="dashboard-main" style="display:none;">
+
+        <!-- TAB NAVIGATION -->
+        <nav class="tab-nav">
+            <button class="tab-btn active" onclick="switchTab('students')">
+                <span class="tab-icon">🎓</span> Students
+            </button>
+            <button class="tab-btn" onclick="switchTab('teachers')">
+                <span class="tab-icon">👨‍🏫</span> Teachers
+            </button>
+            <button class="tab-btn" onclick="switchTab('add-user')">
+                <span class="tab-icon">➕</span> Add User
+            </button>
+            <button class="tab-btn" onclick="switchTab('pages')">
+                <span class="tab-icon">🔗</span> Pages
+            </button>
+        </nav>
+
+        <!-- STUDENTS TAB -->
+        <section class="tab-content active" id="tab-students">
+            <div class="section-header">
+                <h2>Student Registry</h2>
+                <div class="search-bar">
+                    <input type="text" id="student-search" placeholder="Search by name or email..." oninput="filterTable('student-table', this.value)">
+                </div>
+            </div>
+            <div class="table-wrap">
+                <table class="data-table" id="student-table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Role</th>
+                            <th>User ID</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="student-tbody">
+                        <tr><td colspan="5" class="loading-row">Loading students...</td></tr>
+                    </tbody>
+                </table>
             </div>
         </section>
 
+        <!-- TEACHERS TAB -->
+        <section class="tab-content" id="tab-teachers">
+            <div class="section-header">
+                <h2>Teacher Registry</h2>
+                <div class="search-bar">
+                    <input type="text" id="teacher-search" placeholder="Search by name or email..." oninput="filterTable('teacher-table', this.value)">
+                </div>
+            </div>
+            <div class="table-wrap">
+                <table class="data-table" id="teacher-table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Role</th>
+                            <th>User ID</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="teacher-tbody">
+                        <tr><td colspan="5" class="loading-row">Loading teachers...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- ADD USER TAB -->
+        <section class="tab-content" id="tab-add-user">
+            <div class="section-header">
+                <h2>Add New User</h2>
+            </div>
+            <div class="form-grid">
+                <!-- Add Student -->
+                <div class="form-card">
+                    <h3>🎓 Add Student</h3>
+                    <p class="form-note">Creates a new student account. They will log in using these credentials.</p>
+                    <div class="form-group">
+                        <label>First Name</label>
+                        <input type="text" id="s-firstname" placeholder="e.g. Kofi">
+                    </div>
+                    <div class="form-group">
+                        <label>Last Name</label>
+                        <input type="text" id="s-lastname" placeholder="e.g. Mensah">
+                    </div>
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" id="s-email" placeholder="student@school.com">
+                    </div>
+                    <div class="form-group">
+                        <label>Temporary Password</label>
+                        <input type="password" id="s-password" placeholder="Min 8 chars, 1 uppercase, 1 number">
+                    </div>
+                    <button class="btn-primary" onclick="addUser('student')">Create Student Account</button>
+                    <div class="form-msg" id="s-msg"></div>
+                </div>
+
+                <!-- Add Teacher -->
+                <div class="form-card">
+                    <h3>👨‍🏫 Add Teacher</h3>
+                    <p class="form-note">Creates a new teacher account with access to the Report System.</p>
+                    <div class="form-group">
+                        <label>First Name</label>
+                        <input type="text" id="t-firstname" placeholder="e.g. Ama">
+                    </div>
+                    <div class="form-group">
+                        <label>Last Name</label>
+                        <input type="text" id="t-lastname" placeholder="e.g. Owusu">
+                    </div>
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" id="t-email" placeholder="teacher@school.com">
+                    </div>
+                    <div class="form-group">
+                        <label>Temporary Password</label>
+                        <input type="password" id="t-password" placeholder="Min 8 chars, 1 uppercase, 1 number">
+                    </div>
+                    <button class="btn-primary" onclick="addUser('teacher')">Create Teacher Account</button>
+                    <div class="form-msg" id="t-msg"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- PAGES TAB -->
+        <section class="tab-content" id="tab-pages">
+            <div class="section-header">
+                <h2>System Pages</h2>
+            </div>
+            <div class="pages-grid">
+                <a href="report.html" class="page-card" target="_blank">
+                    <span class="page-icon">📊</span>
+                    <h3>Report System</h3>
+                    <p>Generate and download student score reports by department.</p>
+                    <span class="page-link">Open →</span>
+                </a>
+                <a href="class assessment.html" class="page-card" target="_blank">
+                    <span class="page-icon">📝</span>
+                    <h3>Class Assessment</h3>
+                    <p>Enter SBA scores and compute converted totals per subject.</p>
+                    <span class="page-link">Open →</span>
+                </a>
+                <a href="index.html" class="page-card" target="_blank">
+                    <span class="page-icon">🔐</span>
+                    <h3>Sign In / Sign Up</h3>
+                    <p>The main login page for all users of the system.</p>
+                    <span class="page-link">Open →</span>
+                </a>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- ACCESS DENIED STATE -->
+    <div class="access-denied" id="access-denied" style="display:none;">
+        <span class="denied-icon">🚫</span>
+        <h2>Access Denied</h2>
+        <p>You do not have admin privileges.</p>
+        <a href="report.html">Go back to Report System</a>
+    </div>
+
+    <!-- DELETE CONFIRMATION MODAL -->
+    <div class="modal-overlay" id="modal" style="display:none;">
+        <div class="modal-box">
+            <h3>Confirm Deletion</h3>
+            <p id="modal-msg">Are you sure you want to remove this user?</p>
+            <p class="modal-warn">⚠️ This will permanently delete their account from the system.</p>
+            <div class="modal-btns">
+                <button class="btn-danger" id="modal-confirm">Yes, Delete</button>
+                <button class="btn-secondary" onclick="closeModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ROLE EDIT MODAL -->
+    <div class="modal-overlay" id="role-modal" style="display:none;">
+        <div class="modal-box">
+            <h3>Change User Role</h3>
+            <p id="role-modal-name">User Name</p>
+            <div class="form-group">
+                <label>New Role</label>
+                <select id="new-role">
+                    <option value="student">Student</option>
+                    <option value="teacher">Teacher</option>
+                    <option value="admin">Admin</option>
+                </select>
+            </div>
+            <div class="modal-btns">
+                <button class="btn-primary" id="role-confirm">Save Role</button>
+                <button class="btn-secondary" onclick="closeRoleModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>© 2026 K_Tawiah Student Report System — Admin Panel</p>
+    </footer>
+
+    <script type="module" src="admin.js"></script>
 </body>
+</html>
