@@ -1,280 +1,289 @@
 // ============================================================
 //  signing.js — K_Tawiah Student Report System
-//  Handles: Sign In (with role-based redirect), Sign Up
-//           (student index sync + teacher registration)
+//  Sign In (email + SMS OTP), Teacher Sign Up, Role Redirect
 // ============================================================
 
 // 1. IMPORTS
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
-import {
-    getAuth,
-    signInWithEmailAndPassword,
-    createUserWithEmailAndPassword
-} from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
-import {
-    getFirestore,
-    doc,
-    getDoc,
-    setDoc,
-    updateDoc
-} from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
-import {
-    firebaseConfig,
-    validateEmail,
-    validatePassword,
-    validateIndexNumber,
-    sanitizeInput,
-    showNotification,
-    MESSAGES
-} from "./config.js";
+import { initializeApp }                        from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
+import { getAuth,
+         signInWithEmailAndPassword,
+         createUserWithEmailAndPassword,
+         RecaptchaVerifier,
+         signInWithPhoneNumber,
+         sendEmailVerification }                from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
+import { getFirestore,
+         doc, getDoc, setDoc }                  from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
+import { firebaseConfig,
+         validateEmail,
+         validatePassword,
+         validatePhone,
+         sanitizeInput,
+         showNotification,
+         resolveRole,
+         sendEmailNotification,
+         MESSAGES }                             from "./config.js";
 
 // 2. INITIALIZE
 const app  = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db   = getFirestore(app);
 
+// ── State ──────────────────────────────────────────────────
+let confirmationResult = null;  // holds Firebase SMS confirmation
+let signedInUser       = null;  // holds user after email login, before OTP
+
 // ============================================================
-//  UI — Show Sign In Form
+//  UI STATE SWITCHERS
 // ============================================================
-window.signin_page = function () {
-    const sign = document.getElementById("signingpage");
-    sign.innerHTML = `
-    <div class="signin-container">
-        <h3>Staff & Student Sign In</h3>
-        <input type="email"     placeholder="Email Address" id="email"    class="email">
-        <input type="password"  placeholder="Password"      id="password" class="pass">
-        <button onclick="handlesignin()" class="signin-button">Sign In</button>
-    </div>`;
+window.showDefault = function () {
+    document.getElementById("state-default").style.display        = "block";
+    document.getElementById("state-signin").style.display         = "none";
+    document.getElementById("state-teacher-signup").style.display = "none";
+};
+
+window.showSignIn = function () {
+    document.getElementById("state-default").style.display        = "none";
+    document.getElementById("state-signin").style.display         = "block";
+    document.getElementById("signin-step1").style.display         = "block";
+    document.getElementById("signin-step2").style.display         = "none";
+};
+
+window.showTeacherSignUp = function () {
+    document.getElementById("state-default").style.display        = "none";
+    document.getElementById("state-teacher-signup").style.display = "block";
 };
 
 // ============================================================
-//  UI — Show Sign Up Form
+//  RECAPTCHA SETUP (required for Phone Auth)
 // ============================================================
-window.signup_page = function () {
-    const sign = document.getElementById("signingpage");
-    sign.innerHTML = `
-    <div class="signup-container">
-        <h3>Create Account</h3>
-
-        <select id="userRole" onchange="toggleIndexField()" class="role-select">
-            <option value="student">Student Account</option>
-            <option value="teacher">Teacher Account</option>
-        </select>
-
-        <div id="indexFieldWrapper">
-            <p>Enter your Index Number to sync with your school records.</p>
-            <input type="text" placeholder="Index Number (e.g. KT-001)" id="indexno" class="indexno">
-        </div>
-
-        <input type="text"     placeholder="First Name"        id="firstname"       required>
-        <input type="text"     placeholder="Last Name"         id="lastname"        required>
-        <input type="email"    placeholder="Email"             id="email"           required>
-        <input type="password" placeholder="Password"          id="password"        required>
-        <input type="password" placeholder="Confirm Password"  id="confirmpassword" required>
-
-        <button onclick="handlesignup()" class="signup-button">Register Account</button>
-    </div>`;
-};
+function setupRecaptcha() {
+    if (!window.recaptchaVerifier) {
+        window.recaptchaVerifier = new RecaptchaVerifier(
+            auth,
+            "recaptcha-container",
+            { size: "invisible" }
+        );
+    }
+}
 
 // ============================================================
-//  UI — Toggle Index Number field based on role selection
+//  SIGN IN — Step 1: Email + Password
 // ============================================================
-window.toggleIndexField = function () {
-    const role         = document.getElementById("userRole").value;
-    const indexWrapper = document.getElementById("indexFieldWrapper");
-    indexWrapper.style.display = (role === "teacher") ? "none" : "block";
-};
+window.handleSignIn = async function () {
+    const email    = sanitizeInput(document.getElementById("signin-email").value);
+    const password = document.getElementById("signin-password").value;
 
-// ============================================================
-//  FIREBASE — Sign In (with role-based redirect)
-// ============================================================
-window.handlesignin = async function () {
-    const email    = sanitizeInput(document.getElementById("email").value);
-    const password = document.getElementById("password").value;
-
-    // Basic validation
     if (!email || !password) {
-        showNotification("Please fill in all fields.", "error");
-        return;
+        showNotification("Please fill in all fields.", "error"); return;
     }
     if (!validateEmail(email)) {
-        showNotification("Please enter a valid email address.", "error");
-        return;
+        showNotification("Please enter a valid email address.", "error"); return;
     }
 
     try {
-        // Step 1: Authenticate with Firebase
+        showNotification("Signing in...", "info");
+
+        // Authenticate
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
-        const user = userCredential.user;
+        signedInUser = userCredential.user;
 
-        // Step 2: Read their Firestore document to get their role
-        const userDocRef  = doc(db, "users", user.uid);
-        const userDocSnap = await getDoc(userDocRef);
+        // Read Firestore profile
+        const userSnap = await getDoc(doc(db, "users", signedInUser.uid));
 
-        if (!userDocSnap.exists()) {
-            console.warn("No Firestore document found for UID:", user.uid);
-            showNotification("Account found but no profile exists. Contact your administrator.", "error");
+        if (!userSnap.exists()) {
+            showNotification("No profile found. Contact your administrator.", "error");
             return;
         }
 
-        const data    = userDocSnap.data();
-        const rawRole = data.role;
+        const data   = userSnap.data();
+        const role   = resolveRole(data.role);
+        const status = data.accountStatus;
+        const phone  = data.phone;
 
-        // Step 3: Safely resolve the role whether it's a string or an array
-        // e.g. "admin" OR ["admin", "teacher"] both work correctly
-        let role;
-        if (Array.isArray(rawRole)) {
-            if      (rawRole.includes("admin"))   role = "admin";
-            else if (rawRole.includes("teacher")) role = "teacher";
-            else if (rawRole.includes("student")) role = "student";
-            else                                  role = "unknown";
-        } else {
-            role = rawRole; // already a plain string
+        // Block pending teachers
+        if (status === "pending") {
+            window.location.href = "pending.html"; return;
         }
 
-        console.log("Resolved role:", role); // helpful for debugging
+        // Block suspended accounts
+        if (status === "suspended") {
+            showNotification("Your account has been suspended. Contact the administrator.", "error");
+            auth.signOut();
+            return;
+        }
 
-        // Step 4: Redirect based on role
-        if (role === "admin") {
-            showNotification("Welcome, Admin!", "success");
-            window.location.href = "admin.html";
-
-        } else if (role === "teacher") {
-            showNotification("Welcome back!", "success");
-            window.location.href = "report.html";
-
-        } else if (role === "student") {
-            showNotification("Welcome back!", "success");
-            window.location.href = "student_view.html";
-
+        // If user has a phone number — require SMS OTP verification
+        if (phone) {
+            setupRecaptcha();
+            await sendSMSOTP(phone);
+            // Show step 2
+            document.getElementById("signin-step1").style.display = "none";
+            document.getElementById("signin-step2").style.display = "block";
         } else {
-            showNotification("Login successful. Role not recognised — contact your administrator.", "warning");
-            window.location.href = "report.html";
+            // No phone number — skip OTP, redirect by role
+            redirectByRole(role);
         }
 
     } catch (error) {
-        console.error("Login Error:", error);
-
-        const errorMessages = {
+        console.error("Sign In error:", error);
+        const msgs = {
             "auth/user-not-found":         "No account found with this email.",
-            "auth/wrong-password":         "Incorrect password. Please try again.",
+            "auth/wrong-password":         "Incorrect password.",
             "auth/invalid-credential":     "Invalid email or password.",
-            "auth/too-many-requests":      "Too many failed attempts. Please try again later.",
+            "auth/too-many-requests":      "Too many attempts. Please try again later.",
             "auth/network-request-failed": "Network error. Check your connection."
         };
-
-        const message = errorMessages[error.code] || MESSAGES.errors.auth || "Login failed. Please try again.";
-        showNotification(message, "error");
+        showNotification(msgs[error.code] || MESSAGES.errors.auth, "error");
     }
 };
 
 // ============================================================
-//  FIREBASE — Sign Up (Student index sync + Teacher registration)
+//  SIGN IN — Step 2: SMS OTP
 // ============================================================
-window.handlesignup = async function () {
-    const userRole = document.getElementById("userRole").value;
-    const indexNo  = sanitizeInput(document.getElementById("indexno")?.value.trim() || "");
-    const fname    = sanitizeInput(document.getElementById("firstname").value.trim());
-    const lname    = sanitizeInput(document.getElementById("lastname").value.trim());
-    const email    = sanitizeInput(document.getElementById("email").value.trim());
-    const password = document.getElementById("password").value;
-    const confirm  = document.getElementById("confirmpassword").value;
-
-    // ── Validation ────────────────────────────────────────────
-    if (!fname || !lname || !email || !password || !confirm) {
-        showNotification("Please fill in all required fields.", "error");
-        return;
-    }
-    if (userRole === "student" && !indexNo) {
-        showNotification("Please enter your Index Number.", "error");
-        return;
-    }
-    if (!validateEmail(email)) {
-        showNotification("Please enter a valid email address.", "error");
-        return;
-    }
-    if (!validatePassword(password)) {
-        showNotification(
-            "Password must be at least 6 characters and contain uppercase, lowercase, and numbers.",
-            "error"
-        );
-        return;
-    }
-    if (password !== confirm) {
-        showNotification("Passwords do not match.", "error");
-        return;
-    }
-    if (userRole === "student" && !validateIndexNumber(indexNo)) {
-        showNotification("Index Number must be in the format KT-001.", "error");
-        return;
-    }
-
-    // ── Create Firebase Auth account ──────────────────────────
+async function sendSMSOTP(phone) {
     try {
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        const user = userCredential.user;
-
-        // ── STUDENT FLOW ──────────────────────────────────────
-        if (userRole === "student") {
-            // Try to find a pre-existing school record using the Index Number
-            const existingRecordRef  = doc(db, "users", indexNo);
-            const existingRecordSnap = await getDoc(existingRecordRef);
-
-            if (existingRecordSnap.exists()) {
-                // Record found — link this Auth account to the teacher's pre-made entry
-                await updateDoc(existingRecordRef, {
-                    uid:           user.uid,
-                    email:         email,
-                    firstName:     fname,
-                    lastName:      lname,
-                    accountStatus: "active"
-                });
-                showNotification(
-                    "Success! Your account has been linked to your school records.",
-                    "success"
-                );
-            } else {
-                // No pre-existing record — create a fresh student profile
-                await setDoc(doc(db, "users", user.uid), {
-                    indexNo:       indexNo,
-                    firstName:     fname,
-                    lastName:      lname,
-                    email:         email,
-                    role:          "student",
-                    accountStatus: "active"
-                });
-                showNotification(
-                    "Account created! No existing school record was found for that Index Number.",
-                    "success"
-                );
-            }
-
-            window.location.href = "student_view.html";
-
-        // ── TEACHER FLOW ──────────────────────────────────────
-        } else if (userRole === "teacher") {
-            await setDoc(doc(db, "users", user.uid), {
-                firstName:     fname,
-                lastName:      lname,
-                email:         email,
-                role:          "teacher",   // NOTE: Admin role can only be set
-                accountStatus: "active"     //       manually in Firebase Console
-            });
-            showNotification("Teacher account created successfully!", "success");
-            window.location.href = "report.html";
+        // Normalize phone to E.164 format for Firebase
+        let normalized = phone.replace(/\s/g, "");
+        if (normalized.startsWith("0")) {
+            normalized = "+233" + normalized.slice(1); // Ghana prefix
         }
+        confirmationResult = await signInWithPhoneNumber(
+            auth, normalized, window.recaptchaVerifier
+        );
+        showNotification("Verification code sent to your phone.", "success");
+    } catch (error) {
+        console.error("SMS OTP error:", error);
+        showNotification("Could not send SMS code. Check your phone number.", "error");
+    }
+}
+
+window.verifySMSOTP = async function () {
+    const code = document.getElementById("signin-otp").value.trim();
+
+    if (!code || code.length < 6) {
+        showNotification("Please enter the 6-digit code.", "error"); return;
+    }
+    if (!confirmationResult) {
+        showNotification("Session expired. Please sign in again.", "error"); return;
+    }
+
+    try {
+        await confirmationResult.confirm(code);
+
+        // Read role again after OTP confirmed
+        const userSnap = await getDoc(doc(db, "users", signedInUser.uid));
+        const role     = resolveRole(userSnap.data()?.role);
+        redirectByRole(role);
 
     } catch (error) {
-        console.error("Signup Error:", error);
+        console.error("OTP verify error:", error);
+        showNotification("Incorrect code. Please try again.", "error");
+    }
+};
 
-        const errorMessages = {
+window.resendOTP = async function () {
+    if (!signedInUser) {
+        showNotification("Session expired. Please sign in again.", "error"); return;
+    }
+    const userSnap = await getDoc(doc(db, "users", signedInUser.uid));
+    const phone    = userSnap.data()?.phone;
+    if (phone) {
+        setupRecaptcha();
+        await sendSMSOTP(phone);
+    }
+};
+
+// ============================================================
+//  ROLE-BASED REDIRECT
+// ============================================================
+function redirectByRole(role) {
+    const routes = {
+        admin:   "admin.html",
+        teacher: "teacher.html",
+        student: "student.html"
+    };
+    const dest = routes[role];
+    if (dest) {
+        showNotification("Welcome back!", "success");
+        window.location.href = dest;
+    } else {
+        showNotification("Unknown role. Contact your administrator.", "warning");
+        auth.signOut();
+    }
+}
+
+// ============================================================
+//  TEACHER SIGN UP
+// ============================================================
+window.handleTeacherSignUp = async function () {
+    const fname   = sanitizeInput(document.getElementById("t-firstname").value.trim());
+    const lname   = sanitizeInput(document.getElementById("t-lastname").value.trim());
+    const email   = sanitizeInput(document.getElementById("t-email").value.trim());
+    const phone   = sanitizeInput(document.getElementById("t-phone").value.trim());
+    const pass    = document.getElementById("t-password").value;
+    const confirm = document.getElementById("t-confirmpassword").value;
+
+    // Validation
+    if (!fname || !lname || !email || !phone || !pass || !confirm) {
+        showNotification("Please fill in all fields.", "error"); return;
+    }
+    if (!validateEmail(email)) {
+        showNotification("Invalid email address.", "error"); return;
+    }
+    if (!validatePhone(phone)) {
+        showNotification("Phone number must be in format +233XXXXXXXXX or 0XXXXXXXXX.", "error"); return;
+    }
+    if (!validatePassword(pass)) {
+        showNotification("Password must be 6+ characters with uppercase and numbers.", "error"); return;
+    }
+    if (pass !== confirm) {
+        showNotification("Passwords do not match.", "error"); return;
+    }
+
+    try {
+        showNotification("Creating account...", "info");
+
+        // Create Firebase Auth account
+        const cred = await createUserWithEmailAndPassword(auth, email, pass);
+        const user = cred.user;
+
+        // Send email verification
+        await sendEmailVerification(user);
+
+        // Write Firestore document — role: "pending" until admin approves
+        await setDoc(doc(db, "users", user.uid), {
+            firstName:     fname,
+            lastName:      lname,
+            email:         email,
+            phone:         phone,
+            role:          "pending",
+            accountStatus: "pending",
+            createdAt:     new Date()
+        });
+
+        // Notify admin via email (Trigger Email Extension)
+        await sendEmailNotification(db, setDoc, doc, {
+            to:      "admin@ktawiah.com", // replace with real admin email
+            subject: "New Teacher Account Pending Approval",
+            text:    `A new teacher account has been created and requires your approval.\n\nName: ${fname} ${lname}\nEmail: ${email}\n\nPlease log in to the admin dashboard to approve or reject this account.`,
+            html:    `<h2>New Teacher Account Pending Approval</h2>
+                      <p><strong>Name:</strong> ${fname} ${lname}</p>
+                      <p><strong>Email:</strong> ${email}</p>
+                      <p>Please log in to the <a href="https://ktawiah.com/admin.html">Admin Dashboard</a> to approve or reject this account.</p>`
+        });
+
+        showNotification("Account created! Awaiting admin approval. Check your email.", "success");
+
+        // Redirect to pending page
+        setTimeout(() => { window.location.href = "pending.html"; }, 2000);
+
+    } catch (error) {
+        console.error("Teacher Sign Up error:", error);
+        const msgs = {
             "auth/email-already-in-use": "An account with this email already exists.",
             "auth/weak-password":        "Password is too weak.",
-            "auth/invalid-email":        "Invalid email address.",
-            "auth/network-request-failed": "Network error. Check your connection."
+            "auth/invalid-email":        "Invalid email address."
         };
-
-        const message = errorMessages[error.code] || MESSAGES.errors.auth || "Sign up failed. Please try again.";
-        showNotification(message, "error");
+        showNotification(msgs[error.code] || MESSAGES.errors.auth, "error");
     }
 };

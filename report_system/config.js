@@ -1,179 +1,184 @@
-// config.js - Centralized configuration for the K_Tawiah Student Report System
+// ============================================================
+//  config.js — K_Tawiah Student Report System
+//  Shared Firebase config, utilities, and constants
+// ============================================================
 
-// Firebase Configuration
+// 1. FIREBASE CONFIG
 export const firebaseConfig = {
-    apiKey: "AIzaSyBmlZD5EHWgt8DsocsPVZcf4MJVjeuC0Fw",
-    authDomain: "reportbase-669ff.firebaseapp.com",
-    projectId: "reportbase-669ff",
-    storageBucket: "reportbase-669ff.firebasestorage.app",
+    apiKey:            "AIzaSyBmlZD5EHWgt8DsocsPVZcf4MJVjeuC0Fw",
+    authDomain:        "reportbase-669ff.firebaseapp.com",
+    projectId:         "reportbase-669ff",
+    storageBucket:     "reportbase-669ff.firebasestorage.app",
     messagingSenderId: "244941864396",
-    appId: "1:244941864396:web:aebc946e160a0172edf169",
-    measurementId: "G-KBTRR8YZFJ"
+    appId:             "1:244941864396:web:aebc946e160a0172edf169",
+    measurementId:     "G-KBTRR8YZFJ"
 };
 
-// Department and Class Data
-export const DEPARTMENTS = {
-    "Preschool": ["Numeracy", "Literacy", "Creative Arts", "Our World"],
-    "LowerPrimary": ["English", "Maths", "Science", "History", "Our World", "RME", "Twi"],
-    "UpperPrimary": ["English", "Maths", "Science", "History", "Computing", "RME", "Twi"],
-    "JuniorHigh": ["English", "Maths", "Science", "Social Studies", "Computing", "Pre-Tech", "RME", "Twi"]
+// 2. SUBJECTS PER DEPARTMENT
+// Used by teacher.js (SBA, Exams, Reports) and admin.js
+export const DEPARTMENT_SUBJECTS = {
+    Preschool:    ["LITERACY", "NUMERACY", "CREATIVE ARTS", "WRITING"],
+    LowerPrimary: ["ENGLISH", "MATHS", "SCIENCE", "HISTORY", "RELIGIOUS EDUCATION", "CREATIVE ARTS", "FRENCH", "TWI"],
+    UpperPrimary: ["ENGLISH", "MATHS", "SCIENCE", "COMPUTING", "HISTORY", "RELIGIOUS EDUCATION", "CREATIVE ARTS", "FRENCH", "TWI"],
+    JuniorHigh:   ["ENGLISH", "MATHS", "SCIENCE", "COMPUTING", "SOCIAL STUDIES", "RELIGIOUS EDUCATION", "CREATIVE ARTS", "FRENCH", "TWI", "CAREER TECHNOLOGY"]
 };
 
-// Department and Classes
-export const CLASSES = {
-    "Preschool": ["Nursery", "Kindergarten1", "Kindergarten2"],
-    "LowerPrimary": ["Basic1", "Basic2", "Basic3"],
-    "UpperPrimary": ["Basic4", "Basic5", "Basic6"],
-    "JuniorHigh": ["JHS1", "JHS2", "JHS3"]
-};
-
-// Stream name patterns for each class
-export const STREAM_PATTERNS = {
-    "Nursery": "N",
-    "Kindergarten1": "K1",
-    "Kindergarten2": "K2",
-    "Basic1": "B1",
-    "Basic2": "B2",
-    "Basic3": "B3",
-    "Basic4": "B4",
-    "Basic5": "B5",
-    "Basic6": "B6",
-    "JHS1": "J1",
-    "JHS2": "J2",
-    "JHS3": "J3"
-};
-
-// Function to generate streams based on class and number of streams
-export function generateStreams(className, numStreams) {
-    const pattern = STREAM_PATTERNS[className];
-    if (!pattern || !numStreams) return [];
-    
-    const streams = [];
-    const letters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
-    
-    for (let i = 0; i < Math.min(numStreams, 8); i++) {
-        streams.push(`${pattern}-${letters[i]}`);
-    }
-    return streams;
+// Department a class code belongs to — derived from prefix
+export function getDepartment(classCode) {
+    const code = classCode.toUpperCase();
+    if (code.startsWith("N"))   return "Preschool";
+    if (code.startsWith("KG"))  return "Preschool";
+    if (code.match(/^B[123]/))  return "LowerPrimary";
+    if (code.match(/^B[456]/))  return "UpperPrimary";
+    if (code.startsWith("JHS")) return "JuniorHigh";
+    return "Unknown";
 }
 
-// Grading Scale
-export const GRADING_SCALE = {
-    A1: { min: 80, label: "A1 (Excellent)" },
-    B2: { min: 70, label: "B2 (Very Good)" },
-    B3: { min: 60, label: "B3 (Good)" },
-    C4: { min: 55, label: "C4 (Credit)" },
-    C5: { min: 50, label: "C5 (Credit)" },
-    C6: { min: 45, label: "C6 (Pass)" },
-    D7: { min: 40, label: "D7 (Pass)" },
-    F9: { min: 0, label: "F9 (Fail)" }
-};
-
-// Validation Rules
-export const VALIDATION = {
-    email: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-    password: {
-        minLength: 6,
-        hasUppercase: /[A-Z]/,
-        hasLowercase: /[a-z]/,
-        hasNumber: /\d/
-    },
-    indexNumber: /^KT-\d{3}$/
-};
-
-// UI Messages
-export const MESSAGES = {
-    errors: {
-        network: "Network error. Please check your connection.",
-        auth: "Authentication failed. Please try again.",
-        permission: "You don't have permission to perform this action.",
-        validation: "Please check your input and try again.",
-        save: "Failed to save data. Please try again."
-    },
-    success: {
-        saved: "Data saved successfully!",
-        published: "Report published to students!",
-        registered: "Student registered successfully!"
-    },
-    loading: {
-        saving: "Saving...",
-        loading: "Loading...",
-        publishing: "Publishing..."
-    }
-};
-
-// Utility Functions
-export function calculateGrade(score) {
-    for (const [key, grade] of Object.entries(GRADING_SCALE)) {
-        if (score >= grade.min) {
-            return grade.label;
-        }
-    }
-    return GRADING_SCALE.F9.label;
+// 3. GRADING
+export function getGrade(score) {
+    if (score >= 80) return "A";
+    if (score >= 70) return "B";
+    if (score >= 60) return "C";
+    if (score >= 50) return "D";
+    if (score >= 40) return "E";
+    return "F";
 }
 
+export function getRemarks(score) {
+    if (score >= 80) return "Excellent";
+    if (score >= 70) return "Very Good";
+    if (score >= 60) return "Good";
+    if (score >= 50) return "Average";
+    if (score >= 40) return "Below Average";
+    return "Unsatisfactory";
+}
+
+// 4. INDEX NUMBER GENERATOR
+// Format: KT-[ClassCode]-[001]
+export async function generateIndexNumber(db, classCode, getDocs, collection, query, where) {
+    try {
+        const q = query(
+            collection(db, "users"),
+            where("classCode", "==", classCode),
+            where("role", "==", "student")
+        );
+        const snap = await getDocs(q);
+        const count = snap.size + 1;
+        const padded = String(count).padStart(3, "0");
+        return `KT-${classCode}-${padded}`;
+    } catch (err) {
+        console.error("Error generating index number:", err);
+        return null;
+    }
+}
+
+// 5. VALIDATION
 export function validateEmail(email) {
-    return VALIDATION.email.test(email);
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
 export function validatePassword(password) {
-    return password.length >= VALIDATION.password.minLength &&
-           VALIDATION.password.hasUppercase.test(password) &&
-           VALIDATION.password.hasLowercase.test(password) &&
-           VALIDATION.password.hasNumber.test(password);
+    // Min 6 chars, at least one uppercase, one lowercase, one number
+    return password.length >= 6 &&
+           /[A-Z]/.test(password) &&
+           /[a-z]/.test(password) &&
+           /[0-9]/.test(password);
 }
 
-export function validateIndexNumber(index) {
-    return VALIDATION.indexNumber.test(index);
+export function validatePhone(phone) {
+    // Accepts formats: +233XXXXXXXXX, 0XXXXXXXXX (Ghana numbers)
+    return /^(\+233|0)[0-9]{9}$/.test(phone.replace(/\s/g, ""));
 }
 
-export function sanitizeInput(input) {
-    return input.trim().replace(/[<>]/g, '');
+export function validateIndexNumber(indexNo) {
+    // Format: KT-[ClassCode]-[001..999]
+    return /^KT-[A-Z0-9]+-\d{3}$/.test(indexNo.toUpperCase());
 }
 
-export function showNotification(message, type = 'info') {
-    // Create a simple notification system
-    const notification = document.createElement('div');
-    notification.className = `notification ${type}`;
-    notification.textContent = message;
+export function sanitizeInput(value) {
+    return value.trim().replace(/[<>]/g, "");
+}
 
-    // Set background color based on type
-    let backgroundColor = '#4444ff'; // default info
-    if (type === 'error') backgroundColor = '#ff4444';
-    else if (type === 'success') backgroundColor = '#44ff44';
+// 6. NOTIFICATIONS — Firebase Trigger Email Extension
+// Writes to the "mail" collection which the extension reads automatically
+export async function sendEmailNotification(db, setDoc, doc, { to, subject, text, html }) {
+    try {
+        const id = `mail_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+        await setDoc(doc(db, "mail", id), {
+            to,
+            message: { subject, text, html: html || text }
+        });
+        console.log("Email queued for:", to);
+        return true;
+    } catch (err) {
+        console.error("Email notification error:", err);
+        return false;
+    }
+}
 
-    notification.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        padding: 15px 20px;
-        background: ${backgroundColor};
-        color: white;
-        border-radius: 8px;
-        z-index: 10000;
-        font-weight: bold;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-        opacity: 0;
-        transform: translateX(100%);
-        transition: all 0.3s ease;
-    `;
+// SMS via Firebase Phone Auth OTP — used for verification only
+// For result notifications, we log them and use email as primary
+export async function logSMSNotification(db, addDoc, collection, { phone, message, type }) {
+    try {
+        await addDoc(collection(db, "notifications"), {
+            type:      type || "sms",
+            recipient: phone,
+            message,
+            status:    "queued",
+            sentAt:    new Date()
+        });
+        return true;
+    } catch (err) {
+        console.error("SMS log error:", err);
+        return false;
+    }
+}
 
-    document.body.appendChild(notification);
+// 7. UI — Toast Notifications (used across all pages)
+export function showNotification(message, type = "info") {
+    // Remove any existing toast
+    const existing = document.getElementById("kt-toast");
+    if (existing) existing.remove();
+
+    const toast = document.createElement("div");
+    toast.id = "kt-toast";
+    toast.className = `kt-toast kt-toast--${type}`;
+    toast.innerText = message;
+    document.body.appendChild(toast);
 
     // Animate in
-    setTimeout(() => {
-        notification.style.opacity = '1';
-        notification.style.transform = 'translateX(0)';
-    }, 10);
+    setTimeout(() => toast.classList.add("kt-toast--show"), 10);
 
-    // Auto remove after 3 seconds
+    // Auto dismiss after 4 seconds
     setTimeout(() => {
-        notification.style.opacity = '0';
-        notification.style.transform = 'translateX(100%)';
-        setTimeout(() => {
-            if (notification.parentNode) {
-                notification.parentNode.removeChild(notification);
-            }
-        }, 300);
-    }, 3000);
+        toast.classList.remove("kt-toast--show");
+        setTimeout(() => toast.remove(), 400);
+    }, 4000);
 }
+
+// 8. ROLE RESOLVER — handles both string "admin" and array ["admin","teacher"]
+export function resolveRole(rawRole) {
+    if (Array.isArray(rawRole)) {
+        if (rawRole.includes("admin"))   return "admin";
+        if (rawRole.includes("teacher")) return "teacher";
+        if (rawRole.includes("student")) return "student";
+        return "unknown";
+    }
+    return rawRole || "unknown";
+}
+
+// 9. MESSAGES
+export const MESSAGES = {
+    errors: {
+        auth:        "Authentication failed. Please try again.",
+        permission:  "You do not have permission to do that.",
+        notFound:    "Record not found.",
+        network:     "Network error. Please check your connection."
+    },
+    success: {
+        saved:       "Changes saved successfully.",
+        created:     "Account created successfully.",
+        published:   "Results published and students notified.",
+        deleted:     "Record deleted successfully."
+    }
+};
