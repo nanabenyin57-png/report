@@ -88,7 +88,7 @@ window.toggleIndexField = function () {
 // ============================================================
 //  FIREBASE — Sign In (with role-based redirect)
 // ============================================================
-/*window.handlesignin = async function () {
+window.handlesignin = async function () {
     const email    = sanitizeInput(document.getElementById("email").value);
     const password = document.getElementById("password").value;
 
@@ -108,46 +108,58 @@ window.toggleIndexField = function () {
         const user = userCredential.user;
 
         // Step 2: Read their Firestore document to get their role
-        const userDocRef = doc(db, "users", user.uid);
+        const userDocRef  = doc(db, "users", user.uid);
         const userDocSnap = await getDoc(userDocRef);
 
-        if (userDocSnap.exists()) {
-            const data = userDocSnap.data();
-            const role = data.role;
+        if (!userDocSnap.exists()) {
+            console.warn("No Firestore document found for UID:", user.uid);
+            showNotification("Account found but no profile exists. Contact your administrator.", "error");
+            return;
+        }
 
-            // Step 3: Redirect based on role
-            if (role === "admin") {
-                showNotification("Welcome, Admin!", "success");
-                window.location.href = "admin.html";
+        const data    = userDocSnap.data();
+        const rawRole = data.role;
 
-            } else if (role === "teacher") {
-                showNotification("Welcome back!", "success");
-                window.location.href = "report.html";
+        // Step 3: Safely resolve the role whether it's a string or an array
+        // e.g. "admin" OR ["admin", "teacher"] both work correctly
+        let role;
+        if (Array.isArray(rawRole)) {
+            if      (rawRole.includes("admin"))   role = "admin";
+            else if (rawRole.includes("teacher")) role = "teacher";
+            else if (rawRole.includes("student")) role = "student";
+            else                                  role = "unknown";
+        } else {
+            role = rawRole; // already a plain string
+        }
 
-            } else if (role === "student") {
-                showNotification("Welcome back!", "success");
-                window.location.href = "student_view.html";
+        console.log("Resolved role:", role); // helpful for debugging
 
-            } else {
-                // Unknown role — safe fallback
-                showNotification("Login successful. Role not recognised.", "warning");
-                window.location.href = "report.html";
-            }
+        // Step 4: Redirect based on role
+        if (role === "admin") {
+            showNotification("Welcome, Admin!", "success");
+            window.location.href = "admin.html";
+
+        } else if (role === "teacher") {
+            showNotification("Welcome back!", "success");
+            window.location.href = "report.html";
+
+        } else if (role === "student") {
+            showNotification("Welcome back!", "success");
+            window.location.href = "student_view.html";
 
         } else {
-            // Auth account exists but no Firestore document — edge case
-            console.warn("No Firestore user document found for UID:", user.uid);
-            showNotification("Account found but no profile exists. Contact your administrator.", "error");
+            showNotification("Login successful. Role not recognised — contact your administrator.", "warning");
+            window.location.href = "report.html";
         }
 
     } catch (error) {
         console.error("Login Error:", error);
 
         const errorMessages = {
-            "auth/user-not-found":      "No account found with this email.",
-            "auth/wrong-password":      "Incorrect password. Please try again.",
-            "auth/invalid-credential":  "Invalid email or password.",
-            "auth/too-many-requests":   "Too many failed attempts. Please try again later.",
+            "auth/user-not-found":         "No account found with this email.",
+            "auth/wrong-password":         "Incorrect password. Please try again.",
+            "auth/invalid-credential":     "Invalid email or password.",
+            "auth/too-many-requests":      "Too many failed attempts. Please try again later.",
             "auth/network-request-failed": "Network error. Check your connection."
         };
 
@@ -155,27 +167,7 @@ window.toggleIndexField = function () {
         showNotification(message, "error");
     }
 };
-*/
-// After getting userDocSnap...
-const data = userDocSnap.data();
 
-// Handle role whether it's a string "admin" or an array ["admin", "teacher"]
-const rawRole = data.role;
-const role = Array.isArray(rawRole)
-    ? (rawRole.includes("admin")   ? "admin"
-     : rawRole.includes("teacher") ? "teacher"
-     : rawRole.includes("student") ? "student"
-     : "unknown")
-    : rawRole; // it's already a plain string
-
-// Now redirect as normal
-if (role === "admin") {
-    window.location.href = "admin.html";
-} else if (role === "teacher") {
-    window.location.href = "report.html";
-} else if (role === "student") {
-    window.location.href = "student_view.html";
-}
 // ============================================================
 //  FIREBASE — Sign Up (Student index sync + Teacher registration)
 // ============================================================
