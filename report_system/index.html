@@ -1,30 +1,122 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">  
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <meta name="author" content="K_Tawiah">
-    <title>K_Tawiah Student Report System</title>   
-    <link rel="stylesheet" href="theme.css">
-    <link rel="stylesheet" href="signing.css">
+    <title>K_Tawiah Student Report System</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Nunito:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/index.css">
 </head>
-<body>
-    <header>
-        <div class="headercontent">
-            <span class="title">K_Tawiah Student Report System</span>
-        </div>
-    </header>
+<body class="index-body">
 
-    <div class="auth-buttons">
-        <button type="button" class="sign-in" onclick="signin_page()">SIGN IN</button>
-        <button type="button" class="sign-up" onclick="signup_page()">SIGN UP</button>
+    <!-- HERO -->
+    <div class="index-hero">
+        <div class="index-hero-content">
+            <span class="header-tag">Welcome</span>
+            <h1 class="header-title">K_Tawiah Student<br>Report System</h1>
+            <p class="header-subtitle">Manage student results, assessments and reports.</p>
+        </div>
     </div>
 
-    <div class="signpage" id="signingpage">
-        </div>
+    <!-- SIGN IN CARD -->
+    <div class="index-card-wrap">
+        <div class="index-card" id="index-card">
 
-    <script src="global.js"></script>
-    <script type="module" src="signing.js"></script>
+            <!-- DEFAULT STATE: Two buttons -->
+            <div id="state-default">
+                <h2 class="index-card-title">Sign In</h2>
+                <p class="index-card-sub">Select your account type to continue.</p>
+                <div class="index-role-btns">
+                    <button class="role-btn" onclick="showSignIn()">
+                        <span class="role-icon">🔐</span>
+                        <span class="role-label">Sign In</span>
+                        <span class="role-desc">Students, Teachers & Admins</span>
+                    </button>
+                    <button class="role-btn" onclick="showTeacherSignUp()">
+                        <span class="role-icon">👨‍🏫</span>
+                        <span class="role-label">Teacher Sign Up</span>
+                        <span class="role-desc">Create a teacher account</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- SIGN IN FORM -->
+            <div id="state-signin" style="display:none;">
+                <h2 class="index-card-title">Sign In</h2>
+
+                <!-- STEP 1: Email + Password -->
+                <div id="signin-step1">
+                    <div class="form-group">
+                        <label>Email Address</label>
+                        <input type="email" id="signin-email" placeholder="your@email.com">
+                    </div>
+                    <div class="form-group">
+                        <label>Password</label>
+                        <input type="password" id="signin-password" placeholder="••••••••">
+                    </div>
+                    <button class="btn-primary btn-full" onclick="handleSignIn()">Sign In</button>
+                </div>
+
+                <!-- STEP 2: Phone OTP Verification -->
+                <div id="signin-step2" style="display:none;">
+                    <p class="index-card-sub">A verification code has been sent to your phone. Enter it below.</p>
+                    <div class="form-group">
+                        <label>SMS Verification Code</label>
+                        <input type="text" id="signin-otp" placeholder="6-digit code" maxlength="6">
+                    </div>
+                    <button class="btn-primary btn-full" onclick="verifySMSOTP()">Verify & Continue</button>
+                    <button class="btn-secondary btn-full" style="margin-top:8px" onclick="resendOTP()">Resend Code</button>
+                </div>
+
+                <div id="recaptcha-container"></div>
+                <button class="btn-secondary btn-full" style="margin-top:12px" onclick="showDefault()">← Back</button>
+            </div>
+
+            <!-- TEACHER SIGN UP FORM -->
+            <div id="state-teacher-signup" style="display:none;">
+                <h2 class="index-card-title">Teacher Sign Up</h2>
+                <p class="index-card-sub">Your account will be reviewed by an admin before activation.</p>
+
+                <div class="form-group">
+                    <label>First Name</label>
+                    <input type="text" id="t-firstname" placeholder="e.g. Kofi">
+                </div>
+                <div class="form-group">
+                    <label>Last Name</label>
+                    <input type="text" id="t-lastname" placeholder="e.g. Mensah">
+                </div>
+                <div class="form-group">
+                    <label>Email Address</label>
+                    <input type="email" id="t-email" placeholder="teacher@school.com">
+                </div>
+                <div class="form-group">
+                    <label>Phone Number</label>
+                    <input type="tel" id="t-phone" placeholder="+233XXXXXXXXX or 0XXXXXXXXX">
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="t-password" placeholder="Min 6 chars, 1 uppercase, 1 number">
+                </div>
+                <div class="form-group">
+                    <label>Confirm Password</label>
+                    <input type="password" id="t-confirmpassword" placeholder="Repeat password">
+                </div>
+
+                <button class="btn-primary btn-full" onclick="handleTeacherSignUp()">Create Account</button>
+                <button class="btn-secondary btn-full" style="margin-top:8px" onclick="showDefault()">← Back</button>
+            </div>
+
+        </div>
+    </div>
+
+    <footer>
+        <p>© 2026 K_Tawiah Student Report System</p>
+    </footer>
+
+    <script type="module" src="js/signing.js"></script>
 </body>
 </html>
