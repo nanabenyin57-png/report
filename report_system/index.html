@@ -3,8 +3,6 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <meta name="author" content="K_Tawiah">
     <title>K_Tawiah Student Report System</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Nunito:wght@300;400;600;700&display=swap" rel="stylesheet">
@@ -31,12 +29,12 @@
                 <h2 class="index-card-title">Sign In</h2>
                 <p class="index-card-sub">Select your account type to continue.</p>
                 <div class="index-role-btns">
-                    <button class="role-btn" onclick="showSignIn()">
+                    <button class="role-btn" id="btn-signin">
                         <span class="role-icon">🔐</span>
                         <span class="role-label">Sign In</span>
-                        <span class="role-desc">Students, Teachers & Admins</span>
+                        <span class="role-desc">Students, Teachers &amp; Admins</span>
                     </button>
-                    <button class="role-btn" onclick="showTeacherSignUp()">
+                    <button class="role-btn" id="btn-teacher-signup">
                         <span class="role-icon">👨‍🏫</span>
                         <span class="role-label">Teacher Sign Up</span>
                         <span class="role-desc">Create a teacher account</span>
@@ -58,7 +56,7 @@
                         <label>Password</label>
                         <input type="password" id="signin-password" placeholder="••••••••">
                     </div>
-                    <button class="btn-primary btn-full" onclick="handleSignIn()">Sign In</button>
+                    <button class="btn-primary btn-full" id="btn-handle-signin">Sign In</button>
                 </div>
 
                 <!-- STEP 2: Phone OTP Verification -->
@@ -68,12 +66,12 @@
                         <label>SMS Verification Code</label>
                         <input type="text" id="signin-otp" placeholder="6-digit code" maxlength="6">
                     </div>
-                    <button class="btn-primary btn-full" onclick="verifySMSOTP()">Verify & Continue</button>
-                    <button class="btn-secondary btn-full" style="margin-top:8px" onclick="resendOTP()">Resend Code</button>
+                    <button class="btn-primary btn-full" id="btn-verify-otp">Verify &amp; Continue</button>
+                    <button class="btn-secondary btn-full" id="btn-resend-otp" style="margin-top:8px">Resend Code</button>
                 </div>
 
                 <div id="recaptcha-container"></div>
-                <button class="btn-secondary btn-full" style="margin-top:12px" onclick="showDefault()">← Back</button>
+                <button class="btn-secondary btn-full" id="btn-back-signin" style="margin-top:12px">← Back</button>
             </div>
 
             <!-- TEACHER SIGN UP FORM -->
@@ -106,8 +104,8 @@
                     <input type="password" id="t-confirmpassword" placeholder="Repeat password">
                 </div>
 
-                <button class="btn-primary btn-full" onclick="handleTeacherSignUp()">Create Account</button>
-                <button class="btn-secondary btn-full" style="margin-top:8px" onclick="showDefault()">← Back</button>
+                <button class="btn-primary btn-full" id="btn-teacher-register">Create Account</button>
+                <button class="btn-secondary btn-full" id="btn-back-signup" style="margin-top:8px">← Back</button>
             </div>
 
         </div>

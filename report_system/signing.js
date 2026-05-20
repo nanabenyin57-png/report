@@ -1,18 +1,19 @@
 // ============================================================
 //  signing.js — K_Tawiah Student Report System
 //  Sign In (email + SMS OTP), Teacher Sign Up, Role Redirect
+//  NOTE: No onclick handlers in HTML — all wired via addEventListener
 // ============================================================
 
 // 1. IMPORTS
-import { initializeApp }                        from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
+import { initializeApp }             from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
 import { getAuth,
          signInWithEmailAndPassword,
          createUserWithEmailAndPassword,
          RecaptchaVerifier,
          signInWithPhoneNumber,
-         sendEmailVerification }                from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
+         sendEmailVerification }     from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
 import { getFirestore,
-         doc, getDoc, setDoc }                  from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
+         doc, getDoc, setDoc }       from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
 import { firebaseConfig,
          validateEmail,
          validatePassword,
@@ -21,7 +22,7 @@ import { firebaseConfig,
          showNotification,
          resolveRole,
          sendEmailNotification,
-         MESSAGES }                             from "./config.js";
+         MESSAGES }                  from "./config.js";
 
 // 2. INITIALIZE
 const app  = initializeApp(firebaseConfig);
@@ -29,39 +30,37 @@ const auth = getAuth(app);
 const db   = getFirestore(app);
 
 // ── State ──────────────────────────────────────────────────
-let confirmationResult = null;  // holds Firebase SMS confirmation
-let signedInUser       = null;  // holds user after email login, before OTP
+let confirmationResult = null;
+let signedInUser       = null;
 
 // ============================================================
 //  UI STATE SWITCHERS
 // ============================================================
-window.showDefault = function () {
+function showDefault() {
     document.getElementById("state-default").style.display        = "block";
     document.getElementById("state-signin").style.display         = "none";
     document.getElementById("state-teacher-signup").style.display = "none";
-};
+}
 
-window.showSignIn = function () {
+function showSignIn() {
     document.getElementById("state-default").style.display        = "none";
     document.getElementById("state-signin").style.display         = "block";
     document.getElementById("signin-step1").style.display         = "block";
     document.getElementById("signin-step2").style.display         = "none";
-};
+}
 
-window.showTeacherSignUp = function () {
+function showTeacherSignUp() {
     document.getElementById("state-default").style.display        = "none";
     document.getElementById("state-teacher-signup").style.display = "block";
-};
+}
 
 // ============================================================
-//  RECAPTCHA SETUP (required for Phone Auth)
+//  RECAPTCHA (required for Phone Auth)
 // ============================================================
 function setupRecaptcha() {
     if (!window.recaptchaVerifier) {
         window.recaptchaVerifier = new RecaptchaVerifier(
-            auth,
-            "recaptcha-container",
-            { size: "invisible" }
+            auth, "recaptcha-container", { size: "invisible" }
         );
     }
 }
@@ -69,7 +68,7 @@ function setupRecaptcha() {
 // ============================================================
 //  SIGN IN — Step 1: Email + Password
 // ============================================================
-window.handleSignIn = async function () {
+async function handleSignIn() {
     const email    = sanitizeInput(document.getElementById("signin-email").value);
     const password = document.getElementById("signin-password").value;
 
@@ -83,11 +82,9 @@ window.handleSignIn = async function () {
     try {
         showNotification("Signing in...", "info");
 
-        // Authenticate
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
         signedInUser = userCredential.user;
 
-        // Read Firestore profile
         const userSnap = await getDoc(doc(db, "users", signedInUser.uid));
 
         if (!userSnap.exists()) {
@@ -100,27 +97,22 @@ window.handleSignIn = async function () {
         const status = data.accountStatus;
         const phone  = data.phone;
 
-        // Block pending teachers
         if (status === "pending") {
             window.location.href = "pending.html"; return;
         }
 
-        // Block suspended accounts
         if (status === "suspended") {
             showNotification("Your account has been suspended. Contact the administrator.", "error");
-            auth.signOut();
-            return;
+            auth.signOut(); return;
         }
 
-        // If user has a phone number — require SMS OTP verification
+        // If phone exists — require SMS OTP
         if (phone) {
             setupRecaptcha();
             await sendSMSOTP(phone);
-            // Show step 2
             document.getElementById("signin-step1").style.display = "none";
             document.getElementById("signin-step2").style.display = "block";
         } else {
-            // No phone number — skip OTP, redirect by role
             redirectByRole(role);
         }
 
@@ -135,18 +127,15 @@ window.handleSignIn = async function () {
         };
         showNotification(msgs[error.code] || MESSAGES.errors.auth, "error");
     }
-};
+}
 
 // ============================================================
 //  SIGN IN — Step 2: SMS OTP
 // ============================================================
 async function sendSMSOTP(phone) {
     try {
-        // Normalize phone to E.164 format for Firebase
         let normalized = phone.replace(/\s/g, "");
-        if (normalized.startsWith("0")) {
-            normalized = "+233" + normalized.slice(1); // Ghana prefix
-        }
+        if (normalized.startsWith("0")) normalized = "+233" + normalized.slice(1);
         confirmationResult = await signInWithPhoneNumber(
             auth, normalized, window.recaptchaVerifier
         );
@@ -157,52 +146,40 @@ async function sendSMSOTP(phone) {
     }
 }
 
-window.verifySMSOTP = async function () {
+async function verifySMSOTP() {
     const code = document.getElementById("signin-otp").value.trim();
-
     if (!code || code.length < 6) {
         showNotification("Please enter the 6-digit code.", "error"); return;
     }
     if (!confirmationResult) {
         showNotification("Session expired. Please sign in again.", "error"); return;
     }
-
     try {
         await confirmationResult.confirm(code);
-
-        // Read role again after OTP confirmed
         const userSnap = await getDoc(doc(db, "users", signedInUser.uid));
         const role     = resolveRole(userSnap.data()?.role);
         redirectByRole(role);
-
     } catch (error) {
         console.error("OTP verify error:", error);
         showNotification("Incorrect code. Please try again.", "error");
     }
-};
+}
 
-window.resendOTP = async function () {
+async function resendOTP() {
     if (!signedInUser) {
         showNotification("Session expired. Please sign in again.", "error"); return;
     }
     const userSnap = await getDoc(doc(db, "users", signedInUser.uid));
     const phone    = userSnap.data()?.phone;
-    if (phone) {
-        setupRecaptcha();
-        await sendSMSOTP(phone);
-    }
-};
+    if (phone) { setupRecaptcha(); await sendSMSOTP(phone); }
+}
 
 // ============================================================
 //  ROLE-BASED REDIRECT
 // ============================================================
 function redirectByRole(role) {
-    const routes = {
-        admin:   "admin.html",
-        teacher: "teacher.html",
-        student: "student.html"
-    };
-    const dest = routes[role];
+    const routes = { admin: "admin.html", teacher: "teacher.html", student: "student.html" };
+    const dest   = routes[role];
     if (dest) {
         showNotification("Welcome back!", "success");
         window.location.href = dest;
@@ -215,7 +192,7 @@ function redirectByRole(role) {
 // ============================================================
 //  TEACHER SIGN UP
 // ============================================================
-window.handleTeacherSignUp = async function () {
+async function handleTeacherSignUp() {
     const fname   = sanitizeInput(document.getElementById("t-firstname").value.trim());
     const lname   = sanitizeInput(document.getElementById("t-lastname").value.trim());
     const email   = sanitizeInput(document.getElementById("t-email").value.trim());
@@ -223,7 +200,6 @@ window.handleTeacherSignUp = async function () {
     const pass    = document.getElementById("t-password").value;
     const confirm = document.getElementById("t-confirmpassword").value;
 
-    // Validation
     if (!fname || !lname || !email || !phone || !pass || !confirm) {
         showNotification("Please fill in all fields.", "error"); return;
     }
@@ -231,7 +207,7 @@ window.handleTeacherSignUp = async function () {
         showNotification("Invalid email address.", "error"); return;
     }
     if (!validatePhone(phone)) {
-        showNotification("Phone number must be in format +233XXXXXXXXX or 0XXXXXXXXX.", "error"); return;
+        showNotification("Phone must be in format +233XXXXXXXXX or 0XXXXXXXXX.", "error"); return;
     }
     if (!validatePassword(pass)) {
         showNotification("Password must be 6+ characters with uppercase and numbers.", "error"); return;
@@ -243,14 +219,11 @@ window.handleTeacherSignUp = async function () {
     try {
         showNotification("Creating account...", "info");
 
-        // Create Firebase Auth account
         const cred = await createUserWithEmailAndPassword(auth, email, pass);
         const user = cred.user;
 
-        // Send email verification
         await sendEmailVerification(user);
 
-        // Write Firestore document — role: "pending" until admin approves
         await setDoc(doc(db, "users", user.uid), {
             firstName:     fname,
             lastName:      lname,
@@ -261,20 +234,17 @@ window.handleTeacherSignUp = async function () {
             createdAt:     new Date()
         });
 
-        // Notify admin via email (Trigger Email Extension)
         await sendEmailNotification(db, setDoc, doc, {
-            to:      "admin@ktawiah.com", // replace with real admin email
+            to:      "admin@ktawiah.com",
             subject: "New Teacher Account Pending Approval",
-            text:    `A new teacher account has been created and requires your approval.\n\nName: ${fname} ${lname}\nEmail: ${email}\n\nPlease log in to the admin dashboard to approve or reject this account.`,
+            text:    `New teacher account requires approval.\nName: ${fname} ${lname}\nEmail: ${email}`,
             html:    `<h2>New Teacher Account Pending Approval</h2>
                       <p><strong>Name:</strong> ${fname} ${lname}</p>
                       <p><strong>Email:</strong> ${email}</p>
-                      <p>Please log in to the <a href="https://ktawiah.com/admin.html">Admin Dashboard</a> to approve or reject this account.</p>`
+                      <p>Log in to the <a href="admin.html">Admin Dashboard</a> to approve or reject.</p>`
         });
 
-        showNotification("Account created! Awaiting admin approval. Check your email.", "success");
-
-        // Redirect to pending page
+        showNotification("Account created! Awaiting admin approval.", "success");
         setTimeout(() => { window.location.href = "pending.html"; }, 2000);
 
     } catch (error) {
@@ -286,4 +256,32 @@ window.handleTeacherSignUp = async function () {
         };
         showNotification(msgs[error.code] || MESSAGES.errors.auth, "error");
     }
-};
+}
+
+// ============================================================
+//  WIRE UP ALL BUTTONS via addEventListener
+// ============================================================
+document.addEventListener("DOMContentLoaded", () => {
+    document.getElementById("btn-signin")
+        ?.addEventListener("click", showSignIn);
+    document.getElementById("btn-teacher-signup")
+        ?.addEventListener("click", showTeacherSignUp);
+    document.getElementById("btn-handle-signin")
+        ?.addEventListener("click", handleSignIn);
+    document.getElementById("btn-back-signin")
+        ?.addEventListener("click", showDefault);
+    document.getElementById("btn-verify-otp")
+        ?.addEventListener("click", verifySMSOTP);
+    document.getElementById("btn-resend-otp")
+        ?.addEventListener("click", resendOTP);
+    document.getElementById("btn-teacher-register")
+        ?.addEventListener("click", handleTeacherSignUp);
+    document.getElementById("btn-back-signup")
+        ?.addEventListener("click", showDefault);
+
+    // Enter key on password triggers sign in
+    document.getElementById("signin-password")
+        ?.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") handleSignIn();
+        });
+});
