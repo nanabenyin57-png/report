@@ -97,14 +97,20 @@ async function handleSignIn() {
         const status = data.accountStatus;
         const phone  = data.phone;
 
-        if (status === "pending") {
-            window.location.href = "pending.html"; return;
-        }
+    
+if (role === "admin") {
+    redirectByRole("admin"); return;
+}
 
-        if (status === "suspended") {
-            showNotification("Your account has been suspended. Contact the administrator.", "error");
-            auth.signOut(); return;
-        }
+// Only block non-admins who are pending
+if (status === "pending") {
+    window.location.href = "pending.html"; return;
+}
+
+if (status === "suspended") {
+    showNotification("Your account has been suspended.", "error");
+    auth.signOut(); return;
+}
 
         // If phone exists — require SMS OTP
         if (phone) {
