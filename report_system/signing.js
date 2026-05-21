@@ -82,13 +82,16 @@ async function handleSignIn() {
     try {
         showNotification("Signing in...", "info");
 
+        // Step 1: Authenticate with Firebase
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
         signedInUser = userCredential.user;
 
+        // Step 2: Read Firestore profile
         const userSnap = await getDoc(doc(db, "users", signedInUser.uid));
 
         if (!userSnap.exists()) {
             showNotification("No profile found. Contact your administrator.", "error");
+            auth.signOut();
             return;
         }
 
@@ -97,28 +100,33 @@ async function handleSignIn() {
         const status = data.accountStatus;
         const phone  = data.phone;
 
-    
-if (role === "admin") {
-    redirectByRole("admin"); return;
-}
+        // Step 3: Admins always get through — no status or OTP block
+        if (role === "admin") {
+            redirectByRole("admin");
+            return;
+        }
 
-// Only block non-admins who are pending
-if (status === "pending") {
-    window.location.href = "pending.html"; return;
-}
+        // Step 4: Block suspended accounts
+        if (status === "suspended") {
+            showNotification("Your account has been suspended. Contact the administrator.", "error");
+            auth.signOut();
+            return;
+        }
 
-if (status === "suspended") {
-    showNotification("Your account has been suspended.", "error");
-    auth.signOut(); return;
-}
+        // Step 5: Block pending accounts (non-admins only)
+        if (status === "pending") {
+            window.location.href = "pending.html";
+            return;
+        }
 
-        // If phone exists — require SMS OTP
+        // Step 6: Active account — require SMS OTP if phone exists
         if (phone) {
             setupRecaptcha();
             await sendSMSOTP(phone);
             document.getElementById("signin-step1").style.display = "none";
             document.getElementById("signin-step2").style.display = "block";
         } else {
+            // No phone number — redirect directly by role
             redirectByRole(role);
         }
 
@@ -184,8 +192,12 @@ async function resendOTP() {
 //  ROLE-BASED REDIRECT
 // ============================================================
 function redirectByRole(role) {
-    const routes = { admin: "admin.html", teacher: "teacher.html", student: "student.html" };
-    const dest   = routes[role];
+    const routes = {
+        admin:   "admin.html",
+        teacher: "teacher.html",
+        student: "student.html"
+    };
+    const dest = routes[role];
     if (dest) {
         showNotification("Welcome back!", "success");
         window.location.href = dest;
@@ -228,8 +240,10 @@ async function handleTeacherSignUp() {
         const cred = await createUserWithEmailAndPassword(auth, email, pass);
         const user = cred.user;
 
+        // Send email verification
         await sendEmailVerification(user);
 
+        // Save to Firestore as pending
         await setDoc(doc(db, "users", user.uid), {
             firstName:     fname,
             lastName:      lname,
@@ -240,6 +254,7 @@ async function handleTeacherSignUp() {
             createdAt:     new Date()
         });
 
+        // Notify admin by email
         await sendEmailNotification(db, setDoc, doc, {
             to:      "admin@ktawiah.com",
             subject: "New Teacher Account Pending Approval",
@@ -285,7 +300,7 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("btn-back-signup")
         ?.addEventListener("click", showDefault);
 
-    // Enter key on password triggers sign in
+    // Enter key on password field triggers sign in
     document.getElementById("signin-password")
         ?.addEventListener("keydown", (e) => {
             if (e.key === "Enter") handleSignIn();
