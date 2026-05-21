@@ -5,241 +5,377 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard — K_Tawiah</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Nunito:wght@300;400;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="report.css">
-    <link rel="stylesheet" href="admin.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Nunito:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/admin.css">
 </head>
 <body>
-    <!-- HEADER / NAV -->
-    <header class="admin-header">
+
+    <!-- HEADER -->
+    <header>
         <nav>
-            <button type="button" class="navigation" id="navigation" onclick="toggleMenu()">&#9776;</button>
+            <button class="navigation" id="btn-menu">&#9776;</button>
             <div class="logo">K_TAWIAH</div>
             <div class="nav_overlay" id="navover">
                 <ul class="links">
-                    <li><a href="report.html" onclick="toggleMenu()">Report System</a></li>
-                    <li><a href="class assessment.html" onclick="toggleMenu()">Class Assessment</a></li>
-                    <li><a href="index.html" onclick="toggleMenu()">Sign Out</a></li>
+                    <li><a href="teacher.html">Teacher Dashboard</a></li>
+                    <li><a href="student.html">Student Dashboard</a></li>
+                    <li><a href="#" id="nav-signout">Sign Out</a></li>
                 </ul>
             </div>
         </nav>
-        <div class="admin-hero">
-            <div class="admin-hero-text">
-                <span class="admin-tag">ADMIN PANEL</span>
-                <h1 class="admin-title">Control Centre</h1>
-                <p class="admin-subtitle" id="admin-welcome">Checking authorization...</p>
-            </div>
-            <!-- Quick Stats Bar -->
+        <div class="header-hero">
+            <span class="header-tag">Admin Panel</span>
+            <h1 class="header-title">Control Centre</h1>
+            <p class="header-subtitle" id="admin-welcome">Checking authorization...</p>
             <div class="stats-bar">
                 <div class="stat-card">
-                    <span class="stat-num" id="total-students">—</span>
+                    <span class="stat-num" id="stat-students">—</span>
                     <span class="stat-label">Students</span>
                 </div>
                 <div class="stat-card">
-                    <span class="stat-num" id="total-teachers">—</span>
+                    <span class="stat-num" id="stat-teachers">—</span>
                     <span class="stat-label">Teachers</span>
                 </div>
                 <div class="stat-card">
-                    <span class="stat-num" id="total-admins">—</span>
-                    <span class="stat-label">Admins</span>
+                    <span class="stat-num" id="stat-pending">—</span>
+                    <span class="stat-label">Pending</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-num" id="stat-classes">—</span>
+                    <span class="stat-label">Classes</span>
                 </div>
             </div>
         </div>
     </header>
 
-    <!-- MAIN DASHBOARD -->
-    <main class="dashboard" id="dashboard-main" style="display:none;">
+    <!-- DASHBOARD -->
+    <main class="dashboard" id="dashboard" style="display:none;">
 
-        <!-- TAB NAVIGATION -->
-        <nav class="tab-nav">
-            <button class="tab-btn active" onclick="switchTab('students')">
-                <span class="tab-icon">🎓</span> Students
-            </button>
-            <button class="tab-btn" onclick="switchTab('teachers')">
-                <span class="tab-icon">👨‍🏫</span> Teachers
-            </button>
-            <button class="tab-btn" onclick="switchTab('add-user')">
-                <span class="tab-icon">➕</span> Add User
-            </button>
-            <button class="tab-btn" onclick="switchTab('pages')">
-                <span class="tab-icon">🔗</span> Pages
-            </button>
-        </nav>
+        <!-- TAB NAV -->
+        <div class="tab-nav">
+            <button class="tab-btn active" data-tab="overview">📊 Overview</button>
+            <button class="tab-btn" data-tab="teachers">👨‍🏫 Teachers</button>
+            <button class="tab-btn" data-tab="students">🎓 Students</button>
+            <button class="tab-btn" data-tab="classes">🏫 Classes</button>
+            <button class="tab-btn" data-tab="results">📋 Results</button>
+            <button class="tab-btn" data-tab="profile">👤 Profile</button>
+        </div>
 
-        <!-- STUDENTS TAB -->
-        <section class="tab-content active" id="tab-students">
+        <!-- ── OVERVIEW TAB ── -->
+        <section class="tab-content active" id="tab-overview">
             <div class="section-header">
-                <h2>Student Registry</h2>
-                <div class="search-bar">
-                    <input type="text" id="student-search" placeholder="Search by name or email..." oninput="filterTable('student-table', this.value)">
+                <h2>Overview</h2>
+            </div>
+            <div class="card" style="margin-bottom:24px;">
+                <h3>⚠️ Pending Teacher Approvals</h3>
+                <div class="table-wrap">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Phone</th>
+                                <th>Applied</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pending-tbody">
+                            <tr><td colspan="5" class="loading-row">Loading...</td></tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
-            <div class="table-wrap">
-                <table class="data-table" id="student-table">
-                    <thead>
-                        <tr>
-                            <th>Name</th>
-                            <th>Email</th>
-                            <th>Role</th>
-                            <th>User ID</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="student-tbody">
-                        <tr><td colspan="5" class="loading-row">Loading students...</td></tr>
-                    </tbody>
-                </table>
+            <div class="card">
+                <h3>🎓 Recently Added Students</h3>
+                <div class="table-wrap">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Index No.</th>
+                                <th>Class</th>
+                                <th>Added By</th>
+                            </tr>
+                        </thead>
+                        <tbody id="recent-students-tbody">
+                            <tr><td colspan="4" class="loading-row">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </section>
 
-        <!-- TEACHERS TAB -->
+        <!-- ── TEACHERS TAB ── -->
         <section class="tab-content" id="tab-teachers">
             <div class="section-header">
-                <h2>Teacher Registry</h2>
+                <h2>Teachers</h2>
                 <div class="search-bar">
-                    <input type="text" id="teacher-search" placeholder="Search by name or email..." oninput="filterTable('teacher-table', this.value)">
+                    <input type="text" id="teacher-search" placeholder="Search teachers...">
                 </div>
             </div>
             <div class="table-wrap">
-                <table class="data-table" id="teacher-table">
+                <table class="data-table">
                     <thead>
                         <tr>
                             <th>Name</th>
                             <th>Email</th>
-                            <th>Role</th>
-                            <th>User ID</th>
+                            <th>Phone</th>
+                            <th>Status</th>
+                            <th>Assigned Subjects</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody id="teacher-tbody">
-                        <tr><td colspan="5" class="loading-row">Loading teachers...</td></tr>
+                        <tr><td colspan="6" class="loading-row">Loading...</td></tr>
                     </tbody>
                 </table>
             </div>
         </section>
 
-        <!-- ADD USER TAB -->
-        <section class="tab-content" id="tab-add-user">
+        <!-- ── STUDENTS TAB ── -->
+        <section class="tab-content" id="tab-students">
             <div class="section-header">
-                <h2>Add New User</h2>
-            </div>
-            <div class="form-grid">
-                <!-- Add Student -->
-                <div class="form-card">
-                    <h3>🎓 Add Student</h3>
-                    <p class="form-note">Creates a new student account. They will log in using these credentials.</p>
-                    <div class="form-group">
-                        <label>First Name</label>
-                        <input type="text" id="s-firstname" placeholder="e.g. Kofi">
+                <h2>Students</h2>
+                <div class="header-actions">
+                    <div class="search-bar">
+                        <input type="text" id="student-search" placeholder="Search students...">
                     </div>
-                    <div class="form-group">
-                        <label>Last Name</label>
-                        <input type="text" id="s-lastname" placeholder="e.g. Mensah">
-                    </div>
-                    <div class="form-group">
-                        <label>Email</label>
-                        <input type="email" id="s-email" placeholder="student@school.com">
-                    </div>
-                    <div class="form-group">
-                        <label>Temporary Password</label>
-                        <input type="password" id="s-password" placeholder="Min 8 chars, 1 uppercase, 1 number">
-                    </div>
-                    <button class="btn-primary" onclick="addUser('student')">Create Student Account</button>
-                    <div class="form-msg" id="s-msg"></div>
+                    <button class="btn-primary" id="btn-open-add-student">+ Add Student</button>
                 </div>
+            </div>
+            <div class="filter-bar">
+                <label>Filter by Class:</label>
+                <select id="student-class-filter">
+                    <option value="">All Classes</option>
+                </select>
+            </div>
+            <div class="table-wrap">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Index No.</th>
+                            <th>Class</th>
+                            <th>Phone</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="student-tbody">
+                        <tr><td colspan="6" class="loading-row">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
 
-                <!-- Add Teacher -->
-                <div class="form-card">
-                    <h3>👨‍🏫 Add Teacher</h3>
-                    <p class="form-note">Creates a new teacher account with access to the Report System.</p>
+        <!-- ── CLASSES TAB ── -->
+        <section class="tab-content" id="tab-classes">
+            <div class="section-header">
+                <h2>Classes</h2>
+                <button class="btn-primary" id="btn-open-add-class">+ Add Class</button>
+            </div>
+            <div class="classes-grid" id="classes-grid">
+                <p class="loading-row">Loading classes...</p>
+            </div>
+        </section>
+
+        <!-- ── RESULTS TAB ── -->
+        <section class="tab-content" id="tab-results">
+            <div class="section-header">
+                <h2>Publish Results</h2>
+            </div>
+            <div class="card" style="margin-bottom:24px;">
+                <h3>📢 Publish Term Results</h3>
+                <p class="form-note">
+                    Publishing results will notify all students in the selected class
+                    by <strong>email and SMS</strong>. Only admins can publish results.
+                </p>
+                <div class="publish-form">
                     <div class="form-group">
-                        <label>First Name</label>
-                        <input type="text" id="t-firstname" placeholder="e.g. Ama">
+                        <label>Select Class</label>
+                        <select id="publish-class">
+                            <option value="">Choose a class...</option>
+                        </select>
                     </div>
                     <div class="form-group">
-                        <label>Last Name</label>
-                        <input type="text" id="t-lastname" placeholder="e.g. Owusu">
+                        <label>Term</label>
+                        <select id="publish-term">
+                            <option value="Term 1">Term 1</option>
+                            <option value="Term 2">Term 2</option>
+                            <option value="Term 3">Term 3</option>
+                        </select>
                     </div>
                     <div class="form-group">
-                        <label>Email</label>
-                        <input type="email" id="t-email" placeholder="teacher@school.com">
+                        <label>Academic Year</label>
+                        <input type="text" id="publish-year" placeholder="e.g. 2025/2026">
                     </div>
-                    <div class="form-group">
-                        <label>Temporary Password</label>
-                        <input type="password" id="t-password" placeholder="Min 8 chars, 1 uppercase, 1 number">
-                    </div>
-                    <button class="btn-primary" onclick="addUser('teacher')">Create Teacher Account</button>
-                    <div class="form-msg" id="t-msg"></div>
+                    <button class="btn-primary" id="btn-publish">
+                        📢 Publish &amp; Notify
+                    </button>
+                </div>
+            </div>
+            <div class="card">
+                <h3>📜 Published Results Log</h3>
+                <div class="table-wrap">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Class</th>
+                                <th>Term</th>
+                                <th>Year</th>
+                                <th>Published By</th>
+                                <th>Date</th>
+                                <th>Students Notified</th>
+                            </tr>
+                        </thead>
+                        <tbody id="results-log-tbody">
+                            <tr><td colspan="6" class="loading-row">No published results yet.</td></tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </section>
 
-        <!-- PAGES TAB -->
-        <section class="tab-content" id="tab-pages">
+        <!-- ── PROFILE TAB ── -->
+        <section class="tab-content" id="tab-profile">
             <div class="section-header">
-                <h2>System Pages</h2>
+                <h2>My Profile</h2>
             </div>
-            <div class="pages-grid">
-                <a href="report.html" class="page-card" target="_blank">
-                    <span class="page-icon">📊</span>
-                    <h3>Report System</h3>
-                    <p>Generate and download student score reports by department.</p>
-                    <span class="page-link">Open →</span>
-                </a>
-                <a href="class assessment.html" class="page-card" target="_blank">
-                    <span class="page-icon">📝</span>
-                    <h3>Class Assessment</h3>
-                    <p>Enter SBA scores and compute converted totals per subject.</p>
-                    <span class="page-link">Open →</span>
-                </a>
-                <a href="index.html" class="page-card" target="_blank">
-                    <span class="page-icon">🔐</span>
-                    <h3>Sign In / Sign Up</h3>
-                    <p>The main login page for all users of the system.</p>
-                    <span class="page-link">Open →</span>
-                </a>
+            <div class="profile-grid">
+                <div class="card">
+                    <h3>✏️ Update Profile</h3>
+                    <div class="form-group">
+                        <label>First Name</label>
+                        <input type="text" id="profile-firstname" placeholder="First Name">
+                    </div>
+                    <div class="form-group">
+                        <label>Last Name</label>
+                        <input type="text" id="profile-lastname" placeholder="Last Name">
+                    </div>
+                    <div class="form-group">
+                        <label>Phone Number</label>
+                        <input type="tel" id="profile-phone" placeholder="+233XXXXXXXXX">
+                    </div>
+                    <button class="btn-primary btn-full" id="btn-update-profile">
+                        Save Changes
+                    </button>
+                </div>
+                <div class="card">
+                    <h3>🔒 Change Password</h3>
+                    <div class="form-group">
+                        <label>Current Password</label>
+                        <input type="password" id="current-password" placeholder="Current password">
+                    </div>
+                    <div class="form-group">
+                        <label>New Password</label>
+                        <input type="password" id="new-password" placeholder="New password">
+                    </div>
+                    <div class="form-group">
+                        <label>Confirm New Password</label>
+                        <input type="password" id="confirm-password" placeholder="Repeat new password">
+                    </div>
+                    <button class="btn-primary btn-full" id="btn-change-password">
+                        Change Password
+                    </button>
+                </div>
             </div>
         </section>
 
     </main>
 
-    <!-- ACCESS DENIED STATE -->
-    <div class="access-denied" id="access-denied" style="display:none;">
-        <span class="denied-icon">🚫</span>
+    <!-- ACCESS DENIED -->
+    <div class="state-page" id="access-denied" style="display:none;">
+        <span class="state-icon">🚫</span>
         <h2>Access Denied</h2>
-        <p>You do not have admin privileges.</p>
-        <a href="report.html">Go back to Report System</a>
+        <p>You do not have admin privileges to view this page.</p>
+        <a href="index.html">← Back to Sign In</a>
     </div>
 
-    <!-- DELETE CONFIRMATION MODAL -->
-    <div class="modal-overlay" id="modal" style="display:none;">
+    <!-- ── MODALS ── -->
+
+    <!-- Add Student -->
+    <div class="modal-overlay" id="modal-add-student" style="display:none;">
         <div class="modal-box">
-            <h3>Confirm Deletion</h3>
-            <p id="modal-msg">Are you sure you want to remove this user?</p>
-            <p class="modal-warn">⚠️ This will permanently delete their account from the system.</p>
+            <h3>➕ Add New Student</h3>
+            <div class="form-group">
+                <label>First Name</label>
+                <input type="text" id="ns-firstname" placeholder="e.g. Kwame">
+            </div>
+            <div class="form-group">
+                <label>Last Name</label>
+                <input type="text" id="ns-lastname" placeholder="e.g. Asante">
+            </div>
+            <div class="form-group">
+                <label>Class</label>
+                <select id="ns-class">
+                    <option value="">Select a class...</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Parent/Guardian Phone</label>
+                <input type="tel" id="ns-phone" placeholder="+233XXXXXXXXX">
+            </div>
+            <div class="form-group">
+                <label>Parent/Guardian Email (optional)</label>
+                <input type="email" id="ns-email" placeholder="parent@email.com">
+            </div>
+            <div class="index-preview" id="index-preview" style="display:none;">
+                Generated Index No: <strong id="index-preview-val">—</strong>
+            </div>
             <div class="modal-btns">
-                <button class="btn-danger" id="modal-confirm">Yes, Delete</button>
-                <button class="btn-secondary" onclick="closeModal()">Cancel</button>
+                <button class="btn-primary" id="btn-confirm-add-student">Add Student</button>
+                <button class="btn-secondary" id="btn-cancel-add-student">Cancel</button>
             </div>
         </div>
     </div>
 
-    <!-- ROLE EDIT MODAL -->
-    <div class="modal-overlay" id="role-modal" style="display:none;">
+    <!-- Add Class -->
+    <div class="modal-overlay" id="modal-add-class" style="display:none;">
         <div class="modal-box">
-            <h3>Change User Role</h3>
-            <p id="role-modal-name">User Name</p>
+            <h3>🏫 Add New Class</h3>
+            <p class="form-note">
+                Follow the format: <strong>N1, KG1A, B4A, JHS2B</strong> etc.
+                The department is detected automatically.
+            </p>
             <div class="form-group">
-                <label>New Role</label>
-                <select id="new-role">
-                    <option value="student">Student</option>
-                    <option value="teacher">Teacher</option>
-                    <option value="admin">Admin</option>
-                </select>
+                <label>Class Code</label>
+                <input type="text" id="nc-code" placeholder="e.g. B4A" style="text-transform:uppercase;">
             </div>
+            <div class="form-group">
+                <label>Class Name</label>
+                <input type="text" id="nc-name" placeholder="e.g. Basic 4A">
+            </div>
+            <div class="dept-preview" id="dept-preview"></div>
             <div class="modal-btns">
-                <button class="btn-primary" id="role-confirm">Save Role</button>
-                <button class="btn-secondary" onclick="closeRoleModal()">Cancel</button>
+                <button class="btn-primary" id="btn-confirm-add-class">Add Class</button>
+                <button class="btn-secondary" id="btn-cancel-add-class">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Assign Subjects -->
+    <div class="modal-overlay" id="modal-assign" style="display:none;">
+        <div class="modal-box modal-wide">
+            <h3>📚 Assign Subjects &amp; Classes</h3>
+            <p class="form-note" id="assign-teacher-label">Teacher: —</p>
+            <div id="assign-subjects-list"></div>
+            <div class="modal-btns">
+                <button class="btn-primary" id="btn-confirm-assign">Save Assignments</button>
+                <button class="btn-secondary" id="btn-cancel-assign">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirm Delete -->
+    <div class="modal-overlay" id="modal-delete" style="display:none;">
+        <div class="modal-box">
+            <h3>⚠️ Confirm Deletion</h3>
+            <p id="delete-msg">Are you sure?</p>
+            <p class="warn-text">This cannot be undone.</p>
+            <div class="modal-btns">
+                <button class="btn-danger" id="btn-confirm-delete">Yes, Delete</button>
+                <button class="btn-secondary" id="btn-cancel-delete">Cancel</button>
             </div>
         </div>
     </div>
@@ -249,5 +385,6 @@
     </footer>
 
     <script type="module" src="admin.js"></script>
+    <script type="module" src="config.js"></script>
 </body>
 </html>
