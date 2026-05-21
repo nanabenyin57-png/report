@@ -42,51 +42,55 @@ let pendingDelete  = { uid: null, type: null };
 let assigningTeacher = { uid: null, name: null };
 
 // ============================================================
-//  AUTH GUARD
+//  AUTH GUARD — inside DOMContentLoaded so elements exist
 // ============================================================
-onAuthStateChanged(auth, async (user) => {
-    if (!user) { window.location.href = "index.html"; return; }
+document.addEventListener("DOMContentLoaded", () => {
+    onAuthStateChanged(auth, async (user) => {
+        if (!user) { window.location.href = "index.html"; return; }
 
-    try {
-        const snap = await getDoc(doc(db, "users", user.uid));
-        if (!snap.exists()) { showDenied(); return; }
+        try {
+            const snap = await getDoc(doc(db, "users", user.uid));
+            if (!snap.exists()) { showDenied(); return; }
 
-        const data = snap.data();
-        const role = resolveRole(data.role);
+            const data = snap.data();
+            const role = resolveRole(data.role);
 
-        if (role !== "admin") { showDenied(); return; }
+            if (role !== "admin") { showDenied(); return; }
 
-        currentAdmin = { uid: user.uid, ...data };
+            currentAdmin = { uid: user.uid, ...data };
 
-        // Show dashboard
-        document.getElementById("dashboard").style.display      = "block";
-        document.getElementById("access-denied").style.display  = "none";
+            // Show dashboard
+            document.getElementById("dashboard").style.display     = "block";
+            document.getElementById("access-denied").style.display = "none";
 
-        const name = data.firstName || data.firstname || "Admin";
-        document.getElementById("admin-welcome").innerText =
-            `Welcome back, ${name}. You have full control.`;
+            const name = data.firstName || data.firstname || "Admin";
+            document.getElementById("admin-welcome").innerText =
+                `Welcome back, ${name}. You have full control.`;
 
-        // Prefill profile tab
-        document.getElementById("profile-firstname").value = data.firstName || "";
-        document.getElementById("profile-lastname").value  = data.lastName  || "";
-        document.getElementById("profile-phone").value     = data.phone     || "";
+            // Prefill profile tab
+            document.getElementById("profile-firstname").value = data.firstName || "";
+            document.getElementById("profile-lastname").value  = data.lastName  || "";
+            document.getElementById("profile-phone").value     = data.phone     || "";
 
-        // Load all data
-        await Promise.all([
-            loadClasses(),
-            loadAllUsers(),
-            loadResultsLog()
-        ]);
+            // Load all data
+            await Promise.all([
+                loadClasses(),
+                loadAllUsers(),
+                loadResultsLog()
+            ]);
 
-    } catch (err) {
-        console.error("Auth error:", err);
-        showDenied();
-    }
+        } catch (err) {
+            console.error("Auth error:", err);
+            showDenied();
+        }
+    });
 });
 
 function showDenied() {
-    document.getElementById("dashboard").style.display     = "none";
-    document.getElementById("access-denied").style.display = "block";
+    const dash   = document.getElementById("dashboard");
+    const denied = document.getElementById("access-denied");
+    if (dash)   dash.style.display   = "none";
+    if (denied) denied.style.display = "block";
 }
 
 // ============================================================
