@@ -513,18 +513,39 @@ async function openAssignModal(uid, name) {
     assigningTeacher = { uid, name };
     document.getElementById("assign-teacher-label").innerText = `Teacher: ${name}`;
 
-    // Load current assignments
+    // 1. Load current assignments and teacher profile data
     const snap = await getDoc(doc(db, "users", uid));
-    const current = snap.data()?.assignedSubjects || [];
-    // current = [{subject:"MATHS", classes:["B4A","B5A"]}, ...]
+    const teacherData = snap.data() || {};
+    const current = teacherData.assignedSubjects || [];
+    
+    // Track teacher's target department (e.g., "Science", "Business", etc.)
+    const teacherDepartment = teacherData.department; 
+
+    // Map existing assignments for UI chip toggling
     const currentMap = {};
     current.forEach(a => { currentMap[a.subject] = a.classes || []; });
 
-    // Build list of all subjects across all departments
-    const allSubjects = [...new Set(Object.values(DEPARTMENT_SUBJECTS).flat())].sort();
+    // 2. Filter subjects based on the teacher's department
+    let subjectsToRender = [];
 
+    if (teacherDepartment && DEPARTMENT_SUBJECTS[teacherDepartment]) {
+        // Teacher has a valid department -> Only pull their department's subjects
+        subjectsToRender = [...DEPARTMENT_SUBJECTS[teacherDepartment]].sort();
+    } else {
+        // Fallback: If no department is set, gracefully display all unique subjects
+        subjectsToRender = [...new Set(Object.values(DEPARTMENT_SUBJECTS).flat())].sort();
+    }
+
+    // 3. Build out the UI list with the filtered subjects
     const list = document.getElementById("assign-subjects-list");
-    list.innerHTML = allSubjects.map(subj => {
+    
+    if (subjectsToRender.length === 0) {
+        list.innerHTML = `<div class="form-msg error">No subjects found for department: ${teacherDepartment || "Unknown"}</div>`;
+        openModal("modal-assign");
+        return;
+    }
+
+    list.innerHTML = subjectsToRender.map(subj => {
         const assignedClasses = currentMap[subj] || [];
         const chips = allClasses.map(c => `
             <span class="class-chip ${assignedClasses.includes(c.id) ? "selected" : ""}"
@@ -535,20 +556,22 @@ async function openAssignModal(uid, name) {
 
         return `
             <div class="assign-subject-row">
-                <div class="assign-subject-name">${subj}</div>
+                <div class="assign-subject-name">
+                    ${subj} 
+                    ${!teacherDepartment ? `<small style="display:block;color:var(--text-muted);font-size:0.65rem;">Global</small>` : ''}
+                </div>
                 <div class="assign-classes-wrap">${chips}</div>
             </div>
         `;
     }).join("");
 
-    // Toggle chips
+    // 4. Attach event listeners to toggle chips on click
     list.querySelectorAll(".class-chip").forEach(chip => {
         chip.addEventListener("click", () => chip.classList.toggle("selected"));
     });
 
     openModal("modal-assign");
 }
-
 async function saveAssignments() {
     if (!assigningTeacher.uid) return;
 
