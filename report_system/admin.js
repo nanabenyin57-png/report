@@ -34,7 +34,48 @@ import { firebaseConfig,
 const app  = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db   = getFirestore(app);
-
+// ── Global Department-to-Subject Mapping ───────────────────
+const DEPARTMENT_SUBJECTS = {
+    "Preschool": [
+        "Literacy", 
+        "Numeracy", 
+        "Writing", 
+        "Creative Arts"
+    ],
+    "Lower Primary": [
+        "English", 
+        "Mathematics", 
+        "Science", 
+        "Creative Arts", 
+        "Twi", 
+        "French", 
+        "History", 
+        "RME"
+    ],
+    "Upper Primary": [
+        "English", 
+        "Mathematics", 
+        "Science", 
+        "Creative Arts", 
+        "Twi", 
+        "French", 
+        "History", 
+        "RME", 
+        "Computing"
+    ],
+    "Junior High": [
+        "English", 
+        "Mathematics", 
+        "Science", 
+        "Creative Arts", 
+        "Twi", 
+        "French", 
+        "Social Studies", 
+        "RME", 
+        "Computing", 
+        "Career Technology"
+    ]
+};
 // ── State ──────────────────────────────────────────────────
 let currentAdmin   = null;
 let allClasses     = [];
