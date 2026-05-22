@@ -1,6 +1,7 @@
 // ============================================================
 //  admin.js — K_Tawiah Admin Dashboard
 //  Tabs: Overview, Teachers, Students, Classes, Results, Profile
+//  No onclick in HTML — all wired via addEventListener
 // ============================================================
 
 // 1. IMPORTS
@@ -15,8 +16,7 @@ import { getFirestore,
          doc, getDoc, setDoc,
          updateDoc, deleteDoc,
          collection, getDocs,
-         query, where, orderBy,
-         limit, addDoc,
+         query, where, addDoc,
          serverTimestamp }              from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
 import { firebaseConfig,
          getDepartment,
@@ -34,58 +34,36 @@ import { firebaseConfig,
 const app  = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db   = getFirestore(app);
-// ── Global Department-to-Subject Mapping ───────────────────
-const DEPARTMENT_SUBJECTS = {
-    "Preschool": [
-        "Literacy", 
-        "Numeracy", 
-        "Writing", 
-        "Creative Arts"
-    ],
-    "Lower Primary": [
-        "English", 
-        "Mathematics", 
-        "Science", 
-        "Creative Arts", 
-        "Twi", 
-        "French", 
-        "History", 
-        "RME"
-    ],
-    "Upper Primary": [
-        "English", 
-        "Mathematics", 
-        "Science", 
-        "Creative Arts", 
-        "Twi", 
-        "French", 
-        "History", 
-        "RME", 
-        "Computing"
-    ],
-    "Junior High": [
-        "English", 
-        "Mathematics", 
-        "Science", 
-        "Creative Arts", 
-        "Twi", 
-        "French", 
-        "Social Studies", 
-        "RME", 
-        "Computing", 
-        "Career Technology"
-    ]
-};
+
 // ── State ──────────────────────────────────────────────────
-let currentAdmin   = null;
-let allClasses     = [];
-let pendingDelete  = { uid: null, type: null };
+let currentAdmin     = null;
+let allClasses       = [];
+let pendingDelete    = { uid: null, type: null };
 let assigningTeacher = { uid: null, name: null };
 
 // ============================================================
-//  AUTH GUARD — inside DOMContentLoaded so elements exist
+//  HELPERS
+// ============================================================
+function openModal(id) {
+    const el = document.getElementById(id);
+    if (el) el.style.display = "flex";
+}
+
+function closeModal(id) {
+    const el = document.getElementById(id);
+    if (el) el.style.display = "none";
+}
+
+function showDenied() {
+    console.warn("Access denied — redirecting.");
+    window.location.href = "index.html";
+}
+
+// ============================================================
+//  AUTH GUARD — inside DOMContentLoaded so DOM is ready
 // ============================================================
 document.addEventListener("DOMContentLoaded", () => {
+
     onAuthStateChanged(auth, async (user) => {
         if (!user) { window.location.href = "index.html"; return; }
 
@@ -95,44 +73,156 @@ document.addEventListener("DOMContentLoaded", () => {
 
             const data = snap.data();
             const role = resolveRole(data.role);
-
             if (role !== "admin") { showDenied(); return; }
 
             currentAdmin = { uid: user.uid, ...data };
 
             // Show dashboard
-            document.getElementById("dashboard").style.display     = "block";
-            document.getElementById("access-denied").style.display = "none";
+            const dashEl   = document.getElementById("dashboard");
+            const deniedEl = document.getElementById("access-denied");
+            if (dashEl)   dashEl.style.display   = "block";
+            if (deniedEl) deniedEl.style.display = "none";
 
             const name = data.firstName || data.firstname || "Admin";
             document.getElementById("admin-welcome").innerText =
                 `Welcome back, ${name}. You have full control.`;
 
-            // Prefill profile tab
+            // Prefill profile
             document.getElementById("profile-firstname").value = data.firstName || "";
             document.getElementById("profile-lastname").value  = data.lastName  || "";
             document.getElementById("profile-phone").value     = data.phone     || "";
 
-            // Load all data
-            await Promise.all([
-                loadClasses(),
-                loadAllUsers(),
-                loadResultsLog()
-            ]);
+            // Load data
+            await Promise.all([loadClasses(), loadAllUsers(), loadResultsLog()]);
 
         } catch (err) {
             console.error("Auth error:", err);
             showDenied();
         }
     });
-});
 
-function showDenied() {
-    const dash   = document.getElementById("dashboard");
-    const denied = document.getElementById("access-denied");
-    if (dash)   dash.style.display   = "none";
-    if (denied) denied.style.display = "block";
-}
+    // ── Tab Switching ────────────────────────────────────────
+    document.querySelectorAll(".tab-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+            document.querySelectorAll(".tab-btn")
+                .forEach(b => b.classList.remove("active"));
+            document.querySelectorAll(".tab-content")
+                .forEach(c => c.classList.remove("active"));
+            btn.classList.add("active");
+            document.getElementById(`tab-${btn.dataset.tab}`)
+                ?.classList.add("active");
+        });
+    });
+
+    // ── Modal Overlay Close ──────────────────────────────────
+    document.querySelectorAll(".modal-overlay").forEach(overlay => {
+        overlay.addEventListener("click", (e) => {
+            if (e.target === overlay) closeModal(overlay.id);
+        });
+    });
+
+    // ── Event Delegation for Dynamic Buttons ─────────────────
+    document.addEventListener("click", (e) => {
+        const btn = e.target.closest("button[data-action]");
+        if (!btn) return;
+        const { action, uid, name } = btn.dataset;
+
+        if      (action === "approve")        approveTeacher(uid);
+        else if (action === "reject")         rejectTeacher(uid);
+        else if (action === "assign")         openAssignModal(uid, name);
+        else if (action === "remove-teacher") openDeleteModal(uid, "teacher",
+            `Remove teacher "${name}" from the system?`);
+        else if (action === "remove-student") openDeleteModal(uid, "student",
+            `Remove student "${name}" from the system?`);
+        else if (action === "remove-class")   openDeleteModal(uid, "class",
+            `Remove class "${uid}"? Students will not be deleted.`);
+    });
+
+    // ── Nav Menu ─────────────────────────────────────────────
+    document.getElementById("btn-menu")
+        ?.addEventListener("click", () => {
+            document.getElementById("navover")?.classList.toggle("open");
+            document.getElementById("btn-menu")?.classList.toggle("is-active");
+        });
+
+    // ── Sign Out ─────────────────────────────────────────────
+    document.getElementById("nav-signout")
+        ?.addEventListener("click", async (e) => {
+            e.preventDefault();
+            await signOut(auth);
+            window.location.href = "index.html";
+        });
+
+    // ── Add Student Modal ────────────────────────────────────
+    document.getElementById("btn-open-add-student")
+        ?.addEventListener("click", () => openModal("modal-add-student"));
+    document.getElementById("btn-cancel-add-student")
+        ?.addEventListener("click", () => closeModal("modal-add-student"));
+    document.getElementById("btn-confirm-add-student")
+        ?.addEventListener("click", addStudent);
+
+    // Live index number preview when class is selected
+    document.getElementById("ns-class")
+        ?.addEventListener("change", async (e) => {
+            const code = e.target.value;
+            if (!code) return;
+            const preview = await generateIndexNumber(
+                db, code, getDocs, collection, query, where
+            );
+            document.getElementById("index-preview-val").innerText = preview || "—";
+            document.getElementById("index-preview").style.display = "block";
+        });
+
+    // ── Add Class Modal ──────────────────────────────────────
+    document.getElementById("btn-open-add-class")
+        ?.addEventListener("click", () => openModal("modal-add-class"));
+    document.getElementById("btn-cancel-add-class")
+        ?.addEventListener("click", () => closeModal("modal-add-class"));
+    document.getElementById("btn-confirm-add-class")
+        ?.addEventListener("click", addClass);
+
+    // Live department preview as class code is typed
+    document.getElementById("nc-code")
+        ?.addEventListener("input", (e) => {
+            const code = e.target.value.toUpperCase();
+            const dept = getDepartment(code);
+            const el   = document.getElementById("dept-preview");
+            if (el) el.innerText = code ? `Department: ${dept}` : "";
+        });
+
+    // ── Assign Subjects Modal ────────────────────────────────
+    document.getElementById("btn-cancel-assign")
+        ?.addEventListener("click", () => closeModal("modal-assign"));
+    document.getElementById("btn-confirm-assign")
+        ?.addEventListener("click", saveAssignments);
+
+    // ── Delete Modal ─────────────────────────────────────────
+    document.getElementById("btn-cancel-delete")
+        ?.addEventListener("click", () => closeModal("modal-delete"));
+    document.getElementById("btn-confirm-delete")
+        ?.addEventListener("click", confirmDelete);
+
+    // ── Publish Results ──────────────────────────────────────
+    document.getElementById("btn-publish")
+        ?.addEventListener("click", publishResults);
+
+    // ── Search & Filter ──────────────────────────────────────
+    document.getElementById("teacher-search")
+        ?.addEventListener("input", (e) =>
+            filterTable("teacher-tbody", e.target.value));
+    document.getElementById("student-search")
+        ?.addEventListener("input", (e) =>
+            filterTable("student-tbody", e.target.value));
+    document.getElementById("student-class-filter")
+        ?.addEventListener("change", (e) =>
+            filterStudentsByClass(e.target.value));
+
+    // ── Profile ──────────────────────────────────────────────
+    document.getElementById("btn-update-profile")
+        ?.addEventListener("click", updateProfile);
+    document.getElementById("btn-change-password")
+        ?.addEventListener("click", changePassword);
+});
 
 // ============================================================
 //  LOAD CLASSES
@@ -167,33 +257,25 @@ function renderClassesGrid() {
                 Students: <strong>${c.studentCount || 0}</strong>
             </div>
             <div class="class-card-actions">
-                <button class="btn-danger" data-class-id="${c.id}">🗑️ Remove</button>
+                <button class="btn-danger"
+                    data-action="remove-class"
+                    data-uid="${c.id}">
+                    🗑️ Remove
+                </button>
             </div>
         </div>
     `).join("");
-
-    // Wire delete buttons
-    grid.querySelectorAll(".btn-danger[data-class-id]").forEach(btn => {
-        btn.addEventListener("click", () => {
-            openDeleteModal(btn.dataset.classId, "class",
-                `Remove class "${btn.dataset.classId}"? Students in this class will not be deleted.`);
-        });
-    });
 }
 
 function populateClassDropdowns() {
-    const dropdowns = [
-        "ns-class", "student-class-filter",
-        "publish-class"
-    ];
-    dropdowns.forEach(id => {
+    ["ns-class", "student-class-filter", "publish-class"].forEach(id => {
         const el = document.getElementById(id);
         if (!el) return;
-        const first = el.options[0];
+        const firstOption = el.options[0];
         el.innerHTML = "";
-        el.appendChild(first);
+        el.appendChild(firstOption);
         allClasses.forEach(c => {
-            const opt = document.createElement("option");
+            const opt       = document.createElement("option");
             opt.value       = c.id;
             opt.textContent = `${c.id} — ${c.name || ""}`;
             el.appendChild(opt);
@@ -206,24 +288,22 @@ function populateClassDropdowns() {
 // ============================================================
 async function loadAllUsers() {
     try {
-        const snap = await getDocs(collection(db, "users"));
+        const snap     = await getDocs(collection(db, "users"));
         const students = [], teachers = [], pending = [], recent = [];
 
         snap.forEach(d => {
             const data = { uid: d.id, ...d.data() };
             const role = resolveRole(data.role);
+
             if (data.accountStatus === "pending") pending.push(data);
             else if (role === "student")          students.push(data);
             else if (role === "teacher" || role === "admin") teachers.push(data);
 
-            // collect 5 most recent students
             if (role === "student" && data.createdAt) recent.push(data);
         });
 
-        // Sort recent by createdAt desc
         recent.sort((a, b) => b.createdAt?.seconds - a.createdAt?.seconds);
 
-        // Update stats
         document.getElementById("stat-students").innerText = students.length;
         document.getElementById("stat-teachers").innerText = teachers.length;
         document.getElementById("stat-pending").innerText  = pending.length;
@@ -258,20 +338,18 @@ function renderPendingTable(users) {
             <td>${date}</td>
             <td>
                 <div class="action-btns">
-                    <button class="btn-success" data-uid="${u.uid}" data-action="approve">✓ Approve</button>
-                    <button class="btn-danger"  data-uid="${u.uid}" data-action="reject">✗ Reject</button>
+                    <button class="btn-success"
+                        data-action="approve" data-uid="${u.uid}">
+                        ✓ Approve
+                    </button>
+                    <button class="btn-danger"
+                        data-action="reject" data-uid="${u.uid}">
+                        ✗ Reject
+                    </button>
                 </div>
             </td>
         </tr>`;
     }).join("");
-
-    tbody.querySelectorAll("button[data-action]").forEach(btn => {
-        btn.addEventListener("click", () => {
-            const { uid, action } = btn.dataset;
-            if (action === "approve") approveTeacher(uid);
-            else rejectTeacher(uid);
-        });
-    });
 }
 
 function renderTeacherTable(users) {
@@ -281,40 +359,39 @@ function renderTeacherTable(users) {
         return;
     }
     tbody.innerHTML = users.map(u => {
-        const name    = `${u.firstName || ""} ${u.lastName || ""}`.trim() || "—";
-        const role    = resolveRole(u.role);
-        const status  = u.accountStatus || "active";
-        const subjCount = u.assignedSubjects?.length || 0;
+        const name       = `${u.firstName || ""} ${u.lastName || ""}`.trim() || "—";
+        const role       = resolveRole(u.role);
+        const status     = u.accountStatus || "active";
+        const subjCount  = u.assignedSubjects?.length || 0;
         return `<tr data-search="${name.toLowerCase()} ${(u.email||"").toLowerCase()}">
             <td>${name}</td>
             <td>${u.email || "—"}</td>
             <td>${u.phone || "—"}</td>
             <td>
                 <span class="badge badge-${status}">${status}</span>
-                ${role === "admin" ? '<span class="badge badge-admin" style="margin-left:4px">admin</span>' : ""}
+                ${role === "admin"
+                    ? `<span class="badge badge-admin" style="margin-left:4px">admin</span>`
+                    : ""}
             </td>
             <td>${subjCount} subject${subjCount !== 1 ? "s" : ""}</td>
             <td>
                 <div class="action-btns">
-                    <button class="btn-secondary" data-uid="${u.uid}" data-name="${name}" data-action="assign">
+                    <button class="btn-secondary"
+                        data-action="assign"
+                        data-uid="${u.uid}"
+                        data-name="${name}">
                         📚 Assign
                     </button>
-                    <button class="btn-danger" data-uid="${u.uid}" data-name="${name}" data-action="remove-teacher">
+                    <button class="btn-danger"
+                        data-action="remove-teacher"
+                        data-uid="${u.uid}"
+                        data-name="${name}">
                         🗑️ Remove
                     </button>
                 </div>
             </td>
         </tr>`;
     }).join("");
-
-    tbody.querySelectorAll("button[data-action]").forEach(btn => {
-        const { uid, name, action } = btn.dataset;
-        btn.addEventListener("click", () => {
-            if (action === "assign")         openAssignModal(uid, name);
-            else if (action === "remove-teacher")
-                openDeleteModal(uid, "teacher", `Remove teacher "${name}" from the system?`);
-        });
-    });
 }
 
 function renderStudentTable(users) {
@@ -326,29 +403,32 @@ function renderStudentTable(users) {
     tbody.innerHTML = users.map(u => {
         const name   = `${u.firstName || ""} ${u.lastName || ""}`.trim() || "—";
         const status = u.accountStatus || "active";
-        return `<tr data-search="${name.toLowerCase()} ${(u.indexNo||"").toLowerCase()}"
-                    data-class="${u.classCode || ""}">
+        return `<tr
+            data-search="${name.toLowerCase()} ${(u.indexNo||"").toLowerCase()}"
+            data-class="${u.classCode || ""}">
             <td>${name}</td>
-            <td><span style="font-family:'Cinzel',serif;font-size:0.8rem;color:var(--gold-light)">${u.indexNo || "—"}</span></td>
+            <td>
+                <span style="font-family:'Cinzel',serif;
+                             font-size:0.8rem;
+                             color:var(--gold-light)">
+                    ${u.indexNo || "—"}
+                </span>
+            </td>
             <td>${u.classCode || "—"}</td>
             <td>${u.phone || "—"}</td>
             <td><span class="badge badge-${status}">${status}</span></td>
             <td>
                 <div class="action-btns">
-                    <button class="btn-danger" data-uid="${u.uid}" data-name="${name}" data-action="remove-student">
+                    <button class="btn-danger"
+                        data-action="remove-student"
+                        data-uid="${u.uid}"
+                        data-name="${name}">
                         🗑️ Remove
                     </button>
                 </div>
             </td>
         </tr>`;
     }).join("");
-
-    tbody.querySelectorAll("button[data-action='remove-student']").forEach(btn => {
-        btn.addEventListener("click", () => {
-            openDeleteModal(btn.dataset.uid, "student",
-                `Remove student "${btn.dataset.name}" from the system?`);
-        });
-    });
 }
 
 function renderRecentStudents(students) {
@@ -382,22 +462,20 @@ async function approveTeacher(uid) {
             accountStatus: "active"
         });
 
-        // Notify teacher by email
         await sendEmailNotification(db, setDoc, doc, {
             to:      data.email,
             subject: "Your K_Tawiah Teacher Account Has Been Approved",
-            text:    `Hello ${data.firstName},\n\nYour teacher account has been approved. You can now sign in at the K_Tawiah Student Report System.\n\nWelcome aboard!`,
+            text:    `Hello ${data.firstName},\n\nYour teacher account has been approved. You can now sign in.`,
             html:    `<h2>Account Approved! 🎉</h2>
                       <p>Hello <strong>${data.firstName}</strong>,</p>
-                      <p>Your teacher account has been approved. You can now sign in.</p>
-                      <p><a href="index.html">Sign In Now →</a></p>`
+                      <p>Your teacher account has been approved. You can now sign in.</p>`
         });
 
-        showNotification(`${data.firstName} has been approved as a teacher.`, "success");
+        showNotification(`${data.firstName} approved as a teacher.`, "success");
         await loadAllUsers();
     } catch (err) {
         console.error("Approve error:", err);
-        showNotification("Could not approve teacher. Try again.", "error");
+        showNotification("Could not approve teacher.", "error");
     }
 }
 
@@ -407,25 +485,22 @@ async function rejectTeacher(uid) {
         if (!snap.exists()) return;
         const data = snap.data();
 
-        await updateDoc(doc(db, "users", uid), {
-            accountStatus: "suspended"
-        });
+        await updateDoc(doc(db, "users", uid), { accountStatus: "suspended" });
 
         await sendEmailNotification(db, setDoc, doc, {
             to:      data.email,
             subject: "K_Tawiah Account Application Update",
-            text:    `Hello ${data.firstName},\n\nUnfortunately your teacher account application has not been approved at this time. Please contact your school administrator for more information.`,
+            text:    `Hello ${data.firstName},\n\nYour teacher account application has not been approved. Please contact your administrator.`,
             html:    `<h2>Account Not Approved</h2>
                       <p>Hello <strong>${data.firstName}</strong>,</p>
-                      <p>Your teacher account application has not been approved at this time.</p>
-                      <p>Please contact your school administrator for more information.</p>`
+                      <p>Your application was not approved. Contact your school administrator.</p>`
         });
 
-        showNotification(`${data.firstName}'s account has been rejected.`, "warning");
+        showNotification(`${data.firstName}'s account rejected.`, "warning");
         await loadAllUsers();
     } catch (err) {
         console.error("Reject error:", err);
-        showNotification("Could not reject teacher. Try again.", "error");
+        showNotification("Could not reject teacher.", "error");
     }
 }
 
@@ -449,44 +524,43 @@ async function addStudent() {
     try {
         showNotification("Creating student...", "info");
 
-        // Generate index number: KT-B4A-001
-        const indexNo = await generateIndexNumber(db, classCode, getDocs, collection, query, where);
+        const indexNo = await generateIndexNumber(
+            db, classCode, getDocs, collection, query, where
+        );
         if (!indexNo) {
-            showNotification("Could not generate index number. Try again.", "error"); return;
+            showNotification("Could not generate index number.", "error"); return;
         }
 
-        // Save to Firestore using indexNo as document ID
         await setDoc(doc(db, "users", indexNo), {
             firstName:     fname,
             lastName:      lname,
-            classCode:     classCode,
-            indexNo:       indexNo,
+            classCode,
+            indexNo,
             phone:         phone || "",
             email:         email || "",
             role:          "student",
-            accountStatus: "pending", // pending until student logs in and sets password
+            accountStatus: "pending",
             createdBy:     currentAdmin?.uid || "admin",
             createdAt:     serverTimestamp()
         });
 
         // Update class student count
-        const classRef = doc(db, "classes", classCode);
+        const classRef  = doc(db, "classes", classCode);
         const classSnap = await getDoc(classRef);
         if (classSnap.exists()) {
-            const count = (classSnap.data().studentCount || 0) + 1;
-            await updateDoc(classRef, { studentCount: count });
+            await updateDoc(classRef, {
+                studentCount: (classSnap.data().studentCount || 0) + 1
+            });
         }
 
+        document.getElementById("index-preview-val").innerText    = indexNo;
+        document.getElementById("index-preview").style.display    = "block";
+
         showNotification(
-            `Student added! Index No: ${indexNo}. Hand credentials to student manually.`,
+            `Student added! Index No: ${indexNo}. Hand credentials manually.`,
             "success"
         );
 
-        // Show index number clearly
-        document.getElementById("index-preview-val").innerText = indexNo;
-        document.getElementById("index-preview").style.display = "block";
-
-        // Clear form
         ["ns-firstname","ns-lastname","ns-phone","ns-email"].forEach(id => {
             document.getElementById(id).value = "";
         });
@@ -497,7 +571,7 @@ async function addStudent() {
 
     } catch (err) {
         console.error("Add student error:", err);
-        showNotification("Could not add student. Try again.", "error");
+        showNotification("Could not add student.", "error");
     }
 }
 
@@ -514,11 +588,10 @@ async function addClass() {
         showNotification("Class code and name are required.", "error"); return;
     }
     if (!/^[A-Z0-9]+$/.test(code)) {
-        showNotification("Class code can only contain letters and numbers.", "error"); return;
+        showNotification("Class code must only contain letters and numbers.", "error"); return;
     }
 
     try {
-        // Check if already exists
         const existing = await getDoc(doc(db, "classes", code));
         if (existing.exists()) {
             showNotification(`Class "${code}" already exists.`, "error"); return;
@@ -534,7 +607,7 @@ async function addClass() {
             createdBy:    currentAdmin?.uid || "admin"
         });
 
-        showNotification(`Class "${code}" added successfully!`, "success");
+        showNotification(`Class "${code}" added!`, "success");
         closeModal("modal-add-class");
         document.getElementById("nc-code").value = "";
         document.getElementById("nc-name").value = "";
@@ -543,89 +616,94 @@ async function addClass() {
         await loadClasses();
     } catch (err) {
         console.error("Add class error:", err);
-        showNotification("Could not add class. Try again.", "error");
+        showNotification("Could not add class.", "error");
     }
 }
 
 // ============================================================
 //  ASSIGN SUBJECTS TO TEACHER
+//  Only shows classes that belong to the subject's department
 // ============================================================
 async function openAssignModal(uid, name) {
     assigningTeacher = { uid, name };
     document.getElementById("assign-teacher-label").innerText = `Teacher: ${name}`;
 
-    // 1. Load current assignments and teacher profile data
-    const snap = await getDoc(doc(db, "users", uid));
-    const teacherData = snap.data() || {};
-    const current = teacherData.assignedSubjects || [];
-    
-    // Track teacher's target department (e.g., "Science", "Business", etc.)
-    const teacherDepartment = teacherData.department; 
-
-    // Map existing assignments for UI chip toggling
+    // Load teacher's current assignments
+    const snap       = await getDoc(doc(db, "users", uid));
+    const current    = snap.data()?.assignedSubjects || [];
     const currentMap = {};
     current.forEach(a => { currentMap[a.subject] = a.classes || []; });
 
-    // 2. Filter subjects based on the teacher's department
-    let subjectsToRender = [];
+    // Build map: subject → departments that teach it
+    const subjectDeptMap = {};
+    Object.entries(DEPARTMENT_SUBJECTS).forEach(([dept, subjects]) => {
+        subjects.forEach(subj => {
+            if (!subjectDeptMap[subj]) subjectDeptMap[subj] = [];
+            subjectDeptMap[subj].push(dept);
+        });
+    });
 
-    if (teacherDepartment && DEPARTMENT_SUBJECTS[teacherDepartment]) {
-        // Teacher has a valid department -> Only pull their department's subjects
-        subjectsToRender = [...DEPARTMENT_SUBJECTS[teacherDepartment]].sort();
-    } else {
-        // Fallback: If no department is set, gracefully display all unique subjects
-        subjectsToRender = [...new Set(Object.values(DEPARTMENT_SUBJECTS).flat())].sort();
-    }
-
-    // 3. Build out the UI list with the filtered subjects
     const list = document.getElementById("assign-subjects-list");
-    
-    if (subjectsToRender.length === 0) {
-        list.innerHTML = `<div class="form-msg error">No subjects found for department: ${teacherDepartment || "Unknown"}</div>`;
-        openModal("modal-assign");
-        return;
-    }
+    list.innerHTML = "";
 
-    list.innerHTML = subjectsToRender.map(subj => {
-        const assignedClasses = currentMap[subj] || [];
-        const chips = allClasses.map(c => `
-            <span class="class-chip ${assignedClasses.includes(c.id) ? "selected" : ""}"
-                  data-subject="${subj}" data-class="${c.id}">
-                ${c.id}
-            </span>
-        `).join("");
+    // Group by department for a cleaner UI
+    Object.entries(DEPARTMENT_SUBJECTS).forEach(([dept, subjects]) => {
+        // Get classes that belong to this department
+        const deptClasses = allClasses.filter(c => getDepartment(c.id) === dept);
+        if (!deptClasses.length) return; // skip if no classes added for this dept yet
 
-        return `
-            <div class="assign-subject-row">
-                <div class="assign-subject-name">
-                    ${subj} 
-                    ${!teacherDepartment ? `<small style="display:block;color:var(--text-muted);font-size:0.65rem;">Global</small>` : ''}
-                </div>
-                <div class="assign-classes-wrap">${chips}</div>
+        const deptBlock = document.createElement("div");
+        deptBlock.style.marginBottom = "20px";
+        deptBlock.innerHTML = `
+            <div style="font-family:'Cinzel',serif;font-size:0.75rem;
+                        color:var(--gold);letter-spacing:0.1em;
+                        text-transform:uppercase;margin-bottom:10px;
+                        padding-bottom:6px;border-bottom:1px solid var(--glass-border)">
+                ${dept}
             </div>
         `;
-    }).join("");
 
-    // 4. Attach event listeners to toggle chips on click
+        subjects.forEach(subj => {
+            const assignedClasses = currentMap[subj] || [];
+            const chips = deptClasses.map(c => `
+                <span class="class-chip ${assignedClasses.includes(c.id) ? "selected" : ""}"
+                      data-subject="${subj}"
+                      data-class="${c.id}">
+                    ${c.id}
+                </span>
+            `).join("");
+
+            deptBlock.innerHTML += `
+                <div class="assign-subject-row">
+                    <div class="assign-subject-name">${subj}</div>
+                    <div class="assign-classes-wrap">${chips}</div>
+                </div>
+            `;
+        });
+
+        list.appendChild(deptBlock);
+    });
+
+    // Toggle chips
     list.querySelectorAll(".class-chip").forEach(chip => {
         chip.addEventListener("click", () => chip.classList.toggle("selected"));
     });
 
     openModal("modal-assign");
 }
+
 async function saveAssignments() {
     if (!assigningTeacher.uid) return;
 
-    // Collect all selected chips
     const assignedSubjects = [];
-    const allSubjects = [...new Set(Object.values(DEPARTMENT_SUBJECTS).flat())].sort();
 
-    allSubjects.forEach(subj => {
-        const classes = [];
-        document.querySelectorAll(
-            `.class-chip.selected[data-subject="${subj}"]`
-        ).forEach(chip => classes.push(chip.dataset.class));
-        if (classes.length) assignedSubjects.push({ subject: subj, classes });
+    // Collect all selected chips
+    document.querySelectorAll(".class-chip.selected").forEach(chip => {
+        const subj  = chip.dataset.subject;
+        const cls   = chip.dataset.class;
+        const entry = assignedSubjects.find(a => a.subject === subj);
+        if (entry) entry.classes.push(cls);
+        else       assignedSubjects.push({ subject: subj, classes: [cls] });
     });
 
     try {
@@ -640,7 +718,7 @@ async function saveAssignments() {
 }
 
 // ============================================================
-//  DELETE (Teacher or Student or Class)
+//  DELETE
 // ============================================================
 function openDeleteModal(uid, type, message) {
     pendingDelete = { uid, type };
@@ -653,15 +731,15 @@ async function confirmDelete() {
     if (!uid) return;
 
     try {
-        await deleteDoc(doc(db, "users", uid));
-        showNotification("Record removed successfully.", "success");
-        closeModal("modal-delete");
-
         if (type === "class") {
             await deleteDoc(doc(db, "classes", uid));
             await loadClasses();
+        } else {
+            await deleteDoc(doc(db, "users", uid));
+            await loadAllUsers();
         }
-        await loadAllUsers();
+        showNotification("Record removed successfully.", "success");
+        closeModal("modal-delete");
     } catch (err) {
         console.error("Delete error:", err);
         showNotification("Could not delete record.", "error");
@@ -683,7 +761,6 @@ async function publishResults() {
     try {
         showNotification("Publishing results...", "info");
 
-        // Get all students in this class
         const q    = query(
             collection(db, "users"),
             where("classCode",     "==", classCode),
@@ -693,47 +770,49 @@ async function publishResults() {
         const snap = await getDocs(q);
 
         let notified = 0;
-        snap.forEach(async (d) => {
+        const promises = [];
+
+        snap.forEach(d => {
             const student = d.data();
-
-            // Mark their report as published
-            await updateDoc(doc(db, "users", d.id), {
-                resultsPublished: true
-            });
-
-            // Send email notification
+            promises.push(
+                updateDoc(doc(db, "users", d.id), { resultsPublished: true })
+            );
             if (student.email) {
-                await sendEmailNotification(db, setDoc, doc, {
-                    to:      student.email,
-                    subject: `Your ${term} Results Are Ready — K_Tawiah`,
-                    text:    `Hello ${student.firstName},\n\nYour ${term} ${year} results have been published. Log in to view your report card.`,
-                    html:    `<h2>Your Results Are Ready! 📊</h2>
-                              <p>Hello <strong>${student.firstName}</strong>,</p>
-                              <p>Your <strong>${term} ${year}</strong> results have been published.</p>
-                              <p><a href="student.html">View Your Report Card →</a></p>`
-                });
+                promises.push(
+                    sendEmailNotification(db, setDoc, doc, {
+                        to:      student.email,
+                        subject: `Your ${term} Results Are Ready — K_Tawiah`,
+                        text:    `Hello ${student.firstName},\n\nYour ${term} ${year} results have been published. Log in to view your report card.`,
+                        html:    `<h2>Your Results Are Ready! 📊</h2>
+                                  <p>Hello <strong>${student.firstName}</strong>,</p>
+                                  <p>Your <strong>${term} ${year}</strong> results have been published.</p>
+                                  <p><a href="student.html">View Your Report Card →</a></p>`
+                    })
+                );
                 notified++;
             }
         });
 
-        // Log the publish event
+        await Promise.all(promises);
+
         await addDoc(collection(db, "published_reports"), {
             classCode,
             term,
             year,
-            publishedBy:  currentAdmin?.uid,
-            publishedAt:  serverTimestamp(),
+            publishedBy:      currentAdmin?.uid,
+            publishedAt:      serverTimestamp(),
             studentsNotified: notified
         });
 
         showNotification(
-            `Results published! ${notified} student(s) notified by email.`,
+            `Results published! ${notified} student(s) notified.`,
             "success"
         );
         await loadResultsLog();
+
     } catch (err) {
         console.error("Publish error:", err);
-        showNotification("Could not publish results. Try again.", "error");
+        showNotification("Could not publish results.", "error");
     }
 }
 
@@ -742,7 +821,7 @@ async function publishResults() {
 // ============================================================
 async function loadResultsLog() {
     try {
-        const snap = await getDocs(collection(db, "published_reports"));
+        const snap  = await getDocs(collection(db, "published_reports"));
         const tbody = document.getElementById("results-log-tbody");
 
         if (snap.empty) {
@@ -759,20 +838,21 @@ async function loadResultsLog() {
                 ? r.publishedAt.toDate().toLocaleDateString() : "—";
             return `<tr>
                 <td>${r.classCode || "—"}</td>
-                <td>${r.term     || "—"}</td>
-                <td>${r.year     || "—"}</td>
+                <td>${r.term      || "—"}</td>
+                <td>${r.year      || "—"}</td>
                 <td>${r.publishedBy || "Admin"}</td>
                 <td>${date}</td>
                 <td>${r.studentsNotified || 0} students</td>
             </tr>`;
         }).join("");
+
     } catch (err) {
         console.error("Load results log error:", err);
     }
 }
 
 // ============================================================
-//  PROFILE UPDATE
+//  PROFILE
 // ============================================================
 async function updateProfile() {
     const fname = sanitizeInput(document.getElementById("profile-firstname").value.trim());
@@ -798,9 +878,9 @@ async function updateProfile() {
 }
 
 async function changePassword() {
-    const current  = document.getElementById("current-password").value;
-    const newPass  = document.getElementById("new-password").value;
-    const confirm  = document.getElementById("confirm-password").value;
+    const current = document.getElementById("current-password").value;
+    const newPass = document.getElementById("new-password").value;
+    const confirm = document.getElementById("confirm-password").value;
 
     if (!current || !newPass || !confirm) {
         showNotification("Please fill in all password fields.", "error"); return;
@@ -825,7 +905,7 @@ async function changePassword() {
         if (err.code === "auth/wrong-password")
             showNotification("Current password is incorrect.", "error");
         else
-            showNotification("Could not change password. Try again.", "error");
+            showNotification("Could not change password.", "error");
     }
 }
 
@@ -845,121 +925,3 @@ function filterStudentsByClass(classCode) {
             ? "" : "none";
     });
 }
-
-// ============================================================
-//  MODAL HELPERS
-// ============================================================
-function openModal(id) {
-    const el = document.getElementById(id);
-    if (el) { el.style.display = "flex"; }
-}
-
-function closeModal(id) {
-    const el = document.getElementById(id);
-    if (el) { el.style.display = "none"; }
-}
-
-// Close modal when clicking overlay background
-document.querySelectorAll(".modal-overlay").forEach(overlay => {
-    overlay.addEventListener("click", (e) => {
-        if (e.target === overlay) closeModal(overlay.id);
-    });
-});
-
-// ============================================================
-//  TAB SWITCHING
-// ============================================================
-document.querySelectorAll(".tab-btn").forEach(btn => {
-    btn.addEventListener("click", () => {
-        document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
-        document.querySelectorAll(".tab-content").forEach(c => c.classList.remove("active"));
-        btn.classList.add("active");
-        document.getElementById(`tab-${btn.dataset.tab}`)?.classList.add("active");
-    });
-});
-
-// ============================================================
-//  WIRE UP ALL BUTTONS
-// ============================================================
-document.addEventListener("DOMContentLoaded", () => {
-
-    // Nav menu
-    document.getElementById("btn-menu")
-        ?.addEventListener("click", () => {
-            document.getElementById("navover").classList.toggle("open");
-            document.getElementById("btn-menu").classList.toggle("is-active");
-        });
-
-    // Sign out
-    document.getElementById("nav-signout")
-        ?.addEventListener("click", async (e) => {
-            e.preventDefault();
-            await signOut(auth);
-            window.location.href = "index.html";
-        });
-
-    // Add Student modal
-    document.getElementById("btn-open-add-student")
-        ?.addEventListener("click", () => openModal("modal-add-student"));
-    document.getElementById("btn-cancel-add-student")
-        ?.addEventListener("click", () => closeModal("modal-add-student"));
-    document.getElementById("btn-confirm-add-student")
-        ?.addEventListener("click", addStudent);
-
-    // Add Class modal
-    document.getElementById("btn-open-add-class")
-        ?.addEventListener("click", () => openModal("modal-add-class"));
-    document.getElementById("btn-cancel-add-class")
-        ?.addEventListener("click", () => closeModal("modal-add-class"));
-    document.getElementById("btn-confirm-add-class")
-        ?.addEventListener("click", addClass);
-
-    // Live dept preview as user types class code
-    document.getElementById("nc-code")
-        ?.addEventListener("input", (e) => {
-            const code = e.target.value.toUpperCase();
-            const dept = getDepartment(code);
-            document.getElementById("dept-preview").innerText =
-                code ? `Department: ${dept}` : "";
-        });
-
-    // Live index preview when class selected for new student
-    document.getElementById("ns-class")
-        ?.addEventListener("change", async (e) => {
-            const code = e.target.value;
-            if (!code) return;
-            const preview = await generateIndexNumber(db, code, getDocs, collection, query, where);
-            document.getElementById("index-preview-val").innerText = preview || "—";
-            document.getElementById("index-preview").style.display = "block";
-        });
-
-    // Assign subjects
-    document.getElementById("btn-cancel-assign")
-        ?.addEventListener("click", () => closeModal("modal-assign"));
-    document.getElementById("btn-confirm-assign")
-        ?.addEventListener("click", saveAssignments);
-
-    // Delete modal
-    document.getElementById("btn-cancel-delete")
-        ?.addEventListener("click", () => closeModal("modal-delete"));
-    document.getElementById("btn-confirm-delete")
-        ?.addEventListener("click", confirmDelete);
-
-    // Publish results
-    document.getElementById("btn-publish")
-        ?.addEventListener("click", publishResults);
-
-    // Search
-    document.getElementById("teacher-search")
-        ?.addEventListener("input", (e) => filterTable("teacher-tbody", e.target.value));
-    document.getElementById("student-search")
-        ?.addEventListener("input", (e) => filterTable("student-tbody", e.target.value));
-    document.getElementById("student-class-filter")
-        ?.addEventListener("change", (e) => filterStudentsByClass(e.target.value));
-
-    // Profile
-    document.getElementById("btn-update-profile")
-        ?.addEventListener("click", updateProfile);
-    document.getElementById("btn-change-password")
-        ?.addEventListener("click", changePassword);
-});
