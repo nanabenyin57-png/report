@@ -5,12 +5,12 @@
 
 // ── FIREBASE CONFIG ───────────────────────────
 export const firebaseConfig = {
-  apiKey:            "YOUR_API_KEY",
+  apiKey:            "AIzaSyBmlZD5EHWgt8DsocsPVZcf4MJVjeuC0Fw",
   authDomain:        "reportbase-669ff.firebaseapp.com",
   projectId:         "reportbase-669ff",
   storageBucket:     "reportbase-669ff.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId:             "YOUR_APP_ID"
+  messagingSenderId: "244941864396",
+  appId:             "1:244941864396:web:aebc946e160a0172edf169"
 };
 
 // ── DEPARTMENT / SUBJECTS ─────────────────────
