@@ -87,6 +87,19 @@ document.addEventListener("DOMContentLoaded", () => {
             document.getElementById("admin-welcome").innerText =
                 `Welcome back, ${name}. You have full control.`;
 
+            // ── Teacher Swap Button ──────────────────────────────
+            // Show "Switch to Teacher View" only if admin is also a teacher
+            // i.e. role field is an array containing both "admin" and "teacher"
+            const isAlsoTeacher = Array.isArray(data.role)
+                ? data.role.includes("teacher")
+                : false; // string role "admin" alone → not a teacher
+
+            const swapBtn = document.getElementById("btn-switch-teacher");
+            if (swapBtn && isAlsoTeacher) {
+                swapBtn.style.display = "inline-flex";
+            }
+            // ────────────────────────────────────────────────────
+
             // Prefill profile
             document.getElementById("profile-firstname").value = data.firstName || "";
             document.getElementById("profile-lastname").value  = data.lastName  || "";
@@ -152,6 +165,18 @@ document.addEventListener("DOMContentLoaded", () => {
             await signOut(auth);
             window.location.href = "index.html";
         });
+
+    // ── Switch to Teacher View ───────────────────────────────
+    // Sets a sessionStorage flag so teacher.js knows this is an
+    // admin acting as teacher, then opens teacher.html in a new tab.
+    // sessionStorage is tab-scoped — it clears automatically when
+    // the teacher tab is closed.
+    document.getElementById("btn-switch-teacher")
+        ?.addEventListener("click", () => {
+            sessionStorage.setItem("adminAsTeacher", "true");
+            window.open("teacher.html", "_blank");
+        });
+    // ────────────────────────────────────────────────────────
 
     // ── Add Student Modal ────────────────────────────────────
     document.getElementById("btn-open-add-student")

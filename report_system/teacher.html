@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Teacher Dashboard — K_Tawiah Report System</title>
+  <link rel="stylesheet" href="css/teacher.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+</head>
+<body>
+
+  <!-- Ambient background orbs -->
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+  <div class="orb orb-3"></div>
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="logo-mark">KT</div>
+      <div class="logo-text">
+        <span class="logo-main">K_Tawiah</span>
+        <span class="logo-sub">Report System</span>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <button class="nav-item active" data-tab="overview">
+        <span class="nav-icon">⊞</span>
+        <span>Overview</span>
+      </button>
+      <button class="nav-item" data-tab="students">
+        <span class="nav-icon">👥</span>
+        <span>My Students</span>
+      </button>
+      <button class="nav-item" data-tab="scores">
+        <span class="nav-icon">📝</span>
+        <span>Scores & Reports</span>
+      </button>
+      <button class="nav-item" data-tab="attendance">
+        <span class="nav-icon">📅</span>
+        <span>Attendance</span>
+      </button>
+      <button class="nav-item" data-tab="ranking" id="rankingNavBtn">
+        <span class="nav-icon">🏆</span>
+        <span>Class Ranking</span>
+        <span class="badge form-only-badge">Form Teacher</span>
+      </button>
+      <button class="nav-item" data-tab="submit">
+        <span class="nav-icon">📤</span>
+        <span>Submit Report</span>
+      </button>
+      <button class="nav-item" data-tab="profile">
+        <span class="nav-icon">👤</span>
+        <span>My Profile</span>
+      </button>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="teacher-info" id="sidebarTeacherInfo">
+        <div class="teacher-avatar" id="sidebarAvatar">—</div>
+        <div>
+          <div class="teacher-name" id="sidebarName">Loading…</div>
+          <div class="teacher-role" id="sidebarRole">Teacher</div>
+        </div>
+      </div>
+      <button class="switch-role-btn hidden" id="adminSwitchBtn" onclick="window.location.href='admin.html'">
+        🔄 Switch to Admin View
+      </button>
+      <button class="sign-out-btn" id="signOutBtn">Sign Out</button>
+    </div>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main class="main-content">
+
+    <!-- TOP BAR -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <h1 class="page-title" id="pageTitle">Overview</h1>
+        <span class="page-breadcrumb" id="pageBreadcrumb">Dashboard</span>
+      </div>
+      <div class="topbar-right">
+        <div class="term-indicator" id="termIndicator">
+          <span class="term-label">Term</span>
+          <span class="term-value" id="termValue">—</span>
+        </div>
+        <div class="notification-bell" id="notificationBell">
+          🔔
+          <span class="notif-dot hidden" id="notifDot"></span>
+        </div>
+      </div>
+    </header>
+
+    <!-- ========== TAB: OVERVIEW ========== -->
+    <section class="tab-content active" id="tab-overview">
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon">👥</div>
+          <div class="stat-info">
+            <div class="stat-value" id="statStudents">0</div>
+            <div class="stat-label">My Students</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">📚</div>
+          <div class="stat-info">
+            <div class="stat-value" id="statSubjects">0</div>
+            <div class="stat-label">Subjects Assigned</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">✅</div>
+          <div class="stat-info">
+            <div class="stat-value" id="statReportsDone">0</div>
+            <div class="stat-label">Reports Filled</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">⏳</div>
+          <div class="stat-info">
+            <div class="stat-value" id="statPending">0</div>
+            <div class="stat-label">Pending Reports</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="overview-panels">
+        <div class="glass-card">
+          <h3 class="card-title">My Assigned Classes & Subjects</h3>
+          <div id="assignedList" class="assigned-list">
+            <p class="empty-msg">Loading your assignments…</p>
+          </div>
+        </div>
+        <div class="glass-card">
+          <h3 class="card-title">Quick Actions</h3>
+          <div class="quick-actions">
+            <button class="action-btn" onclick="switchTab('students')">➕ Add Student</button>
+            <button class="action-btn" onclick="switchTab('scores')">📝 Fill Scores</button>
+            <button class="action-btn" onclick="switchTab('attendance')">📅 Mark Attendance</button>
+            <button class="action-btn" onclick="switchTab('submit')">📤 Submit Report</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== TAB: MY STUDENTS ========== -->
+    <section class="tab-content" id="tab-students">
+      <div class="section-header">
+        <h2 class="section-title">My Students</h2>
+        <button class="primary-btn" id="addStudentBtn">➕ Add Student</button>
+      </div>
+
+      <!-- Class selector -->
+      <div class="filter-bar">
+        <label class="filter-label">Class:</label>
+        <select class="glass-select" id="studentClassFilter">
+          <option value="">— Select Class —</option>
+        </select>
+      </div>
+
+      <div class="glass-card">
+        <table class="data-table" id="studentsTable">
+          <thead>
+            <tr>
+              <th>Index No.</th>
+              <th>Full Name</th>
+              <th>Class</th>
+              <th>Date Added</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="studentsTableBody">
+            <tr><td colspan="5" class="empty-msg">Select a class to view students.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- ADD STUDENT MODAL -->
+      <div class="modal-overlay hidden" id="addStudentModal">
+        <div class="modal glass-card">
+          <div class="modal-header">
+            <h3>Add New Student</h3>
+            <button class="modal-close" id="closeAddStudent">✕</button>
+          </div>
+          <div class="modal-body">
+            <div class="form-group">
+              <label>Class</label>
+              <select class="glass-select" id="newStudentClass">
+                <option value="">— Select Class —</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Full Name</label>
+              <input type="text" class="glass-input" id="newStudentName" placeholder="e.g. Kofi Mensah"/>
+            </div>
+            <div class="form-group">
+              <label>Gender</label>
+              <select class="glass-select" id="newStudentGender">
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Index Number (Auto-generated)</label>
+              <input type="text" class="glass-input" id="newStudentIndex" readonly placeholder="Will be generated…"/>
+            </div>
+            <div class="form-group">
+              <label>Guardian Phone</label>
+              <input type="tel" class="glass-input" id="newStudentPhone" placeholder="+233…"/>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="secondary-btn" id="cancelAddStudent">Cancel</button>
+            <button class="primary-btn" id="confirmAddStudent">Add Student</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== TAB: SCORES & REPORTS ========== -->
+    <section class="tab-content" id="tab-scores">
+      <div class="section-header">
+        <h2 class="section-title">Scores & Reports</h2>
+      </div>
+
+      <div class="filter-bar">
+        <label class="filter-label">Class:</label>
+        <select class="glass-select" id="scoresClassFilter">
+          <option value="">— Select Class —</option>
+        </select>
+        <label class="filter-label">Subject:</label>
+        <select class="glass-select" id="scoresSubjectFilter">
+          <option value="">— Select Subject —</option>
+        </select>
+        <button class="primary-btn sm" id="loadScoresBtn">Load</button>
+      </div>
+
+      <div class="glass-card" id="scoresTableCard">
+        <table class="data-table" id="scoresTable">
+          <thead>
+            <tr>
+              <th>Index No.</th>
+              <th>Student Name</th>
+              <th>Assessment (40)</th>
+              <th>Exam (60)</th>
+              <th>Total (100)</th>
+              <th>Grade</th>
+              <th>Remarks</th>
+              <th>Save</th>
+            </tr>
+          </thead>
+          <tbody id="scoresTableBody">
+            <tr><td colspan="8" class="empty-msg">Select a class and subject to load scores.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ========== TAB: ATTENDANCE ========== -->
+    <section class="tab-content" id="tab-attendance">
+      <div class="section-header">
+        <h2 class="section-title">Attendance</h2>
+      </div>
+
+      <div class="filter-bar">
+        <label class="filter-label">Class:</label>
+        <select class="glass-select" id="attendanceClassFilter">
+          <option value="">— Select Class —</option>
+        </select>
+        <button class="primary-btn sm" id="loadAttendanceBtn">Load</button>
+      </div>
+
+      <div class="glass-card term-days-card">
+        <h3 class="card-title">Term Details</h3>
+        <div class="term-days-row">
+          <div class="form-group inline">
+            <label>Total Days in Term</label>
+            <input type="number" class="glass-input sm" id="termTotalDays" min="1" max="365" placeholder="e.g. 80"/>
+          </div>
+          <button class="primary-btn sm" id="saveTermDaysBtn">Save Term Days</button>
+        </div>
+      </div>
+
+      <div class="glass-card">
+        <table class="data-table" id="attendanceTable">
+          <thead>
+            <tr>
+              <th>Index No.</th>
+              <th>Student Name</th>
+              <th>Days Present</th>
+              <th>Days Absent</th>
+              <th>Save</th>
+            </tr>
+          </thead>
+          <tbody id="attendanceTableBody">
+            <tr><td colspan="5" class="empty-msg">Select a class to load attendance.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ========== TAB: CLASS RANKING ========== -->
+    <section class="tab-content" id="tab-ranking">
+      <div class="section-header">
+        <h2 class="section-title">Class Ranking</h2>
+        <span class="form-teacher-badge">Form Teacher Only</span>
+      </div>
+      <p class="tab-description">Rankings are computed from each student's total scores across all subjects.</p>
+
+      <div class="filter-bar">
+        <label class="filter-label">Class:</label>
+        <select class="glass-select" id="rankingClassFilter">
+          <option value="">— Select Class —</option>
+        </select>
+        <button class="primary-btn sm" id="computeRankingBtn">Compute Rankings</button>
+      </div>
+
+      <div class="glass-card">
+        <table class="data-table" id="rankingTable">
+          <thead>
+            <tr>
+              <th>Rank</th>
+              <th>Index No.</th>
+              <th>Student Name</th>
+              <th>Total Score</th>
+              <th>Average</th>
+              <th>Subjects</th>
+            </tr>
+          </thead>
+          <tbody id="rankingTableBody">
+            <tr><td colspan="6" class="empty-msg">Select a class and compute rankings.</td></tr>
+          </tbody>
+        </table>
+        <div class="ranking-footer hidden" id="rankingFooter">
+          <button class="primary-btn" id="saveRankingBtn">💾 Save Rankings</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== TAB: SUBMIT REPORT ========== -->
+    <section class="tab-content" id="tab-submit">
+      <div class="section-header">
+        <h2 class="section-title">Submit Class Report</h2>
+      </div>
+      <p class="tab-description">Once all scores, remarks, and attendance are filled, submit the class report to the admin for review and publishing.</p>
+
+      <div class="submit-checklist glass-card">
+        <h3 class="card-title">Pre-submission Checklist</h3>
+        <ul class="checklist" id="submitChecklist">
+          <li class="check-item" id="checkScores"><span class="check-icon">⬜</span> All student scores filled</li>
+          <li class="check-item" id="checkRemarks"><span class="check-icon">⬜</span> All remarks added</li>
+          <li class="check-item" id="checkAttendance"><span class="check-icon">⬜</span> Attendance recorded</li>
+          <li class="check-item" id="checkTermDays"><span class="check-icon">⬜</span> Term days set</li>
+          <li class="check-item" id="checkRanking"><span class="check-icon">⬜</span> Class ranking computed (form teachers)</li>
+        </ul>
+      </div>
+
+      <div class="glass-card submit-card">
+        <div class="form-group">
+          <label>Select Class to Submit</label>
+          <select class="glass-select" id="submitClassSelect">
+            <option value="">— Select Class —</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Teacher's Note to Admin (optional)</label>
+          <textarea class="glass-input" id="teacherNote" rows="4" placeholder="Any notes for the admin before publishing…"></textarea>
+        </div>
+        <div class="submit-status glass-card" id="submitStatus" style="display:none;"></div>
+        <button class="primary-btn large" id="submitReportBtn">📤 Submit Report to Admin</button>
+      </div>
+    </section>
+
+    <!-- ========== TAB: MY PROFILE ========== -->
+    <section class="tab-content" id="tab-profile">
+      <div class="section-header">
+        <h2 class="section-title">My Profile</h2>
+      </div>
+
+      <div class="profile-layout">
+        <!-- Profile Card -->
+        <div class="glass-card profile-card">
+          <div class="profile-avatar-large" id="profileAvatarLarge">—</div>
+          <div class="profile-detail-group">
+            <div class="profile-field">
+              <span class="field-label">Full Name</span>
+              <span class="field-value" id="profileName">—</span>
+            </div>
+            <div class="profile-field">
+              <span class="field-label">Email</span>
+              <span class="field-value" id="profileEmail">—</span>
+            </div>
+            <div class="profile-field">
+              <span class="field-label">Phone</span>
+              <span class="field-value" id="profilePhone">—</span>
+            </div>
+            <div class="profile-field">
+              <span class="field-label">Role</span>
+              <span class="field-value" id="profileRole">Teacher</span>
+            </div>
+            <div class="profile-field">
+              <span class="field-label">Assigned Classes</span>
+              <span class="field-value" id="profileClasses">—</span>
+            </div>
+            <div class="profile-field">
+              <span class="field-label">Assigned Subjects</span>
+              <span class="field-value" id="profileSubjects">—</span>
+            </div>
+            <div class="profile-field" id="profileFormClassRow">
+              <span class="field-label">Form Class</span>
+              <span class="field-value" id="profileFormClass">—</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Student Report Links -->
+        <div class="glass-card profile-students-card">
+          <h3 class="card-title">My Students — Report Card Links</h3>
+          <div class="filter-bar">
+            <label class="filter-label">Filter by class:</label>
+            <select class="glass-select" id="profileClassFilter">
+              <option value="">All Classes</option>
+            </select>
+          </div>
+          <ul class="student-report-list" id="studentReportList">
+            <li class="empty-msg">Loading students…</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- TOAST NOTIFICATIONS -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script type="module" src="teacher.js"></script>
+</body>
+</html>

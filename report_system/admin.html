@@ -18,7 +18,12 @@
             <div class="logo">K_TAWIAH</div>
             <div class="nav_overlay" id="navover">
                 <ul class="links">
-                    <li><a href="teacher.html">Teacher Dashboard</a></li>
+                    <!-- Only visible when admin is also a teacher; shown by admin.js -->
+                    <li>
+                        <button id="btn-switch-teacher" class="nav-teacher-swap" style="display:none">
+                            🎓 Teacher View
+                        </button>
+                    </li>
                     <li><a href="student.html">Student Dashboard</a></li>
                     <li><a href="#" id="nav-signout">Sign Out</a></li>
                 </ul>
