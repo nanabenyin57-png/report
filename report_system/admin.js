@@ -27,6 +27,7 @@ import { firebaseConfig,
          sanitizeInput,
          showNotification,
          resolveRole,
+         hasRole,
          sendEmailNotification,
          MESSAGES }                     from "./config.js";
 
@@ -71,9 +72,12 @@ document.addEventListener("DOMContentLoaded", () => {
             const snap = await getDoc(doc(db, "users", user.uid));
             if (!snap.exists()) { showDenied(); return; }
 
-            const data = snap.data();
-            const role = resolveRole(data.role);
-            if (role !== "admin") { showDenied(); return; }
+            const data  = snap.data();
+            // resolveRole returns a normalized array e.g. ["admin", "teacher"]
+            // This handles trailing spaces and comma-separated strings safely.
+            const roles = resolveRole(data.role);
+
+            if (!hasRole(roles, "admin")) { showDenied(); return; }
 
             currentAdmin = { uid: user.uid, ...data };
 
@@ -88,11 +92,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 `Welcome back, ${name}. You have full control.`;
 
             // ── Teacher Swap Button ──────────────────────────────
-            // Show "Switch to Teacher View" only if admin is also a teacher
-            // i.e. role field is an array containing both "admin" and "teacher"
-            const isAlsoTeacher = Array.isArray(data.role)
-                ? data.role.includes("teacher")
-                : false; // string role "admin" alone → not a teacher
+            // Uses resolveRole so trailing spaces like "admin " are
+            // normalized before the includes() check — avoids false
+            // negatives on dual-role accounts stored with whitespace.
+            const isAlsoTeacher = hasRole(roles, "teacher");
 
             const swapBtn = document.getElementById("btn-switch-teacher");
             if (swapBtn && isAlsoTeacher) {
@@ -317,14 +320,14 @@ async function loadAllUsers() {
         const students = [], teachers = [], pending = [], recent = [];
 
         snap.forEach(d => {
-            const data = { uid: d.id, ...d.data() };
-            const role = resolveRole(data.role);
+            const data  = { uid: d.id, ...d.data() };
+            const roles = resolveRole(data.role);
 
-            if (data.accountStatus === "pending") pending.push(data);
-            else if (role === "student")          students.push(data);
-            else if (role === "teacher" || role === "admin") teachers.push(data);
+            if (data.accountStatus === "pending")   pending.push(data);
+            else if (hasRole(roles, "student"))     students.push(data);
+            else if (hasRole(roles, "teacher") || hasRole(roles, "admin")) teachers.push(data);
 
-            if (role === "student" && data.createdAt) recent.push(data);
+            if (hasRole(roles, "student") && data.createdAt) recent.push(data);
         });
 
         recent.sort((a, b) => b.createdAt?.seconds - a.createdAt?.seconds);
@@ -384,17 +387,18 @@ function renderTeacherTable(users) {
         return;
     }
     tbody.innerHTML = users.map(u => {
-        const name       = `${u.firstName || ""} ${u.lastName || ""}`.trim() || "—";
-        const role       = resolveRole(u.role);
-        const status     = u.accountStatus || "active";
-        const subjCount  = u.assignedSubjects?.length || 0;
+        const name      = `${u.firstName || ""} ${u.lastName || ""}`.trim() || "—";
+        const roles     = resolveRole(u.role);
+        const status    = u.accountStatus || "active";
+        const subjCount = u.assignedSubjects?.length || 0;
+        const isAdmin   = hasRole(roles, "admin");
         return `<tr data-search="${name.toLowerCase()} ${(u.email||"").toLowerCase()}">
             <td>${name}</td>
             <td>${u.email || "—"}</td>
             <td>${u.phone || "—"}</td>
             <td>
                 <span class="badge badge-${status}">${status}</span>
-                ${role === "admin"
+                ${isAdmin
                     ? `<span class="badge badge-admin" style="margin-left:4px">admin</span>`
                     : ""}
             </td>
@@ -487,14 +491,12 @@ async function approveTeacher(uid) {
             accountStatus: "active"
         });
 
-        await sendEmailNotification(db, setDoc, doc, {
-            to:      data.email,
-            subject: "Your K_Tawiah Teacher Account Has Been Approved",
-            text:    `Hello ${data.firstName},\n\nYour teacher account has been approved. You can now sign in.`,
-            html:    `<h2>Account Approved! 🎉</h2>
-                      <p>Hello <strong>${data.firstName}</strong>,</p>
-                      <p>Your teacher account has been approved. You can now sign in.</p>`
-        });
+        await sendEmailNotification(
+            data.email,
+            "Your K_Tawiah Teacher Account Has Been Approved",
+            `Hello ${data.firstName},\n\nYour teacher account has been approved. You can now sign in.`,
+            db
+        );
 
         showNotification(`${data.firstName} approved as a teacher.`, "success");
         await loadAllUsers();
@@ -512,14 +514,12 @@ async function rejectTeacher(uid) {
 
         await updateDoc(doc(db, "users", uid), { accountStatus: "suspended" });
 
-        await sendEmailNotification(db, setDoc, doc, {
-            to:      data.email,
-            subject: "K_Tawiah Account Application Update",
-            text:    `Hello ${data.firstName},\n\nYour teacher account application has not been approved. Please contact your administrator.`,
-            html:    `<h2>Account Not Approved</h2>
-                      <p>Hello <strong>${data.firstName}</strong>,</p>
-                      <p>Your application was not approved. Contact your school administrator.</p>`
-        });
+        await sendEmailNotification(
+            data.email,
+            "K_Tawiah Account Application Update",
+            `Hello ${data.firstName},\n\nYour teacher account application has not been approved. Please contact your administrator.`,
+            db
+        );
 
         showNotification(`${data.firstName}'s account rejected.`, "warning");
         await loadAllUsers();
@@ -549,12 +549,15 @@ async function addStudent() {
     try {
         showNotification("Creating student...", "info");
 
-        const indexNo = await generateIndexNumber(
-            db, classCode, getDocs, collection, query, where
+        // generateIndexNumber in config.js takes (classCode, position)
+        // Count existing students in class first
+        const existingSnap = await getDocs(
+            query(collection(db, "users"),
+                  where("classCode", "==", classCode),
+                  where("role", "==", "student"))
         );
-        if (!indexNo) {
-            showNotification("Could not generate index number.", "error"); return;
-        }
+        const nextPosition = existingSnap.size + 1;
+        const indexNo      = generateIndexNumber(classCode, nextPosition);
 
         await setDoc(doc(db, "users", indexNo), {
             firstName:     fname,
@@ -578,8 +581,8 @@ async function addStudent() {
             });
         }
 
-        document.getElementById("index-preview-val").innerText    = indexNo;
-        document.getElementById("index-preview").style.display    = "block";
+        document.getElementById("index-preview-val").innerText = indexNo;
+        document.getElementById("index-preview").style.display = "block";
 
         showNotification(
             `Student added! Index No: ${indexNo}. Hand credentials manually.`,
@@ -658,15 +661,6 @@ async function openAssignModal(uid, name) {
     const current    = snap.data()?.assignedSubjects || [];
     const currentMap = {};
     current.forEach(a => { currentMap[a.subject] = a.classes || []; });
-
-    // Build map: subject → departments that teach it
-    const subjectDeptMap = {};
-    Object.entries(DEPARTMENT_SUBJECTS).forEach(([dept, subjects]) => {
-        subjects.forEach(subj => {
-            if (!subjectDeptMap[subj]) subjectDeptMap[subj] = [];
-            subjectDeptMap[subj].push(dept);
-        });
-    });
 
     const list = document.getElementById("assign-subjects-list");
     list.innerHTML = "";
@@ -804,15 +798,12 @@ async function publishResults() {
             );
             if (student.email) {
                 promises.push(
-                    sendEmailNotification(db, setDoc, doc, {
-                        to:      student.email,
-                        subject: `Your ${term} Results Are Ready — K_Tawiah`,
-                        text:    `Hello ${student.firstName},\n\nYour ${term} ${year} results have been published. Log in to view your report card.`,
-                        html:    `<h2>Your Results Are Ready! 📊</h2>
-                                  <p>Hello <strong>${student.firstName}</strong>,</p>
-                                  <p>Your <strong>${term} ${year}</strong> results have been published.</p>
-                                  <p><a href="student.html">View Your Report Card →</a></p>`
-                    })
+                    sendEmailNotification(
+                        student.email,
+                        `Your ${term} Results Are Ready — K_Tawiah`,
+                        `Hello ${student.firstName},\n\nYour ${term} ${year} results have been published. Log in to view your report card.`,
+                        db
+                    )
                 );
                 notified++;
             }
@@ -914,7 +905,7 @@ async function changePassword() {
         showNotification("New passwords do not match.", "error"); return;
     }
     if (!validatePassword(newPass)) {
-        showNotification("Password must be 6+ chars with uppercase and numbers.", "error"); return;
+        showNotification("Password must be 8+ characters.", "error"); return;
     }
 
     try {

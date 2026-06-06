@@ -14,6 +14,27 @@
   <div class="orb orb-2"></div>
   <div class="orb orb-3"></div>
 
+  <!-- ADMIN-AS-TEACHER BANNER
+       Hidden by default; teacher.js shows it when adminAsTeacher flag is set -->
+  <div id="admin-teacher-banner" style="
+      display:none; align-items:center; gap:12px;
+      background:rgba(245,158,11,0.15);
+      border-bottom:1px solid rgba(245,158,11,0.3);
+      padding:10px 24px; font-size:13px;
+      color:#f59e0b; font-family:'DM Sans',sans-serif;
+      position:relative; z-index:100;">
+    ⚠️ You are viewing the <strong style="margin:0 4px;">Teacher Dashboard</strong> as an admin.
+    <button id="banner-back-btn" style="
+        margin-left:auto;
+        background:rgba(245,158,11,0.2);
+        border:1px solid rgba(245,158,11,0.4);
+        color:#f59e0b; padding:4px 14px;
+        border-radius:6px; cursor:pointer;
+        font-size:12px; font-family:'DM Sans',sans-serif;">
+      ← Back to Admin
+    </button>
+  </div>
+
   <!-- SIDEBAR -->
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-header">
@@ -64,7 +85,8 @@
           <div class="teacher-role" id="sidebarRole">Teacher</div>
         </div>
       </div>
-      <button class="switch-role-btn hidden" id="adminSwitchBtn" onclick="window.location.href='admin.html'">
+      <!-- Shown only for dual-role admin/teacher accounts; wired in teacher.js -->
+      <button class="switch-role-btn hidden" id="adminSwitchBtn">
         🔄 Switch to Admin View
       </button>
       <button class="sign-out-btn" id="signOutBtn">Sign Out</button>
@@ -135,10 +157,10 @@
         <div class="glass-card">
           <h3 class="card-title">Quick Actions</h3>
           <div class="quick-actions">
-            <button class="action-btn" onclick="switchTab('students')">➕ Add Student</button>
-            <button class="action-btn" onclick="switchTab('scores')">📝 Fill Scores</button>
-            <button class="action-btn" onclick="switchTab('attendance')">📅 Mark Attendance</button>
-            <button class="action-btn" onclick="switchTab('submit')">📤 Submit Report</button>
+            <button class="action-btn" id="qa-students">➕ Add Student</button>
+            <button class="action-btn" id="qa-scores">📝 Fill Scores</button>
+            <button class="action-btn" id="qa-attendance">📅 Mark Attendance</button>
+            <button class="action-btn" id="qa-submit">📤 Submit Report</button>
           </div>
         </div>
       </div>
@@ -151,7 +173,6 @@
         <button class="primary-btn" id="addStudentBtn">➕ Add Student</button>
       </div>
 
-      <!-- Class selector -->
       <div class="filter-bar">
         <label class="filter-label">Class:</label>
         <select class="glass-select" id="studentClassFilter">
