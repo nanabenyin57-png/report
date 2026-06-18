@@ -4,7 +4,7 @@ import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/
 import { 
     getFirestore, collection, addDoc, getDocs, query, where, serverTimestamp 
 } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
-import { firebaseConfig, DEPARTMENTS, CLASSES, STREAM_PATTERNS, generateStreams, showNotification, MESSAGES } from "./config.js";
+import { firebaseConfig, DEPARTMENTS, CLASSES, STREAM_PATTERNS, generateStreams, showNotification, MESSAGES } from "./repconfig.js";
 
 // 3. INITIALIZATION
 const app = initializeApp(firebaseConfig);

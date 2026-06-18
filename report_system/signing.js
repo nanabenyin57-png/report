@@ -20,7 +20,7 @@ import { firebaseConfig,
          showNotification,
          resolveRole,
          sendEmailNotification,
-         MESSAGES }                  from "./config.js";
+         MESSAGES }                  from "./repconfig.js";
 
 // 2. INITIALIZE
 const app  = initializeApp(firebaseConfig);
