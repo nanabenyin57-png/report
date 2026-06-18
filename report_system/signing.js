@@ -1,6 +1,6 @@
 // ============================================================
 //  signing.js — K_Tawiah Student Report System
-//  Sign In (email + SMS OTP), Teacher Sign Up, Role Redirect
+//  Sign In (Email + Password), Teacher Sign Up, Role Redirect
 //  NOTE: No onclick handlers in HTML — all wired via addEventListener
 // ============================================================
 
@@ -9,8 +9,6 @@ import { initializeApp }             from "https://www.gstatic.com/firebasejs/11
 import { getAuth,
          signInWithEmailAndPassword,
          createUserWithEmailAndPassword,
-         RecaptchaVerifier,
-         signInWithPhoneNumber,
          sendEmailVerification }     from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
 import { getFirestore,
          doc, getDoc, setDoc }       from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
@@ -30,8 +28,7 @@ const auth = getAuth(app);
 const db   = getFirestore(app);
 
 // ── State ──────────────────────────────────────────────────
-let confirmationResult = null;
-let signedInUser       = null;
+let signedInUser = null;
 
 // ============================================================
 //  UI STATE SWITCHERS
@@ -42,31 +39,20 @@ function showDefault() {
     document.getElementById("state-teacher-signup").style.display = "none";
 }
 
+// Streamlined: Step 1 & Step 2 UI blocks are removed since SMS is gone
 function showSignIn() {
     document.getElementById("state-default").style.display        = "none";
     document.getElementById("state-signin").style.display         = "block";
-    document.getElementById("signin-step1").style.display         = "block";
-    document.getElementById("signin-step2").style.display         = "none";
 }
 
+// Fixed function name to match event listener
 function showTeacherSignUp() {
     document.getElementById("state-default").style.display        = "none";
     document.getElementById("state-teacher-signup").style.display = "block";
 }
 
 // ============================================================
-//  RECAPTCHA (required for Phone Auth)
-// ============================================================
-function setupRecaptcha() {
-    if (!window.recaptchaVerifier) {
-        window.recaptchaVerifier = new RecaptchaVerifier(
-            auth, "recaptcha-container", { size: "invisible" }
-        );
-    }
-}
-
-// ============================================================
-//  SIGN IN — Step 1: Email + Password
+//  SIGN IN — Email + Password
 // ============================================================
 async function handleSignIn() {
     const email    = sanitizeInput(document.getElementById("signin-email").value);
@@ -82,11 +68,11 @@ async function handleSignIn() {
     try {
         showNotification("Signing in...", "info");
 
-        // Step 1: Authenticate with Firebase
+        // Step 1: Authenticate with Firebase Auth
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
         signedInUser = userCredential.user;
 
-        // Step 2: Read Firestore profile
+        // Step 2: Read Firestore profile data
         const userSnap = await getDoc(doc(db, "users", signedInUser.uid));
 
         if (!userSnap.exists()) {
@@ -98,9 +84,8 @@ async function handleSignIn() {
         const data   = userSnap.data();
         const role   = resolveRole(data.role);
         const status = data.accountStatus;
-        const phone  = data.phone;
 
-        // Step 3: Admins always get through — no status or OTP block
+        // Step 3: Admins always bypass status limitations
         if (role === "admin") {
             redirectByRole("admin");
             return;
@@ -113,22 +98,14 @@ async function handleSignIn() {
             return;
         }
 
-        // Step 5: Block pending accounts (non-admins only)
+        // Step 5: Route pending accounts
         if (status === "pending") {
             window.location.href = "pending.html";
             return;
         }
 
-        // Step 6: Active account — require SMS OTP if phone exists
-        if (phone) {
-            setupRecaptcha();
-            await sendSMSOTP(phone);
-            document.getElementById("signin-step1").style.display = "none";
-            document.getElementById("signin-step2").style.display = "block";
-        } else {
-            // No phone number — redirect directly by role
-            redirectByRole(role);
-        }
+        // Step 6: Active accounts bypass SMS and route immediately
+        redirectByRole(role);
 
     } catch (error) {
         console.error("Sign In error:", error);
@@ -141,51 +118,6 @@ async function handleSignIn() {
         };
         showNotification(msgs[error.code] || MESSAGES.errors.auth, "error");
     }
-}
-
-// ============================================================
-//  SIGN IN — Step 2: SMS OTP
-// ============================================================
-async function sendSMSOTP(phone) {
-    try {
-        let normalized = phone.replace(/\s/g, "");
-        if (normalized.startsWith("0")) normalized = "+233" + normalized.slice(1);
-        confirmationResult = await signInWithPhoneNumber(
-            auth, normalized, window.recaptchaVerifier
-        );
-        showNotification("Verification code sent to your phone.", "success");
-    } catch (error) {
-        console.error("SMS OTP error:", error);
-        showNotification("Could not send SMS code. Check your phone number.", "error");
-    }
-}
-
-async function verifySMSOTP() {
-    const code = document.getElementById("signin-otp").value.trim();
-    if (!code || code.length < 6) {
-        showNotification("Please enter the 6-digit code.", "error"); return;
-    }
-    if (!confirmationResult) {
-        showNotification("Session expired. Please sign in again.", "error"); return;
-    }
-    try {
-        await confirmationResult.confirm(code);
-        const userSnap = await getDoc(doc(db, "users", signedInUser.uid));
-        const role     = resolveRole(userSnap.data()?.role);
-        redirectByRole(role);
-    } catch (error) {
-        console.error("OTP verify error:", error);
-        showNotification("Incorrect code. Please try again.", "error");
-    }
-}
-
-async function resendOTP() {
-    if (!signedInUser) {
-        showNotification("Session expired. Please sign in again.", "error"); return;
-    }
-    const userSnap = await getDoc(doc(db, "users", signedInUser.uid));
-    const phone    = userSnap.data()?.phone;
-    if (phone) { setupRecaptcha(); await sendSMSOTP(phone); }
 }
 
 // ============================================================
@@ -240,10 +172,10 @@ async function handleTeacherSignUp() {
         const cred = await createUserWithEmailAndPassword(auth, email, pass);
         const user = cred.user;
 
-        // Send email verification
+        // Send email verification link via Firebase
         await sendEmailVerification(user);
 
-        // Save to Firestore as pending
+        // Save account state to Firestore as pending
         await setDoc(doc(db, "users", user.uid), {
             firstName:     fname,
             lastName:      lname,
@@ -291,10 +223,6 @@ document.addEventListener("DOMContentLoaded", () => {
         ?.addEventListener("click", handleSignIn);
     document.getElementById("btn-back-signin")
         ?.addEventListener("click", showDefault);
-    document.getElementById("btn-verify-otp")
-        ?.addEventListener("click", verifySMSOTP);
-    document.getElementById("btn-resend-otp")
-        ?.addEventListener("click", resendOTP);
     document.getElementById("btn-teacher-register")
         ?.addEventListener("click", handleTeacherSignUp);
     document.getElementById("btn-back-signup")
