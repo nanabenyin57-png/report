@@ -15,11 +15,10 @@ export const firebaseConfig = {
 
 // ── DEPARTMENT / SUBJECTS ─────────────────────
 export const DEPARTMENT_SUBJECTS = {
-  "Science":     ["Mathematics", "Integrated Science", "English", "Social Studies", "ICT", "Physics", "Chemistry", "Biology"],
-  "Arts":        ["Mathematics", "English", "Social Studies", "Literature", "History", "Government", "Economics", "TWI"],
-  "Business":    ["Mathematics", "English", "Social Studies", "Economics", "Accounting", "Business Management", "ICT", "TWI"],
-  "Technical":   ["Mathematics", "English", "Social Studies", "Technical Drawing", "Workshop Technology", "ICT", "Physics"],
-  "General":     ["Mathematics", "English", "Social Studies", "ICT", "Religious Studies", "TWI", "Physical Education"]
+  "PreSchool":     ["Numeracy", "Literacy", "Writing", "Creative Arts"],
+  "LowerPrimary":        ["Mathematics", "English", "Science", "Religious And Moral Education", "History", "Creative Arts", "French", "TWI", "Abacus"],
+  "UpperPrimary":   ["Mathematics", "English", "Science", "Religious And Moral Education", "History", "Creative Arts", "French", "TWI","Computing","Abacus"], 
+  "JuniorHigh":     ["Mathematics", "English", "Science", "Religious And Moral Education", "Social Studies", "Creative Arts", "French", "TWI","Computing","Career Technology"],
 };
 
 export function getDepartment(classCode) {
