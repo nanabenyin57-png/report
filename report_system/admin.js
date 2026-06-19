@@ -668,14 +668,20 @@ async function openAssignModal(uid, name) {
     const list = document.getElementById("assign-subjects-list");
     list.innerHTML = "";
 
-    // Unify string matches to safely recognize your structural config abbreviations
+    // Loop through departments defined in config.js
     Object.entries(DEPARTMENT_SUBJECTS).forEach(([deptKey, subjects]) => {
         const deptClasses = allClasses.filter(c => {
-            const code = c.id.toUpperCase();
-            if (deptKey === "PreSchool")    return code.includes("PRE") || code.includes("PR") || code.includes("KG");
-            if (deptKey === "LowerPrimary") return code.includes("LPR") || code.includes("LP") || code.includes("LOWER");
-            if (deptKey === "UpperPrimary") return code.includes("UPR") || code.includes("UP") || code.includes("UPPER");
-            if (deptKey === "JuniorHigh")   return code.includes("JUN") || code.includes("JHS") || code.includes("JH");
+            const classId = (c.id || "").toUpperCase();
+            const evaluatedDept = getDepartment(classId);
+
+            // Cross-reference dynamic department configuration
+            if (evaluatedDept === deptKey) return true;
+
+            // Fallback keyword configuration pattern matching
+            if (deptKey === "PreSchool")    return classId.includes("PRE") || classId.includes("PR") || classId.includes("KG");
+            if (deptKey === "LowerPrimary") return classId.includes("LPR") || classId.includes("LP") || classId.includes("LOWER");
+            if (deptKey === "UpperPrimary") return classId.includes("UPR") || classId.includes("UP") || classId.includes("UPPER");
+            if (deptKey === "JuniorHigh")   return classId.includes("JUN") || classId.includes("JHS") || classId.includes("JH");
             return false;
         });
 
@@ -684,7 +690,7 @@ async function openAssignModal(uid, name) {
         const deptBlock = document.createElement("div");
         deptBlock.style.marginBottom = "20px";
         
-        // Humanize layout labels without destroying target map references
+        // Format presentation category label headers
         const labelText = deptKey.replace(/([A-Z])/g, ' $1').trim();
         deptBlock.innerHTML = `
             <div style="font-family:'Cinzel',serif;font-size:0.75rem;
