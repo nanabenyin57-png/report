@@ -286,14 +286,12 @@ function populateClassDropdowns() {
         const el = document.getElementById(id);
         if (!el) return;
 
-        // Cache the text content and value of the original initial option safely
         const initialOption = el.options[0];
         const defaultText = initialOption ? initialOption.textContent : "";
         const defaultValue = initialOption ? initialOption.value : "";
 
         el.innerHTML = "";
 
-        // Re-append a brand new default option to prevent shifting it out of place
         const defaultOpt = document.createElement("option");
         defaultOpt.value = defaultValue;
         defaultOpt.textContent = defaultText;
@@ -313,7 +311,7 @@ function populateClassDropdowns() {
 // ============================================================
 async function loadAllUsers() {
     try {
-        const snap     = await getDocs(collection(db, "users"));
+        const snap = await getDocs(collection(db, "users"));
         const students = [], teachers = [], pending = [], recent = [];
 
         snap.forEach(d => {
@@ -649,14 +647,12 @@ async function openAssignModal(uid, name) {
     assigningTeacher = { uid, name };
     document.getElementById("assign-teacher-label").innerText = `Teacher: ${name}`;
 
-    // Load teacher's current profile assignments
     const snap       = await getDoc(doc(db, "users", uid));
     const teacherData = snap.data() || {};
     const current    = teacherData.assignedSubjects || [];
     const currentMap = {};
     current.forEach(a => { currentMap[a.subject] = a.classes || []; });
 
-    // ── Setup of Form Master Dropdown ───────────────────────────
     const formMasterSelect = document.getElementById("assign-form-master-class");
     if (formMasterSelect) {
         formMasterSelect.innerHTML = '<option value="">-- Not a Form Master --</option>';
@@ -666,23 +662,20 @@ async function openAssignModal(uid, name) {
             opt.textContent = `${c.id} — ${c.name || ""}`;
             formMasterSelect.appendChild(opt);
         });
-        // Pre-select current class if they are already assigned as a Form Master
         formMasterSelect.value = teacherData.formMasterOf || "";
     }
-    // ────────────────────────────────────────────────────────
 
     const list = document.getElementById("assign-subjects-list");
     list.innerHTML = "";
 
-    // Loop through updated structural keys in DEPARTMENT_SUBJECTS
+    // Unify string matches to safely recognize your structural config abbreviations
     Object.entries(DEPARTMENT_SUBJECTS).forEach(([deptKey, subjects]) => {
-        
         const deptClasses = allClasses.filter(c => {
             const code = c.id.toUpperCase();
-            if (deptKey === "PreSchool")    return code.includes("PRE") || code.includes("PR");
-            if (deptKey === "LowerPrimary") return code.includes("LP")  || code.includes("LOWER");
-            if (deptKey === "UpperPrimary") return code.includes("UP")  || code.includes("UPPER");
-            if (deptKey === "JuniorHigh")   return code.includes("JHS") || code.includes("JH");
+            if (deptKey === "PreSchool")    return code.includes("PRE") || code.includes("PR") || code.includes("KG");
+            if (deptKey === "LowerPrimary") return code.includes("LPR") || code.includes("LP") || code.includes("LOWER");
+            if (deptKey === "UpperPrimary") return code.includes("UPR") || code.includes("UP") || code.includes("UPPER");
+            if (deptKey === "JuniorHigh")   return code.includes("JUN") || code.includes("JHS") || code.includes("JH");
             return false;
         });
 
@@ -690,12 +683,15 @@ async function openAssignModal(uid, name) {
 
         const deptBlock = document.createElement("div");
         deptBlock.style.marginBottom = "20px";
+        
+        // Humanize layout labels without destroying target map references
+        const labelText = deptKey.replace(/([A-Z])/g, ' $1').trim();
         deptBlock.innerHTML = `
             <div style="font-family:'Cinzel',serif;font-size:0.75rem;
                         color:var(--gold);letter-spacing:0.1em;
                         text-transform:uppercase;margin-bottom:10px;
                         padding-bottom:6px;border-bottom:1px solid var(--glass-border)">
-                ${deptKey.replace(/([A-Z])/g, ' $1').trim()}
+                ${labelText}
             </div>
         `;
 
@@ -732,7 +728,6 @@ async function saveAssignments() {
 
     const assignedSubjects = [];
 
-    // Collect selected chips
     document.querySelectorAll(".class-chip.selected").forEach(chip => {
         const subj  = chip.dataset.subject;
         const cls   = chip.dataset.class;
@@ -741,19 +736,16 @@ async function saveAssignments() {
         else       assignedSubjects.push({ subject: subj, classes: [cls] });
     });
 
-    // Collect Form Master Option value
     const selectedFormClass = document.getElementById("assign-form-master-class")?.value || "";
 
     try {
         showNotification("Saving assignments...", "info");
 
-        // 1. Update the teacher's profile document payload
         await updateDoc(doc(db, "users", assigningTeacher.uid), { 
             assignedSubjects,
             formMasterOf: selectedFormClass || null
         });
 
-        // 2. Save structural reference inside classes document mapping
         if (selectedFormClass) {
             await updateDoc(doc(db, "classes", selectedFormClass), {
                 formMasterId: assigningTeacher.uid
