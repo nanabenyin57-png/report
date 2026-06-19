@@ -637,7 +637,7 @@ async function addClass() {
 }
 
 // ============================================================
-//  ASSIGN SUBJECTS & FORM MASTER TO TEACHER
+//  ASSIGN SUBJECTS & FORM MASTER TO TEACHER (UPDATED)
 // ============================================================
 async function openAssignModal(uid, name) {
     assigningTeacher = { uid, name };
@@ -650,7 +650,7 @@ async function openAssignModal(uid, name) {
     const currentMap = {};
     current.forEach(a => { currentMap[a.subject] = a.classes || []; });
 
-    // ── NEW: Dynamic Setup of Form Master Dropdown ───────────
+    // ── Setup of Form Master Dropdown ───────────────────────────
     const formMasterSelect = document.getElementById("assign-form-master-class");
     if (formMasterSelect) {
         formMasterSelect.innerHTML = '<option value="">-- Not a Form Master --</option>';
@@ -668,9 +668,21 @@ async function openAssignModal(uid, name) {
     const list = document.getElementById("assign-subjects-list");
     list.innerHTML = "";
 
-    // Group by department for a cleaner UI
-    Object.entries(DEPARTMENT_SUBJECTS).forEach(([dept, subjects]) => {
-        const deptClasses = allClasses.filter(c => getDepartment(c.id) === dept);
+    // Loop through your updated structural keys in DEPARTMENT_SUBJECTS
+    Object.entries(DEPARTMENT_SUBJECTS).forEach(([deptKey, subjects]) => {
+        
+        // Match classes belonging to this specific structural department tier.
+        // If your class codes start with or include the tier names (e.g., "JHS1", "PR1", "LP2")
+        // customize the filtering match here.
+        const deptClasses = allClasses.filter(c => {
+            const code = c.id.toUpperCase();
+            if (deptKey === "PreSchool")    return code.includes("PRE") || code.includes("PR");
+            if (deptKey === "LowerPrimary") return code.includes("LP")  || code.includes("LOWER");
+            if (deptKey === "UpperPrimary") return code.includes("UP")  || code.includes("UPPER");
+            if (deptKey === "JuniorHigh")   return code.includes("JHS") || code.includes("JH");
+            return false;
+        });
+
         if (!deptClasses.length) return; 
 
         const deptBlock = document.createElement("div");
@@ -680,7 +692,7 @@ async function openAssignModal(uid, name) {
                         color:var(--gold);letter-spacing:0.1em;
                         text-transform:uppercase;margin-bottom:10px;
                         padding-bottom:6px;border-bottom:1px solid var(--glass-border)">
-                ${dept}
+                ${deptKey.replace(/([A-Z])/g, ' $1').trim()} <!-- Formats to: Junior High, Lower Primary -->
             </div>
         `;
 
