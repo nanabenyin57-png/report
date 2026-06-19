@@ -360,11 +360,22 @@
     </div>
 
     <!-- Assign Subjects -->
-    <div class="modal-overlay" id="modal-assign" style="display:none;">
+   <div class="modal-overlay" id="modal-assign" style="display:none;">
         <div class="modal-box modal-wide">
             <h3>📚 Assign Subjects &amp; Classes</h3>
             <p class="form-note" id="assign-teacher-label">Teacher: —</p>
+            
             <div id="assign-subjects-list"></div>
+            
+            <div class="form-group-master" style="margin: 20px 0; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.1);">
+                <label style="display: block; margin-bottom: 8px; font-weight: 600;">👑 Appoint Form Master Role</label>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <select id="assign-form-master-class" class="form-control" style="background: rgba(0,0,0,0.2); color: #fff; padding: 8px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.15);">
+                        <option value="">-- Not a Form Master --</option>
+                    </select>
+                </div>
+            </div>
+
             <div class="modal-btns">
                 <button class="btn-primary" id="btn-confirm-assign">Save Assignments</button>
                 <button class="btn-secondary" id="btn-cancel-assign">Cancel</button>
