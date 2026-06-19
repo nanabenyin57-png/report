@@ -414,8 +414,8 @@ async function renderScoresTable(classCode, subject) {
         return `<tr data-student-id="${s.id}" data-class="${classCode}" data-subject="${subject}">
             <td><code>${s.indexNo || "—"}</code></td>
             <td>${studentName}</td>
-            <td><input class="score-input assessment-score" type="number" min="0" max="40" value="${assessment}" placeholder="0–40"/></td>
-            <td><input class="score-input exam-score"       type="number" min="0" max="60" value="${exam}"       placeholder="0–60"/></td>
+            <td><input class="score-input assessment-score" type="number" min="0" max="50" value="${assessment}" placeholder="0–50"/></td>
+            <td><input class="score-input exam-score"       type="number" min="0" max="50" value="${exam}"       placeholder="0–50"/></td>
             <td><span class="total-display total-cell">${total !== "" ? total : "—"}</span></td>
             <td><span class="grade-badge grade-${grade !== "—" ? grade[0] : "F"}">${grade}</span></td>
             <td>
@@ -479,8 +479,8 @@ document.getElementById("scoresTableBody").addEventListener("click", async e => 
         ? sanitizeInput(customInp.value.trim())
         : remarkSel.value;
 
-    if (assessment > 40) { showToast("Assessment cannot exceed 40.", "error"); return; }
-    if (exam       > 60) { showToast("Exam score cannot exceed 60.", "error"); return; }
+    if (assessment > 50) { showToast("Assessment cannot exceed 50.", "error"); return; }
+    if (exam       > 50) { showToast("Exam score cannot exceed 50.", "error"); return; }
 
     try {
         const docId = `${studentId}_${subject}_${classCode}`;
