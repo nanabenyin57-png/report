@@ -139,11 +139,11 @@ function redirectByRole(rolesArray) {
     let dest = null;
 
     if (rolesArray.includes("admin")) {
-        dest = "admin.html";
+        dest = "report_system/admin.html";
     } else if (rolesArray.includes("teacher")) {
-        dest = "teacher.html";
+        dest = "report_system/teacher.html";
     } else if (rolesArray.includes("student")) {
-        dest = "student.html";
+        dest = "report_system/student.html";
     }
 
     if (dest) {
@@ -210,11 +210,11 @@ async function handleTeacherSignUp() {
             html:    `<h2>New Teacher Account Pending Approval</h2>
                       <p><strong>Name:</strong> ${fname} ${lname}</p>
                       <p><strong>Email:</strong> ${email}</p>
-                      <p>Log in to the <a href="admin.html">Admin Dashboard</a> to approve or reject.</p>`
+                      <p>Log in to the <a href="report_system/admin.html">Admin Dashboard</a> to approve or reject.</p>`
         });
 
         showNotification("Account created! Awaiting admin approval.", "success");
-        setTimeout(() => { window.location.href = "pending.html"; }, 2000);
+        setTimeout(() => { window.location.href = "report_system/pending.html"; }, 2000);
 
     } catch (error) {
         console.error("Teacher Sign Up error:", error);
