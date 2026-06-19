@@ -18,7 +18,6 @@ import { firebaseConfig,
          validatePhone,
          sanitizeInput,
          showNotification,
-         resolveRole,
          sendEmailNotification,
          MESSAGES }                  from "./config.js";
 
@@ -39,13 +38,11 @@ function showDefault() {
     document.getElementById("state-teacher-signup").style.display = "none";
 }
 
-// Streamlined: Step 1 & Step 2 UI blocks are removed since SMS is gone
 function showSignIn() {
     document.getElementById("state-default").style.display        = "none";
     document.getElementById("state-signin").style.display         = "block";
 }
 
-// Fixed function name to match event listener
 function showTeacherSignUp() {
     document.getElementById("state-default").style.display        = "none";
     document.getElementById("state-teacher-signup").style.display = "block";
@@ -82,12 +79,26 @@ async function handleSignIn() {
         }
 
         const data   = userSnap.data();
-        const role   = resolveRole(data.role);
         const status = data.accountStatus;
 
+        // Normalize string roles or arrays into a clean, lowercased array
+        let rolesArray = [];
+        if (Array.isArray(data.role)) {
+            rolesArray = data.role.map(r => String(r).toLowerCase());
+        } else if (typeof data.role === "string") {
+            rolesArray = [data.role.toLowerCase()];
+        }
+
+        // Catch empty roles or missing arrays
+        if (rolesArray.length === 0) {
+            showNotification("No roles assigned. Contact your administrator.", "warning");
+            auth.signOut();
+            return;
+        }
+
         // Step 3: Admins always bypass status limitations
-        if (role === "admin") {
-            redirectByRole("admin");
+        if (rolesArray.includes("admin")) {
+            redirectByRole(rolesArray);
             return;
         }
 
@@ -104,8 +115,8 @@ async function handleSignIn() {
             return;
         }
 
-        // Step 6: Active accounts bypass SMS and route immediately
-        redirectByRole(role);
+        // Step 6: Active accounts bypass SMS and route immediately based on role priority
+        redirectByRole(rolesArray);
 
     } catch (error) {
         console.error("Sign In error:", error);
@@ -123,18 +134,23 @@ async function handleSignIn() {
 // ============================================================
 //  ROLE-BASED REDIRECT
 // ============================================================
-function redirectByRole(role) {
-    const routes = {
-        admin:   "admin.html",
-        teacher: "teacher.html",
-        student: "student.html"
-    };
-    const dest = routes[role];
+function redirectByRole(rolesArray) {
+    // Priority checklist routing: Admin -> Teacher -> Student
+    let dest = null;
+
+    if (rolesArray.includes("admin")) {
+        dest = "admin.html";
+    } else if (rolesArray.includes("teacher")) {
+        dest = "teacher.html";
+    } else if (rolesArray.includes("student")) {
+        dest = "student.html";
+    }
+
     if (dest) {
         showNotification("Welcome back!", "success");
         window.location.href = dest;
     } else {
-        showNotification("Unknown role. Contact your administrator.", "warning");
+        showNotification("Unknown role profile. Contact your administrator.", "warning");
         auth.signOut();
     }
 }
