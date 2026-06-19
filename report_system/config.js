@@ -22,13 +22,13 @@ export const DEPARTMENT_SUBJECTS = {
 };
 
 export function getDepartment(classCode) {
-  if (!classCode) return "General";
+  if (!classCode) return "UpperPrimary"; // Default department
   const code = classCode.toUpperCase();
-  if (code.includes("SC") || code.includes("SCI")) return "Science";
-  if (code.includes("AR") || code.includes("ART")) return "Arts";
-  if (code.includes("BU") || code.includes("BUS")) return "Business";
-  if (code.includes("TE") || code.includes("TEC")) return "Technical";
-  return "General";
+  if (code.includes("PRE")) return "PreSchool";
+  if (code.includes("LPR")) return "LowerPrimary";
+  if (code.includes("UPR")) return "UpperPrimary";
+  if (code.includes("JUN")) return "JuniorHigh";
+  return "UpperPrimary"; // Fallback department
 }
 
 // ── GRADE COMPUTATION ─────────────────────────
@@ -94,13 +94,13 @@ export function sanitizeInput(str) {
 }
 
 // ── ROLE RESOLVER ─────────────────────────────
-/**
- * Resolves a role value from Firestore into an array of lowercase role strings.
- * Handles:
- *   - Array:              ["admin", "teacher"]      → ["admin", "teacher"]
- *   - Comma string:       "admin, teacher"          → ["admin", "teacher"]
- *   - Single string:      "admin"                   → ["admin"]
- *   - Whitespace string:  "admin "                  → ["admin"]
+/*
+ // Resolves a role value from Firestore into an array of lowercase role strings.
+ // Handles:
+    - Array:              ["admin", "teacher"]      → ["admin", "teacher"]
+    - Comma string:       "admin, teacher"          → ["admin", "teacher"]
+    - Single string:      "admin"                   → ["admin"]
+   - Whitespace string:  "admin "                  → ["admin"]
  */
 export function resolveRole(role) {
   if (Array.isArray(role)) {
