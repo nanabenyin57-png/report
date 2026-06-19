@@ -55,11 +55,6 @@ function closeModal(id) {
     if (el) el.style.display = "none";
 }
 
-function showDenied() {
-    console.warn("Access denied — redirecting.");
-    window.location.href = "index.html";
-}
-
 // ============================================================
 //  AUTH GUARD — inside DOMContentLoaded so DOM is ready
 // ============================================================
@@ -290,9 +285,20 @@ function populateClassDropdowns() {
     ["ns-class", "student-class-filter", "publish-class"].forEach(id => {
         const el = document.getElementById(id);
         if (!el) return;
-        const firstOption = el.options;
+
+        // Cache the text content and value of the original initial option safely
+        const initialOption = el.options[0];
+        const defaultText = initialOption ? initialOption.textContent : "";
+        const defaultValue = initialOption ? initialOption.value : "";
+
         el.innerHTML = "";
-        el.appendChild(firstOption);
+
+        // Re-append a brand new default option to prevent shifting it out of place
+        const defaultOpt = document.createElement("option");
+        defaultOpt.value = defaultValue;
+        defaultOpt.textContent = defaultText;
+        el.appendChild(defaultOpt);
+
         allClasses.forEach(c => {
             const opt       = document.createElement("option");
             opt.value       = c.id;
@@ -637,7 +643,7 @@ async function addClass() {
 }
 
 // ============================================================
-//  ASSIGN SUBJECTS & FORM MASTER TO TEACHER (UPDATED)
+//  ASSIGN SUBJECTS & FORM MASTER TO TEACHER
 // ============================================================
 async function openAssignModal(uid, name) {
     assigningTeacher = { uid, name };
@@ -668,12 +674,9 @@ async function openAssignModal(uid, name) {
     const list = document.getElementById("assign-subjects-list");
     list.innerHTML = "";
 
-    // Loop through your updated structural keys in DEPARTMENT_SUBJECTS
+    // Loop through updated structural keys in DEPARTMENT_SUBJECTS
     Object.entries(DEPARTMENT_SUBJECTS).forEach(([deptKey, subjects]) => {
         
-        // Match classes belonging to this specific structural department tier.
-        // If your class codes start with or include the tier names (e.g., "JHS1", "PR1", "LP2")
-        // customize the filtering match here.
         const deptClasses = allClasses.filter(c => {
             const code = c.id.toUpperCase();
             if (deptKey === "PreSchool")    return code.includes("PRE") || code.includes("PR");
@@ -692,7 +695,7 @@ async function openAssignModal(uid, name) {
                         color:var(--gold);letter-spacing:0.1em;
                         text-transform:uppercase;margin-bottom:10px;
                         padding-bottom:6px;border-bottom:1px solid var(--glass-border)">
-                ${deptKey.replace(/([A-Z])/g, ' $1').trim()} <!-- Formats to: Junior High, Lower Primary -->
+                ${deptKey.replace(/([A-Z])/g, ' $1').trim()}
             </div>
         `;
 
@@ -738,9 +741,8 @@ async function saveAssignments() {
         else       assignedSubjects.push({ subject: subj, classes: [cls] });
     });
 
-    // ── NEW: Collect Form Master Option value ───────────────
+    // Collect Form Master Option value
     const selectedFormClass = document.getElementById("assign-form-master-class")?.value || "";
-    // ────────────────────────────────────────────────────────
 
     try {
         showNotification("Saving assignments...", "info");
@@ -748,10 +750,10 @@ async function saveAssignments() {
         // 1. Update the teacher's profile document payload
         await updateDoc(doc(db, "users", assigningTeacher.uid), { 
             assignedSubjects,
-            formMasterOf: selectedFormClass || null // Saves class code string or clears it
+            formMasterOf: selectedFormClass || null
         });
 
-        // 2. Optional: Save a back-reference tracking string directly inside the class doc
+        // 2. Save structural reference inside classes document mapping
         if (selectedFormClass) {
             await updateDoc(doc(db, "classes", selectedFormClass), {
                 formMasterId: assigningTeacher.uid
@@ -868,7 +870,7 @@ async function publishResults() {
 // ============================================================
 async function loadResultsLog() {
     try {
-        const snap  = await getDocs(collection(db, "published_reports"));
+        const snap = await getDocs(collection(db, "published_reports"));
         const tbody = document.getElementById("results-log-tbody");
 
         if (snap.empty) {
@@ -971,4 +973,9 @@ function filterStudentsByClass(classCode) {
         row.style.display = (!classCode || row.dataset.class === classCode)
             ? "" : "none";
     });
+}
+
+function showDenied() {
+    console.warn("Access denied — redirecting.");
+    window.location.href = "index.html";
 }
