@@ -73,8 +73,6 @@ document.addEventListener("DOMContentLoaded", () => {
             if (!snap.exists()) { showDenied(); return; }
 
             const data  = snap.data();
-            // resolveRole returns a normalized array e.g. ["admin", "teacher"]
-            // This handles trailing spaces and comma-separated strings safely.
             const roles = resolveRole(data.role);
 
             if (!hasRole(roles, "admin")) { showDenied(); return; }
@@ -92,9 +90,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 `Welcome back, ${name}. You have full control.`;
 
             // ── Teacher Swap Button ──────────────────────────────
-            // Uses resolveRole so trailing spaces like "admin " are
-            // normalized before the includes() check — avoids false
-            // negatives on dual-role accounts stored with whitespace.
             const isAlsoTeacher = hasRole(roles, "teacher");
 
             const swapBtn = document.getElementById("btn-switch-teacher");
@@ -170,10 +165,6 @@ document.addEventListener("DOMContentLoaded", () => {
         });
 
     // ── Switch to Teacher View ───────────────────────────────
-    // Sets a sessionStorage flag so teacher.js knows this is an
-    // admin acting as teacher, then opens teacher.html in a new tab.
-    // sessionStorage is tab-scoped — it clears automatically when
-    // the teacher tab is closed.
     document.getElementById("btn-switch-teacher")
         ?.addEventListener("click", () => {
             sessionStorage.setItem("adminAsTeacher", "true");
@@ -299,7 +290,7 @@ function populateClassDropdowns() {
     ["ns-class", "student-class-filter", "publish-class"].forEach(id => {
         const el = document.getElementById(id);
         if (!el) return;
-        const firstOption = el.options[0];
+        const firstOption = el.options;
         el.innerHTML = "";
         el.appendChild(firstOption);
         allClasses.forEach(c => {
@@ -549,8 +540,6 @@ async function addStudent() {
     try {
         showNotification("Creating student...", "info");
 
-        // generateIndexNumber in config.js takes (classCode, position)
-        // Count existing students in class first
         const existingSnap = await getDocs(
             query(collection(db, "users"),
                   where("classCode", "==", classCode),
@@ -572,7 +561,6 @@ async function addStudent() {
             createdAt:     serverTimestamp()
         });
 
-        // Update class student count
         const classRef  = doc(db, "classes", classCode);
         const classSnap = await getDoc(classRef);
         if (classSnap.exists()) {
@@ -649,27 +637,41 @@ async function addClass() {
 }
 
 // ============================================================
-//  ASSIGN SUBJECTS TO TEACHER
-//  Only shows classes that belong to the subject's department
+//  ASSIGN SUBJECTS & FORM MASTER TO TEACHER
 // ============================================================
 async function openAssignModal(uid, name) {
     assigningTeacher = { uid, name };
     document.getElementById("assign-teacher-label").innerText = `Teacher: ${name}`;
 
-    // Load teacher's current assignments
+    // Load teacher's current profile assignments
     const snap       = await getDoc(doc(db, "users", uid));
-    const current    = snap.data()?.assignedSubjects || [];
+    const teacherData = snap.data() || {};
+    const current    = teacherData.assignedSubjects || [];
     const currentMap = {};
     current.forEach(a => { currentMap[a.subject] = a.classes || []; });
+
+    // ── NEW: Dynamic Setup of Form Master Dropdown ───────────
+    const formMasterSelect = document.getElementById("assign-form-master-class");
+    if (formMasterSelect) {
+        formMasterSelect.innerHTML = '<option value="">-- Not a Form Master --</option>';
+        allClasses.forEach(c => {
+            const opt = document.createElement("option");
+            opt.value = c.id;
+            opt.textContent = `${c.id} — ${c.name || ""}`;
+            formMasterSelect.appendChild(opt);
+        });
+        // Pre-select current class if they are already assigned as a Form Master
+        formMasterSelect.value = teacherData.formMasterOf || "";
+    }
+    // ────────────────────────────────────────────────────────
 
     const list = document.getElementById("assign-subjects-list");
     list.innerHTML = "";
 
     // Group by department for a cleaner UI
     Object.entries(DEPARTMENT_SUBJECTS).forEach(([dept, subjects]) => {
-        // Get classes that belong to this department
         const deptClasses = allClasses.filter(c => getDepartment(c.id) === dept);
-        if (!deptClasses.length) return; // skip if no classes added for this dept yet
+        if (!deptClasses.length) return; 
 
         const deptBlock = document.createElement("div");
         deptBlock.style.marginBottom = "20px";
@@ -703,7 +705,6 @@ async function openAssignModal(uid, name) {
         list.appendChild(deptBlock);
     });
 
-    // Toggle chips
     list.querySelectorAll(".class-chip").forEach(chip => {
         chip.addEventListener("click", () => chip.classList.toggle("selected"));
     });
@@ -716,7 +717,7 @@ async function saveAssignments() {
 
     const assignedSubjects = [];
 
-    // Collect all selected chips
+    // Collect selected chips
     document.querySelectorAll(".class-chip.selected").forEach(chip => {
         const subj  = chip.dataset.subject;
         const cls   = chip.dataset.class;
@@ -725,9 +726,27 @@ async function saveAssignments() {
         else       assignedSubjects.push({ subject: subj, classes: [cls] });
     });
 
+    // ── NEW: Collect Form Master Option value ───────────────
+    const selectedFormClass = document.getElementById("assign-form-master-class")?.value || "";
+    // ────────────────────────────────────────────────────────
+
     try {
-        await updateDoc(doc(db, "users", assigningTeacher.uid), { assignedSubjects });
-        showNotification("Subject assignments saved.", "success");
+        showNotification("Saving assignments...", "info");
+
+        // 1. Update the teacher's profile document payload
+        await updateDoc(doc(db, "users", assigningTeacher.uid), { 
+            assignedSubjects,
+            formMasterOf: selectedFormClass || null // Saves class code string or clears it
+        });
+
+        // 2. Optional: Save a back-reference tracking string directly inside the class doc
+        if (selectedFormClass) {
+            await updateDoc(doc(db, "classes", selectedFormClass), {
+                formMasterId: assigningTeacher.uid
+            });
+        }
+
+        showNotification("Subject assignments and Form Master duties saved.", "success");
         closeModal("modal-assign");
         await loadAllUsers();
     } catch (err) {
