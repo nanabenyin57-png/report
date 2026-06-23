@@ -273,12 +273,17 @@ async function renderStudentsTable(classCode) {
         </tr>`).join("");
 }
 
-// ── ADD STUDENT MODAL ─────────────────────────
-document.getElementById("addStudentBtn").addEventListener("click", () => {
+// ── ADD STUDENT MODAL TRIGGER ENGINE ──────────
+function openAddStudentModal() {
+    document.getElementById("newStudentClass").value = "";
     document.getElementById("newStudentIndex").value = "";
     document.getElementById("newStudentName").value  = "";
+    document.getElementById("newStudentPhone").value = "";
     document.getElementById("addStudentModal").classList.remove("hidden");
-});
+}
+
+document.getElementById("addStudentBtn").addEventListener("click", openAddStudentModal);
+
 document.getElementById("closeAddStudent").addEventListener("click", () => {
     document.getElementById("addStudentModal").classList.add("hidden");
 });
@@ -306,7 +311,7 @@ document.getElementById("confirmAddStudent").addEventListener("click", async () 
     }
 
     const nameParts = name.trim().split(/\s+/);
-    const firstName = nameParts || name;
+    const firstName = nameParts[0] || name;
     const lastName  = nameParts.slice(1).join(" ") || "";
 
     try {
@@ -322,12 +327,11 @@ document.getElementById("confirmAddStudent").addEventListener("click", async () 
             guardianPhone: phone || "",
             email:         "",
             role:          "student",
-            accountStatus: "active", // Retain active execution logic context for teachers
+            accountStatus: "active",
             createdBy:     teacherUid,
             createdAt:     serverTimestamp()
         });
 
-        // Aligned class student metrics count handler logic sync
         const classRef  = doc(db, "classes", classCode);
         const classSnap = await getDoc(classRef);
         if (classSnap.exists()) {
@@ -566,7 +570,6 @@ async function renderAttendanceTable(classCode) {
     });
 }
 
-// Save attendance row
 document.getElementById("attendanceTableBody").addEventListener("click", async e => {
     if (!e.target.classList.contains("save-row-btn")) return;
     const row       = e.target.closest("tr");
@@ -789,7 +792,11 @@ document.querySelectorAll(".nav-item").forEach(btn => {
     btn.addEventListener("click", () => switchTab(btn.dataset.tab));
 });
 
-document.getElementById("qa-students")  ?.addEventListener("click", () => switchTab("students"));
+// Integrated Quick Action interceptor logic loops
+document.getElementById("qa-students")  ?.addEventListener("click", () => {
+    switchTab("students");
+    openAddStudentModal();
+});
 document.getElementById("qa-scores")    ?.addEventListener("click", () => switchTab("scores"));
 document.getElementById("qa-attendance")?.addEventListener("click", () => switchTab("attendance"));
 document.getElementById("qa-submit")    ?.addEventListener("click", () => switchTab("submit"));
