@@ -46,18 +46,11 @@ onAuthStateChanged(auth, async user => {
         if (!snap.exists()) { window.location.href = "index.html"; return; }
 
         const data  = snap.data();
-        // resolveRole normalizes arrays, comma strings, and trims whitespace.
-        // e.g. ["admin ", "teacher"] → ["admin", "teacher"]
         const roles = resolveRole(data.role);
 
-        // ── Admin-as-Teacher bypass ──────────────────────────────
-        // Set by admin.js when the admin clicks "🎓 Teacher View".
-        // sessionStorage is tab-scoped — clears automatically on tab close.
         const adminAsTeacher = sessionStorage.getItem("adminAsTeacher") === "true";
 
         if (adminAsTeacher) {
-            // Must also have "teacher" in their role to use the teacher dashboard.
-            // Uses resolveRole so trailing spaces don't cause false negatives.
             const isAlsoTeacher = hasRole(roles, "teacher");
 
             if (!isAlsoTeacher) {
@@ -71,16 +64,13 @@ onAuthStateChanged(auth, async user => {
                 return;
             }
 
-            // Show the admin-mode banner and wire both back buttons
             const banner = document.getElementById("admin-teacher-banner");
             if (banner) banner.style.display = "flex";
 
-            // Banner "← Back to Admin" button
             document.getElementById("banner-back-btn")
                 ?.addEventListener("click", goBackToAdmin);
 
         } else {
-            // ── Normal teacher checks ──────────────────────────────
             if (data.accountStatus === "pending") {
                 window.location.href = "pending.html"; return;
             }
@@ -94,14 +84,12 @@ onAuthStateChanged(auth, async user => {
             }
         }
 
-        // ── No assigned subjects guard ───────────────────────────
         if (!data.assignedSubjects || data.assignedSubjects.length === 0) {
             showToast(
                 "You have no assigned subjects yet. Contact the admin.",
                 "warning",
                 6000
             );
-            // Page still loads — teacher sees empty dashboard rather than broken state.
         }
 
         await loadTeacherProfile(user, data, roles);
@@ -115,9 +103,6 @@ onAuthStateChanged(auth, async user => {
 // ── LOAD TEACHER PROFILE ──────────────────────
 async function loadTeacherProfile(user, data, roles) {
     try {
-        // ── Admin switcher button ────────────────────────────────
-        // Show "Switch to Admin View" if this user also has admin role.
-        // Wired here via addEventListener — no onclick in HTML.
         if (hasRole(roles, "admin")) {
             const adminBtn = document.getElementById("adminSwitchBtn");
             if (adminBtn) {
@@ -129,14 +114,15 @@ async function loadTeacherProfile(user, data, roles) {
         currentTeacher   = { id: user.uid, ...data };
         assignedClasses  = data.assignedClasses  || [];
         assignedSubjects = data.assignedSubjects || [];
-        isFormTeacher    = !!(data.formClass);
-        formClass        = data.formClass || null;
+        
+        // Handle both formClass and formMasterOf structural schema parameters
+        formClass        = data.formClass || data.formMasterOf || null;
+        isFormTeacher    = !!formClass;
 
-        // Populate sidebar
         const fullName = data.firstName && data.lastName
             ? `${data.firstName} ${data.lastName}`
             : data.displayName || data.name || "Teacher";
-        const initials = fullName.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase();
+        const initials = fullName.split(" ").map(n => n).join("").slice(0, 2).toUpperCase();
 
         document.getElementById("sidebarAvatar").textContent      = initials;
         document.getElementById("profileAvatarLarge").textContent = initials;
@@ -144,10 +130,8 @@ async function loadTeacherProfile(user, data, roles) {
         document.getElementById("sidebarRole").textContent        = isFormTeacher ? "Form Teacher" : "Teacher";
         document.getElementById("termValue").textContent          = data.currentTerm || "—";
 
-        // Show/hide ranking nav
         document.getElementById("rankingNavBtn").classList.toggle("hidden", !isFormTeacher);
 
-        // Populate profile tab
         document.getElementById("profileName").textContent     = fullName;
         document.getElementById("profileEmail").textContent    = data.email || "—";
         document.getElementById("profilePhone").textContent    = data.phone || "—";
@@ -158,6 +142,7 @@ async function loadTeacherProfile(user, data, roles) {
 
         if (isFormTeacher) {
             document.getElementById("profileFormClass").textContent = formClass;
+            document.getElementById("profileFormClassRow").style.display = "";
         } else {
             document.getElementById("profileFormClassRow").style.display = "none";
         }
@@ -201,7 +186,6 @@ async function loadOverview() {
         return;
     }
     assignedSubjects.forEach(({ classCode, subject, classes }) => {
-        // Support both {classCode, subject} and {subject, classes:[]} shapes
         const classLabel = classCode || (classes || []).join(", ");
         const item = document.createElement("div");
         item.className = "assigned-item";
@@ -217,7 +201,7 @@ async function loadOverview() {
         const students = await fetchStudents(code);
         totalStudents += students.length;
         for (const s of students) {
-            for (const as of assignedSubjects.filter(a => a.classCode === code)) {
+            for (const as of assignedSubjects.filter(a => a.classCode === code || (a.classes || []).includes(code))) {
                 const aSnap = await getDoc(doc(db, "assessments", `${s.id}_${as.subject}_${code}`));
                 if (aSnap.exists() && aSnap.data().totalScore !== undefined) totalDone++;
             }
@@ -243,7 +227,6 @@ async function fetchStudents(classCode) {
         allStudents[classCode] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         return allStudents[classCode];
     } catch {
-        // Fallback without orderBy if composite index is missing
         const q2 = query(
             collection(db, "users"),
             where("role", "==", "student"),
@@ -322,9 +305,8 @@ document.getElementById("confirmAddStudent").addEventListener("click", async () 
         showToast("Please fill all required fields.", "error"); return;
     }
 
-    // Split name into first/last for consistency with admin.js
     const nameParts = name.trim().split(/\s+/);
-    const firstName = nameParts[0] || name;
+    const firstName = nameParts || name;
     const lastName  = nameParts.slice(1).join(" ") || "";
 
     try {
@@ -336,14 +318,24 @@ document.getElementById("confirmAddStudent").addEventListener("click", async () 
             classCode,
             indexNo,
             gender,
-            guardianPhone: phone,
+            phone:         phone || "",
+            guardianPhone: phone || "",
+            email:         "",
             role:          "student",
-            accountStatus: "active",
+            accountStatus: "active", // Retain active execution logic context for teachers
             createdBy:     teacherUid,
             createdAt:     serverTimestamp()
         });
 
-        // Invalidate cache so table reloads fresh
+        // Aligned class student metrics count handler logic sync
+        const classRef  = doc(db, "classes", classCode);
+        const classSnap = await getDoc(classRef);
+        if (classSnap.exists()) {
+            await updateDoc(classRef, {
+                studentCount: (classSnap.data().studentCount || 0) + 1
+            });
+        }
+
         delete allStudents[classCode];
         document.getElementById("addStudentModal").classList.add("hidden");
         showToast(`Student ${name} added — Index No: ${indexNo}.`, "success");
@@ -417,7 +409,7 @@ async function renderScoresTable(classCode, subject) {
             <td><input class="score-input assessment-score" type="number" min="0" max="50" value="${assessment}" placeholder="0–50"/></td>
             <td><input class="score-input exam-score"       type="number" min="0" max="50" value="${exam}"       placeholder="0–50"/></td>
             <td><span class="total-display total-cell">${total !== "" ? total : "—"}</span></td>
-            <td><span class="grade-badge grade-${grade !== "—" ? grade[0] : "F"}">${grade}</span></td>
+            <td><span class="grade-badge grade-${grade !== "—" ? grade : "F"}">${grade}</span></td>
             <td>
                 <select class="remark-select">
                     <option value="">— Remark —</option>
@@ -434,7 +426,6 @@ async function renderScoresTable(classCode, subject) {
 
     tbody.innerHTML = rows.join("");
 
-    // Live total calculation + custom remark toggle
     tbody.querySelectorAll("tr").forEach(row => {
         const aInput  = row.querySelector(".assessment-score");
         const eInput  = row.querySelector(".exam-score");
@@ -448,7 +439,7 @@ async function renderScoresTable(classCode, subject) {
             totalEl.textContent = (aInput.value !== "" || eInput.value !== "") ? t : "—";
             const g = t > 0 ? getGrade(t) : "—";
             gb.textContent = g;
-            gb.className   = `grade-badge grade-${g !== "—" ? g[0] : "F"}`;
+            gb.className   = `grade-badge grade-${g !== "—" ? g : "F"}`;
         }
         aInput.addEventListener("input", recalcTotal);
         eInput.addEventListener("input", recalcTotal);
@@ -461,7 +452,6 @@ async function renderScoresTable(classCode, subject) {
     });
 }
 
-// Save a single row's scores
 document.getElementById("scoresTableBody").addEventListener("click", async e => {
     if (!e.target.classList.contains("save-row-btn")) return;
     const row       = e.target.closest("tr");
@@ -533,7 +523,6 @@ async function renderAttendanceTable(classCode) {
     const tbody = document.getElementById("attendanceTableBody");
     tbody.innerHTML = `<tr><td colspan="5" class="empty-msg">Loading…</td></tr>`;
 
-    // Load saved term days
     const configSnap = await getDoc(doc(db, "system_config", `termDays_${classCode}`));
     if (configSnap.exists()) {
         document.getElementById("termTotalDays").value = configSnap.data().termDays || "";
@@ -565,7 +554,6 @@ async function renderAttendanceTable(classCode) {
     }));
     tbody.innerHTML = rows.join("");
 
-    // Live absent calc
     tbody.querySelectorAll("tr").forEach(row => {
         const inp      = row.querySelector(".days-present");
         const absEl    = row.querySelector(".days-absent-display");
@@ -642,7 +630,6 @@ async function computeAndRenderRanking(classCode) {
         };
     }));
 
-    // Sort descending, assign ranks (tie-aware)
     studentTotals.sort((a, b) => b.grandTotal - a.grandTotal);
     let rank = 1;
     studentTotals.forEach((s, i) => {
@@ -802,13 +789,11 @@ document.querySelectorAll(".nav-item").forEach(btn => {
     btn.addEventListener("click", () => switchTab(btn.dataset.tab));
 });
 
-// Quick action buttons (no onclick in HTML)
 document.getElementById("qa-students")  ?.addEventListener("click", () => switchTab("students"));
 document.getElementById("qa-scores")    ?.addEventListener("click", () => switchTab("scores"));
 document.getElementById("qa-attendance")?.addEventListener("click", () => switchTab("attendance"));
 document.getElementById("qa-submit")    ?.addEventListener("click", () => switchTab("submit"));
 
-// Expose for any remaining inline calls (e.g. future additions)
 window.switchTab = switchTab;
 
 // ═══════════════════════════════════════════════

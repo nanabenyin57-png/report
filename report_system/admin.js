@@ -286,9 +286,9 @@ function populateClassDropdowns() {
         const el = document.getElementById(id);
         if (!el) return;
 
-        const initialOption = el.options[0];
-        const defaultText = initialOption ? initialOption.textContent : "";
-        const defaultValue = initialOption ? initialOption.value : "";
+        const initialOption = el.options;
+        const defaultText = initialOption && initialOption[0] ? initialOption[0].textContent : "";
+        const defaultValue = initialOption && initialOption[0] ? initialOption[0].value : "";
 
         el.innerHTML = "";
 
@@ -525,7 +525,7 @@ async function rejectTeacher(uid) {
 }
 
 // ============================================================
-//  ADD STUDENT
+//  ADD STUDENT (Bypasses pending queue to keep profile active instantly)
 // ============================================================
 async function addStudent() {
     const fname     = sanitizeInput(document.getElementById("ns-firstname").value.trim());
@@ -552,19 +552,24 @@ async function addStudent() {
         const nextPosition = existingSnap.size + 1;
         const indexNo      = generateIndexNumber(classCode, nextPosition);
 
+        // Created as "active" directly to match teacher execution structure 
         await setDoc(doc(db, "users", indexNo), {
             firstName:     fname,
             lastName:      lname,
+            displayName:   `${fname} ${lname}`.trim(),
+            name:          `${fname} ${lname}`.trim(),
             classCode,
             indexNo,
             phone:         phone || "",
+            guardianPhone: phone || "",
             email:         email || "",
             role:          "student",
-            accountStatus: "pending",
+            accountStatus: "active",
             createdBy:     currentAdmin?.uid || "admin",
             createdAt:     serverTimestamp()
         });
 
+        // Increment class student counts
         const classRef  = doc(db, "classes", classCode);
         const classSnap = await getDoc(classRef);
         if (classSnap.exists()) {
@@ -577,7 +582,7 @@ async function addStudent() {
         document.getElementById("index-preview").style.display = "block";
 
         showNotification(
-            `Student added! Index No: ${indexNo}. Hand credentials manually.`,
+            `Student added successfully! Index No: ${indexNo}.`,
             "success"
         );
 
@@ -662,22 +667,19 @@ async function openAssignModal(uid, name) {
             opt.textContent = `${c.id} — ${c.name || ""}`;
             formMasterSelect.appendChild(opt);
         });
-        formMasterSelect.value = teacherData.formMasterOf || "";
+        formMasterSelect.value = teacherData.formMasterOf || teacherData.formClass || "";
     }
 
     const list = document.getElementById("assign-subjects-list");
     list.innerHTML = "";
 
-    // Loop through departments defined in config.js
     Object.entries(DEPARTMENT_SUBJECTS).forEach(([deptKey, subjects]) => {
         const deptClasses = allClasses.filter(c => {
             const classId = (c.id || "").toUpperCase();
             const evaluatedDept = getDepartment(classId);
 
-            // Cross-reference dynamic department configuration
             if (evaluatedDept === deptKey) return true;
 
-            // Fallback keyword configuration pattern matching
             if (deptKey === "PreSchool")    return classId.includes("PRE") || classId.includes("PR") || classId.includes("KG");
             if (deptKey === "LowerPrimary") return classId.includes("LPR") || classId.includes("LP") || classId.includes("LOWER");
             if (deptKey === "UpperPrimary") return classId.includes("UPR") || classId.includes("UP") || classId.includes("UPPER");
@@ -690,7 +692,6 @@ async function openAssignModal(uid, name) {
         const deptBlock = document.createElement("div");
         deptBlock.style.marginBottom = "20px";
         
-        // Format presentation category label headers
         const labelText = deptKey.replace(/([A-Z])/g, ' $1').trim();
         deptBlock.innerHTML = `
             <div style="font-family:'Cinzel',serif;font-size:0.75rem;
@@ -733,23 +734,32 @@ async function saveAssignments() {
     if (!assigningTeacher.uid) return;
 
     const assignedSubjects = [];
+    const uniqueClasses = new Set();
 
     document.querySelectorAll(".class-chip.selected").forEach(chip => {
         const subj  = chip.dataset.subject;
         const cls   = chip.dataset.class;
+        uniqueClasses.add(cls);
+        
         const entry = assignedSubjects.find(a => a.subject === subj);
         if (entry) entry.classes.push(cls);
         else       assignedSubjects.push({ subject: subj, classes: [cls] });
     });
 
     const selectedFormClass = document.getElementById("assign-form-master-class")?.value || "";
+    if (selectedFormClass) {
+        uniqueClasses.add(selectedFormClass);
+    }
 
     try {
         showNotification("Saving assignments...", "info");
 
+        // Saves flat assignedClasses array back to teacher profiles 
         await updateDoc(doc(db, "users", assigningTeacher.uid), { 
             assignedSubjects,
-            formMasterOf: selectedFormClass || null
+            assignedClasses: Array.from(uniqueClasses),
+            formMasterOf: selectedFormClass || null,
+            formClass: selectedFormClass || null
         });
 
         if (selectedFormClass) {
@@ -811,7 +821,7 @@ async function publishResults() {
     try {
         showNotification("Publishing results...", "info");
 
-        const q    = query(
+        const q = query(
             collection(db, "users"),
             where("classCode",     "==", classCode),
             where("role",          "==", "student"),
