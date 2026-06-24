@@ -1,7 +1,5 @@
 // ============================================================
 //  signing.js — K_Tawiah Student Report System
-//  Sign In (Email + Password), Teacher Sign Up, Role Redirect
-//  NOTE: No onclick handlers in HTML — all wired via addEventListener
 // ============================================================
 
 // 1. IMPORTS
@@ -26,54 +24,104 @@ const app  = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db   = getFirestore(app);
 
-// ── State ──────────────────────────────────────────────────
 let signedInUser = null;
 
 // ============================================================
-//  UI STATE SWITCHERS
+//  ROLE SELECTION CHANGE LISTENER
 // ============================================================
+document.getElementById("role_select").addEventListener("change", function() {
+    const selectedRole = this.value;
+    const studentSigninSection = document.getElementById("student_signin");
+    const teacherSigninSection = document.getElementById("signin-step1");
+    
+    if (selectedRole === "teacher") {
+        studentSigninSection.style.display = "none";
+        teacherSigninSection.style.display = "block";
+    } else if (selectedRole === "student") {
+        studentSigninSection.style.display = "block";
+        teacherSigninSection.style.display = "none";
+    } else {
+        studentSigninSection.style.display = "none";
+        teacherSigninSection.style.display = "none";
+    }
+});
+
+// ============================================================
+//  UI VISIBILITY STATE FUNCTIONS
+// ============================================================
+function showSignIn() {
+    document.getElementById("state-default").style.display = "none";
+    document.getElementById("state-signin").style.display  = "block";
+    
+    // Clear and force default layout structure states
+    document.getElementById("role_select").value = "choice";
+    document.getElementById("student_signin").style.display = "none";
+    document.getElementById("signin-step1").style.display = "none";
+}
+
+function showTeacherSignUp() {
+    document.getElementById("state-default").style.display        = "none";
+    document.getElementById("state-signin").style.display         = "none";
+    document.getElementById("state-teacher-signup").style.display = "block";
+}
+
 function showDefault() {
     document.getElementById("state-default").style.display        = "block";
     document.getElementById("state-signin").style.display         = "none";
     document.getElementById("state-teacher-signup").style.display = "none";
 }
 
-function showSignIn() {
-    document.getElementById("state-default").style.display        = "none";
-    document.getElementById("state-signin").style.display         = "block";
-}
-
-function showTeacherSignUp() {
-    document.getElementById("state-default").style.display        = "none";
-    document.getElementById("state-teacher-signup").style.display = "block";
-}
-
 // ============================================================
-//  SIGN IN — Email + Password
+//  AUTHENTICATION CONTROLLER LOGIC
 // ============================================================
 async function handleSignIn() {
-    const email    = sanitizeInput(document.getElementById("signin-email").value);
-    const password = document.getElementById("signin-password").value;
+    const role = document.getElementById("role_select").value;
+    let email = "";
+    let password = "";
 
-    if (!email || !password) {
-        showNotification("Please fill in all fields.", "error"); return;
+    if (role === "choice" || !role) {
+        showNotification("Please select your role first.", "error");
+        return;
     }
-    if (!validateEmail(email)) {
-        showNotification("Please enter a valid email address.", "error"); return;
+
+    if (role === "student") {
+        const indexNumber = sanitizeInput(document.getElementById("student_index").value.trim());
+        const studentEmailPass = document.getElementById("student_password").value.trim();
+
+        if (!indexNumber || !studentEmailPass) {
+            showNotification("Please enter your index number and registered email.", "error");
+            return;
+        }
+
+        // Standardize account mappings: Converts local index identifiers to database layout lookups
+        email = `${indexNumber.toLowerCase()}@school.com`; 
+        password = studentEmailPass;
+
+    } else if (role === "teacher") {
+        email = sanitizeInput(document.getElementById("signin-email").value.trim());
+        password = document.getElementById("signin-password").value;
+
+        if (!email || !password) {
+            showNotification("Please fill in all layout credentials.", "error");
+            return;
+        }
+        if (!validateEmail(email)) {
+            showNotification("Please enter a valid email address.", "error");
+            return;
+        }
     }
 
     try {
         showNotification("Signing in...", "info");
 
-        // Step 1: Authenticate with Firebase Auth
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
         signedInUser = userCredential.user;
 
-        // Step 2: Read Firestore profile data
+        // Verify registration profile role documents from Firestore
         const userSnap = await getDoc(doc(db, "users", signedInUser.uid));
 
         if (!userSnap.exists()) {
-            showNotification("No profile found. Contact your administrator.", "error");
+            showNotification("No profile records discovered. Contact Administrator.", "error");
             auth.signOut();
             return;
         }
@@ -81,7 +129,6 @@ async function handleSignIn() {
         const data   = userSnap.data();
         const status = data.accountStatus;
 
-        // Normalize string roles or arrays into a clean, lowercased array
         let rolesArray = [];
         if (Array.isArray(data.role)) {
             rolesArray = data.role.map(r => String(r).toLowerCase());
@@ -89,164 +136,127 @@ async function handleSignIn() {
             rolesArray = [data.role.toLowerCase()];
         }
 
-        // Catch empty roles or missing arrays
         if (rolesArray.length === 0) {
-            showNotification("No roles assigned. Contact your administrator.", "warning");
+            showNotification("No system access profiles assigned.", "warning");
             auth.signOut();
             return;
         }
 
-        // Step 3: Admins always bypass status limitations
         if (rolesArray.includes("admin")) {
             redirectByRole(rolesArray);
             return;
         }
 
-        // Step 4: Block suspended accounts
         if (status === "suspended") {
-            showNotification("Your account has been suspended. Contact the administrator.", "error");
+            showNotification("Your account has been suspended.", "error");
             auth.signOut();
             return;
         }
 
-        // Step 5: Route pending accounts
         if (status === "pending") {
             window.location.href = "pending.html";
             return;
         }
 
-        // Step 6: Active accounts bypass SMS and route immediately based on role priority
         redirectByRole(rolesArray);
 
     } catch (error) {
         console.error("Sign In error:", error);
         const msgs = {
-            "auth/user-not-found":         "No account found with this email.",
-            "auth/wrong-password":         "Incorrect password.",
-            "auth/invalid-credential":     "Invalid email or password.",
-            "auth/too-many-requests":      "Too many attempts. Please try again later.",
-            "auth/network-request-failed": "Network error. Check your connection."
+            "auth/user-not-found":         "No account matches these configurations.",
+            "auth/wrong-password":         "Incorrect validation security criteria.",
+            "auth/invalid-credential":     "Invalid authorization profile credentials.",
+            "auth/too-many-requests":      "Too many attempts. Locked out temporarily.",
+            "auth/network-request-failed": "Network failure. Check connection settings."
         };
         showNotification(msgs[error.code] || MESSAGES.errors.auth, "error");
     }
 }
 
-// ============================================================
-//  ROLE-BASED REDIRECT
-// ============================================================
-function redirectByRole(rolesArray) {
-    // Priority checklist routing: Admin -> Teacher -> Student
-    let dest = null;
-
-    if (rolesArray.includes("admin")) {
-        dest = "report_system/admin.html";
-    } else if (rolesArray.includes("teacher")) {
-        dest = "report_system/teacher.html";
-    } else if (rolesArray.includes("student")) {
-        dest = "report_system/student.html";
-    }
-
-    if (dest) {
-        showNotification("Welcome back!", "success");
-        window.location.href = dest;
-    } else {
-        showNotification("Unknown role profile. Contact your administrator.", "warning");
-        auth.signOut();
-    }
-}
-
-// ============================================================
-//  TEACHER SIGN UP
-// ============================================================
 async function handleTeacherSignUp() {
-    const fname   = sanitizeInput(document.getElementById("t-firstname").value.trim());
-    const lname   = sanitizeInput(document.getElementById("t-lastname").value.trim());
-    const email   = sanitizeInput(document.getElementById("t-email").value.trim());
-    const phone   = sanitizeInput(document.getElementById("t-phone").value.trim());
-    const pass    = document.getElementById("t-password").value;
-    const confirm = document.getElementById("t-confirmpassword").value;
+    const firstName = sanitizeInput(document.getElementById("t-firstname").value.trim());
+    const lastName  = sanitizeInput(document.getElementById("t-lastname").value.trim());
+    const email     = sanitizeInput(document.getElementById("t-email").value.trim());
+    const phone     = sanitizeInput(document.getElementById("t-phone").value.trim());
+    const password  = document.getElementById("t-password").value;
+    const confirmPw = document.getElementById("t-confirmpassword").value;
 
-    if (!fname || !lname || !email || !phone || !pass || !confirm) {
-        showNotification("Please fill in all fields.", "error"); return;
+    if (!firstName || !lastName || !email || !phone || !password || !confirmPw) {
+        showNotification("Please clear and fill all matching input forms.", "error");
+        return;
     }
     if (!validateEmail(email)) {
-        showNotification("Invalid email address.", "error"); return;
+        showNotification("Invalid entry structure inside Email box.", "error");
+        return;
     }
     if (!validatePhone(phone)) {
-        showNotification("Phone must be in format +233XXXXXXXXX or 0XXXXXXXXX.", "error"); return;
+        showNotification("Please fulfill an official structured validation phone layout.", "error");
+        return;
     }
-    if (!validatePassword(pass)) {
-        showNotification("Password must be 6+ characters with uppercase and numbers.", "error"); return;
+    if (!validatePassword(password)) {
+        showNotification("Password requires minimum 6 characters, an uppercase letter, and a number.", "error");
+        return;
     }
-    if (pass !== confirm) {
-        showNotification("Passwords do not match.", "error"); return;
+    if (password !== confirmPw) {
+        showNotification("Input confirmation parameters do not match.", "error");
+        return;
     }
 
     try {
-        showNotification("Creating account...", "info");
+        showNotification("Creating account records...", "info");
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
 
-        const cred = await createUserWithEmailAndPassword(auth, email, pass);
-        const user = cred.user;
-
-        // Send email verification link via Firebase
         await sendEmailVerification(user);
 
-        // Save account state to Firestore as pending
         await setDoc(doc(db, "users", user.uid), {
-            firstName:     fname,
-            lastName:      lname,
-            email:         email,
-            phone:         phone,
-            role:          "pending",
+            uid: user.uid,
+            firstName,
+            lastName,
+            email,
+            phone,
+            role: "teacher",
             accountStatus: "pending",
-            createdAt:     new Date()
+            createdAt: new Date().toISOString()
         });
 
-        // Notify admin by email
-        await sendEmailNotification(db, setDoc, doc, {
-            to:      "admin@ktawiah.com",
-            subject: "New Teacher Account Pending Approval",
-            text:    `New teacher account requires approval.\nName: ${fname} ${lname}\nEmail: ${email}`,
-            html:    `<h2>New Teacher Account Pending Approval</h2>
-                      <p><strong>Name:</strong> ${fname} ${lname}</p>
-                      <p><strong>Email:</strong> ${email}</p>
-                      <p>Log in to the <a href="report_system/admin.html">Admin Dashboard</a> to approve or reject.</p>`
-        });
-
-        showNotification("Account created! Awaiting admin approval.", "success");
-        setTimeout(() => { window.location.href = "report_system/pending.html"; }, 2000);
+        showNotification("Registration successful! Approval pending documentation verification.", "success");
+        setTimeout(() => { window.location.href = "pending.html"; }, 2000);
 
     } catch (error) {
         console.error("Teacher Sign Up error:", error);
         const msgs = {
-            "auth/email-already-in-use": "An account with this email already exists.",
-            "auth/weak-password":        "Password is too weak.",
-            "auth/invalid-email":        "Invalid email address."
+            "auth/email-already-in-use": "An account matching this email mapping exists.",
+            "auth/weak-password":        "Password strength does not pass criteria metrics.",
+            "auth/invalid-email":        "The structural formulation of the email is invalid."
         };
         showNotification(msgs[error.code] || MESSAGES.errors.auth, "error");
     }
 }
 
+function redirectByRole(roles) {
+    if (roles.includes("admin")) {
+        window.location.href = "report_system/admin.html";
+    } else if (roles.includes("teacher")) {
+        window.location.href = "report_system/teacher.html";
+    } else if (roles.includes("student")) {
+        window.location.href = "report_system/student.html";
+    } else {
+        window.location.href = "index.html";
+    }
+}
+
 // ============================================================
-//  WIRE UP ALL BUTTONS via addEventListener
+//  EVENT ROUTER CORE INITIALIZATION
 // ============================================================
 document.addEventListener("DOMContentLoaded", () => {
-    document.getElementById("btn-signin")
-        ?.addEventListener("click", showSignIn);
-    document.getElementById("btn-teacher-signup")
-        ?.addEventListener("click", showTeacherSignUp);
-    document.getElementById("btn-handle-signin")
-        ?.addEventListener("click", handleSignIn);
-    document.getElementById("btn-back-signin")
-        ?.addEventListener("click", showDefault);
-    document.getElementById("btn-teacher-register")
-        ?.addEventListener("click", handleTeacherSignUp);
-    document.getElementById("btn-back-signup")
-        ?.addEventListener("click", showDefault);
+    document.getElementById("btn-signin")?.addEventListener("click", showSignIn);
+    document.getElementById("btn-teacher-signup")?.addEventListener("click", showTeacherSignUp);
+    document.getElementById("btn-back-signin")?.addEventListener("click", showDefault);
+    document.getElementById("btn-teacher-register")?.addEventListener("click", handleTeacherSignUp);
+    document.getElementById("btn-back-signup")?.addEventListener("click", showDefault);
 
-    // Enter key on password field triggers sign in
-    document.getElementById("signin-password")
-        ?.addEventListener("keydown", (e) => {
-            if (e.key === "Enter") handleSignIn();
-        });
+    // Dynamic routing assignments matching clean functional separation mappings
+    document.getElementById("btn-submit-student-signin")?.addEventListener("click", handleSignIn);
+    document.getElementById("btn-submit-teacher-signin")?.addEventListener("click", handleSignIn);
 });

@@ -11,7 +11,6 @@
 </head>
 <body class="index-body">
 
-    <!-- HERO -->
     <div class="index-hero">
         <div class="index-hero-content">
             <span class="header-tag">Welcome</span>
@@ -20,20 +19,20 @@
         </div>
     </div>
 
-    <!-- SIGN IN CARD -->
     <div class="index-card-wrap">
         <div class="index-card" id="index-card">
 
-            <!-- DEFAULT STATE: Two buttons -->
             <div id="state-default">
                 <h2 class="index-card-title">Sign In</h2>
-                <p class="index-card-sub">Select your account type to continue.</p>
+                <p class="index-card-sub">Select an account option to continue.</p>
+                
                 <div class="index-role-btns">
                     <button class="role-btn" id="btn-signin">
                         <span class="role-icon">🔐</span>
-                        <span class="role-label">Sign In</span>
+                        <span class="role-label">Sign In Portal</span>
                         <span class="role-desc">Students, Teachers &amp; Admins</span>
                     </button>
+                            
                     <button class="role-btn" id="btn-teacher-signup">
                         <span class="role-icon">👨‍🏫</span>
                         <span class="role-label">Teacher Sign Up</span>
@@ -42,12 +41,31 @@
                 </div>
             </div>
 
-            <!-- SIGN IN FORM -->
             <div id="state-signin" style="display:none;">
                 <h2 class="index-card-title">Sign In</h2>
+                <p class="index-card-sub">Select your system role to open credentials inputs.</p>
 
-                <!-- STEP 1: Email + Password -->
-                <div id="signin-step1">
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <select id="role_select" class="selection" style="width: 100%; padding: 10px; background: rgba(255,255,255,0.07); color: moccasin; border: 1px solid var(--glass-border); border-radius: 10px;">
+                        <option value="choice" selected disabled>MAKE A CHOICE</option>
+                        <option value="student">Student</option>
+                        <option value="teacher">Teacher / Admin</option>
+                    </select>
+                </div>
+
+                <div id="student_signin" style="display: none;">
+                    <div class="form-group">
+                        <label>INDEX NUMBER</label>
+                        <input type="text" id="student_index" placeholder="e.g. KT-B4B-001">
+                    </div>
+                    <div class="form-group">
+                        <label>PASSWORD FOR STUDENTS</label>
+                        <input type="password" id="student_password" placeholder="your@email.com">
+                    </div>
+                    <button class="btn-primary btn-full" id="btn-submit-student-signin" style="margin-top: 10px;">Sign In as Student</button>
+                </div>
+
+                <div id="signin-step1" style="display: none;">
                     <div class="form-group">
                         <label>Email Address</label>
                         <input type="email" id="signin-email" placeholder="your@email.com">
@@ -56,11 +74,10 @@
                         <label>Password</label>
                         <input type="password" id="signin-password" placeholder="••••••••">
                     </div>
-                    <button class="btn-primary btn-full" id="btn-handle-signin">Sign In</button>
+                    <button class="btn-primary btn-full" id="btn-submit-teacher-signin" style="margin-top: 10px;">Sign In</button>
                 </div>
 
-                <!-- STEP 2: Phone OTP Verification -->
-                <div id="signin-step2" style="display:none;">
+                <div id="signin-step2" style="display:none; margin-top: 15px;">
                     <p class="index-card-sub">A verification code has been sent to your phone. Enter it below.</p>
                     <div class="form-group">
                         <label>SMS Verification Code</label>
@@ -71,10 +88,9 @@
                 </div>
 
                 <div id="recaptcha-container"></div>
-                <button class="btn-secondary btn-full" id="btn-back-signin" style="margin-top:12px">← Back</button>
+                <button class="btn-secondary btn-full" id="btn-back-signin" style="margin-top:15px">← Back</button>
             </div>
 
-            <!-- TEACHER SIGN UP FORM -->
             <div id="state-teacher-signup" style="display:none;">
                 <h2 class="index-card-title">Teacher Sign Up</h2>
                 <p class="index-card-sub">Your account will be reviewed by an admin before activation.</p>
@@ -116,6 +132,5 @@
     </footer>
 
     <script type="module" src="report_system/signing.js"></script>
-    <script type="module" src="report_system/global.js"></script>
 </body>
 </html>

@@ -80,33 +80,38 @@
     text-align: center;
 }
 
-/* === FORM ELEMENTS === */
-.signin-button, .signup-button {
-    background: var(--primary-blue);
-    color: black;
-    border: none;
-    padding: 12px 24px;
-    border-radius: 8px;
-    font-weight: bold;
-    cursor: pointer;
-    transition: var(--transition-normal);
-    font-size: 14px;
+/* === FORM FORMS STRUCTURE === */
+.form-group {
+    margin-bottom: 15px;
+    width: 100%;
+    text-align: left;
 }
 
-.signin-button:hover, .signup-button:hover {
-    filter: brightness(1.2);
-    transform: scale(1.02);
+.form-group label {
+    display: block;
+    font-size: 0.75rem;
+    font-family: 'Nunito', sans-serif;
+    font-weight: 700;
+    color: var(--gold, #c9a84c);
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+    text-transform: uppercase;
 }
 
-/* === RESPONSIVE DESIGN === */
-@media (max-width: 480px) {
-    .signin-container {
-        width: 280px;
-        height: 220px;
-    }
+.form-group input {
+    width: 100%;
+    padding: 12px 14px;
+    background: rgba(255, 255, 255, 0.07);
+    border: 1px solid rgba(201, 168, 76, 0.3);
+    border-radius: 10px;
+    color: #f5f0e8;
+    font-size: 0.95rem;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    box-sizing: border-box;
+}
 
-    .signup-container {
-        width: 350px;
-        height: 500px;
-    }
+.form-group input:focus {
+    border-color: #f0d080;
+    box-shadow: 0 0 8px rgba(240, 208, 128, 0.25);
 }
