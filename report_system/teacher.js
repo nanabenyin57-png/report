@@ -1,5 +1,5 @@
 // ============================================================
-//   K_Tawiah — teacher.js (COMPLETE FIXED MODULE)
+//   K_Tawiah — teacher.js (ROLES ARRAY COMPATIBLE RUNTIME)
 // ============================================================
 
 import { initializeApp }                    from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
@@ -13,7 +13,7 @@ import { getFirestore, doc, getDoc,
 import { firebaseConfig, getGrade, getRemarks,
          generateIndexNumber, sanitizeInput,
          showNotification, sendEmailNotification,
-         resolveRole, hasRole }              from "./config.js";
+         resolveRole, hasRole, DEPARTMENT_SUBJECTS } from "./config.js";
 
 // ── INIT ──────────────────────────────────────
 const app  = initializeApp(firebaseConfig);
@@ -28,12 +28,14 @@ let assignedSubjects = [];
 let isFormTeacher    = false;
 let formClass        = null;
 let allStudents      = {};
+let isAdminViewing   = false;
 
 // ── HELPER: navigate back to admin ──
 function goBackToAdmin() {
     sessionStorage.removeItem("adminAsTeacher");
     window.location.href = "admin.html";
 }
+window.goBackToAdmin = goBackToAdmin;
 
 // ── AUTH GUARD ────────────────────────────────
 onAuthStateChanged(auth, async (user) => {
@@ -46,6 +48,7 @@ onAuthStateChanged(auth, async (user) => {
     const adminAsTeacherUid = sessionStorage.getItem("adminAsTeacher");
     if (adminAsTeacherUid) {
         teacherUid = adminAsTeacherUid;
+        isAdminViewing = true;
         const banner = document.getElementById("admin-teacher-banner");
         if (banner) banner.style.display = "flex";
     }
@@ -53,30 +56,61 @@ onAuthStateChanged(auth, async (user) => {
     try {
         const snap = await getDoc(doc(db, "users", teacherUid));
         if (!snap.exists()) {
-            showNotification("Teacher profile not found.", "error");
+            showNotification("Profile not found.", "error");
             return;
         }
         currentTeacher = snap.data();
         
-        // Parse assignments
-        assignedClasses  = currentTeacher.assignedClasses || [];
-        assignedSubjects = currentTeacher.assignedSubjects || [];
-        isFormTeacher    = currentTeacher.isFormTeacher || false;
-        formClass        = currentTeacher.formClass || null;
+        // Handle array role structure vs flat string roles safely
+        const rolesArray = Array.isArray(currentTeacher.role) 
+            ? currentTeacher.role 
+            : [currentTeacher.role || ""];
+
+        if (rolesArray.includes("admin") || adminAsTeacherUid) {
+            isAdminViewing = true;
+        }
+
+        // Parse assignments or grant full override privileges if admin
+        if (isAdminViewing) {
+            isFormTeacher = true;
+            
+            // Fetch all global system classes to populate selection tools smoothly
+            const classSnap = await getDocs(collection(db, "classes"));
+            assignedClasses = [];
+            classSnap.forEach(d => assignedClasses.push(d.id));
+            
+            // Dynamically combine all available subject strings from configuration dictionary
+            const globalSubjectSet = new Set();
+            Object.values(DEPARTMENT_SUBJECTS).forEach(subs => {
+                subs.forEach(s => globalSubjectSet.add(s));
+            });
+            
+            assignedSubjects = Array.from(globalSubjectSet).map(subjectName => {
+                return { subjectCode: subjectName, classCode: "All" };
+            });
+        } else {
+            assignedClasses  = currentTeacher.assignedClasses || [];
+            assignedSubjects = currentTeacher.assignedSubjects || [];
+            isFormTeacher    = currentTeacher.isFormTeacher || false;
+            formClass        = currentTeacher.formClass || null;
+        }
 
         // Render profile text elements safely
-        if (document.getElementById("welcomeName")) document.getElementById("welcomeName").textContent = currentTeacher.firstName || "Teacher";
+        if (document.getElementById("welcomeName")) document.getElementById("welcomeName").textContent = currentTeacher.firstName || "Admin/Teacher";
         if (document.getElementById("profileName")) document.getElementById("profileName").textContent = `${currentTeacher.firstName || ""} ${currentTeacher.lastName || ""}`;
         if (document.getElementById("profileEmail")) document.getElementById("profileEmail").textContent = currentTeacher.email || "—";
         if (document.getElementById("profilePhone")) document.getElementById("profilePhone").textContent = currentTeacher.phone || "—";
-        if (document.getElementById("profileClasses")) document.getElementById("profileClasses").textContent = assignedClasses.join(", ") || "None";
+        if (document.getElementById("profileClasses")) document.getElementById("profileClasses").textContent = isAdminViewing ? "All System Classes" : (assignedClasses.join(", ") || "None");
         
-        const subStrings = assignedSubjects.map(s => `${s.subjectCode} (${s.classCode})`);
-        if (document.getElementById("profileSubjects")) document.getElementById("profileSubjects").textContent = subStrings.join(", ") || "None";
+        const subStrings = assignedSubjects.map(s => `${s.subjectCode} (${s.classCode || "Global"})`);
+        if (document.getElementById("profileSubjects")) document.getElementById("profileSubjects").textContent = isAdminViewing ? "All Subjects Override Access" : (subStrings.join(", ") || "None");
 
         const formRow = document.getElementById("profileFormClassRow");
         if (isFormTeacher && formClass) {
             if (document.getElementById("profileFormClass")) document.getElementById("profileFormClass").textContent = formClass;
+            if (formRow) formRow.style.display = "flex";
+        } else if (isAdminViewing) {
+            if (document.getElementById("profileFormClass")) document.getElementById("profileFormClass").textContent = "Global Admin Master Access";
             if (formRow) formRow.style.display = "flex";
         } else {
             if (formRow) formRow.style.display = "none";
@@ -102,25 +136,21 @@ function adjustAddStudentVisibility() {
     const addStudentBtn = document.getElementById("openAddStudentBtn");
     const filterEl = document.getElementById("studentClassFilter");
     const classFilter = filterEl ? filterEl.value : "";
-    const adminAsTeacherUid = sessionStorage.getItem("adminAsTeacher");
 
     if (!addStudentBtn) return;
 
-    // Admins viewing as teachers can always register profiles
-    if (adminAsTeacherUid) {
+    if (isAdminViewing) {
         addStudentBtn.style.display = "inline-flex";
         return;
     }
 
     if (classFilter) {
-        // Hide button completely if they do not manage this specific filtered class
         if (isFormTeacher && formClass === classFilter) {
             addStudentBtn.style.display = "inline-flex";
         } else {
             addStudentBtn.style.display = "none";
         }
     } else {
-        // On global view, display button only if they hold any active form teacher role
         if (isFormTeacher && formClass) {
             addStudentBtn.style.display = "inline-flex";
         } else {
@@ -150,6 +180,7 @@ function populateClassSelectors() {
     });
 }
 
+// Fixed: Correct sorting maps on unique codes
 function populateSubjectSelectors() {
     const selectors = ["scoresSubjectFilter", "submitSubjectSelect"];
     selectors.forEach(id => {
@@ -157,7 +188,7 @@ function populateSubjectSelectors() {
         if (!el) return;
         while (el.options.length > 1) el.remove(1);
 
-        const uniqueSubs = [...new Set(assignedSubjects.map(s => s.subjectCode))];
+        const uniqueSubs = [...new Set(assignedSubjects.map(s => s.subjectCode))].sort();
         uniqueSubs.forEach(s => {
             const opt = document.createElement("option");
             opt.value = s; opt.textContent = s;
@@ -168,13 +199,14 @@ function populateSubjectSelectors() {
 
 // ── DATA INGESTION: ALL ASSIGNED STUDENTS ──
 async function loadStudentsData() {
-    if (assignedClasses.length === 0) {
-        renderStudentsTable();
-        renderReportLinks();
-        return;
-    }
     try {
-        const q = query(collection(db, "students"), where("classCode", "in", assignedClasses));
+        let q;
+        if (isAdminViewing || assignedClasses.length === 0) {
+            q = collection(db, "students");
+        } else {
+            q = query(collection(db, "students"), where("classCode", "in", assignedClasses));
+        }
+        
         const snap = await getDocs(q);
         allStudents = {};
         snap.forEach(docSnap => {
@@ -187,7 +219,6 @@ async function loadStudentsData() {
         renderRankingTable();
         renderReportLinks();
         
-        // Update overview dynamic counters if present
         const totalCount = Object.keys(allStudents).length;
         if (document.getElementById("statStudents")) document.getElementById("statStudents").textContent = totalCount;
         if (document.getElementById("statSubjects")) document.getElementById("statSubjects").textContent = assignedSubjects.length;
@@ -228,14 +259,13 @@ function renderStudentsTable() {
     });
 }
 
-// ── MODAL WINDOW CONTROLS ──
 function openAddStudentModal() {
     const modal = document.getElementById("addStudentModal");
     if (!modal) return;
     modal.style.display = "flex";
     
     const classSelect = document.getElementById("newStudentClass");
-    if (classSelect && isFormTeacher && formClass) {
+    if (classSelect && !isAdminViewing && isFormTeacher && formClass) {
         classSelect.value = formClass;
     }
 }
@@ -247,10 +277,8 @@ function closeAddStudentModal() {
 }
 window.closeAddStudentModal = closeAddStudentModal;
 
-// ── WRITE BACK SYSTEM: REGISTER NEW STUDENT ──
 async function handleCreateStudent(e) {
     e.preventDefault();
-    const adminAsTeacherUid = sessionStorage.getItem("adminAsTeacher");
 
     const classCode = document.getElementById("newStudentClass").value;
     const firstName = sanitizeInput(document.getElementById("newStudentFirst").value.trim());
@@ -263,10 +291,9 @@ async function handleCreateStudent(e) {
         return;
     }
 
-    // STRICT PERMISSION BLOCK ENFORCEMENT
-    if (!adminAsTeacherUid) { 
+    if (!isAdminViewing) { 
         if (!isFormTeacher || formClass !== classCode) {
-            showNotification(`Access Denied! You are not the assigned Form Master for class ${classCode}. Registration blocked.`, "error");
+            showNotification(`Access Denied! You are not the assigned Form Master for class ${classCode}.`, "error");
             return;
         }
     }
@@ -309,7 +336,6 @@ async function handleCreateStudent(e) {
     }
 }
 
-// ── ASSESSMENT GRADE GRIDS ──
 function renderScoresTable() {
     const tbody = document.getElementById("scoresTableBody");
     if (!tbody) return;
@@ -324,8 +350,7 @@ function renderScoresTable() {
     }
 
     const hasAccess = assignedSubjects.some(s => s.classCode === classFilter && s.subjectCode === subjectFilter);
-    const adminAsTeacherUid = sessionStorage.getItem("adminAsTeacher");
-    if (!hasAccess && !adminAsTeacherUid) {
+    if (!hasAccess && !isAdminViewing) {
         tbody.innerHTML = `<tr><td colspan="6" class="empty-msg" style="color:var(--danger)">Access Denied: You do not teach ${subjectFilter} in Class ${classFilter}.</td></tr>`;
         return;
     }
@@ -400,7 +425,6 @@ async function saveAssessments() {
     }
 }
 
-// ── ATTENDANCE METRIC TRACKER ──
 function renderAttendanceTable() {
     const tbody = document.getElementById("attendanceTableBody");
     if (!tbody) return; tbody.innerHTML = "";
@@ -458,11 +482,10 @@ async function saveAttendance() {
         await loadStudentsData();
     } catch (err) {
         console.error(err);
-        showNotification("Failed to save terminal parameters.", "error");
+        showNotification("Failed to save parameters.", "error");
     }
 }
 
-// ── ANALYTICS RUNTIME ──
 function renderRankingTable() {
     const tbody = document.getElementById("rankingTableBody");
     if (!tbody) return; tbody.innerHTML = "";
@@ -520,7 +543,6 @@ async function handleSubmitReportCard(e) {
     showNotification(`Assessments for ${sub} in class ${cl} locked and dispatched to admin reviews!`, "success");
 }
 
-// ── TAB INITIALIZATION SWITCHER ──
 const tabTitles = { dashboard: "Overview", students: "Student Registry", scores: "Input Scores", attendance: "Conduct & Attendance", ranking: "Class Analytics", submit: "Final Submission", profile: "My Portal Profile" };
 function switchTab(name) {
     document.querySelectorAll(".tab-content").forEach(t => t.classList.remove("active"));
@@ -538,7 +560,6 @@ function switchTab(name) {
 }
 window.switchTab = switchTab;
 
-// ── DOM RUNTIME HANDLER REGISTRATION ──
 document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("addStudentForm")?.addEventListener("submit", handleCreateStudent);
     document.getElementById("btnSaveScores")?.addEventListener("click", saveAssessments);
@@ -556,12 +577,10 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("profileClassFilter")?.addEventListener("change", renderReportLinks);
     document.getElementById("banner-back-btn")?.addEventListener("click", goBackToAdmin);
     
-    // Wire up sidebar tabs click routes
     document.querySelectorAll(".nav-item").forEach(btn => {
         btn.addEventListener("click", () => switchTab(btn.dataset.tab));
     });
 
-    // Overview Quick Actions routers
     document.getElementById("qa-students")?.addEventListener("click", () => { switchTab("students"); openAddStudentModal(); });
     document.getElementById("qa-scores")?.addEventListener("click", () => switchTab("scores"));
     document.getElementById("qa-attendance")?.addEventListener("click", () => switchTab("attendance"));
