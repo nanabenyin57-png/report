@@ -180,7 +180,6 @@ function populateClassSelectors() {
     });
 }
 
-// Fixed: Correct sorting maps on unique codes
 function populateSubjectSelectors() {
     const selectors = ["scoresSubjectFilter", "submitSubjectSelect"];
     selectors.forEach(id => {
