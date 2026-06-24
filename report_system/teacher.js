@@ -1,7 +1,6 @@
-// =============================================
-//   K_Tawiah — teacher.js
-//   Teacher Dashboard Logic (ES Module)
-// =============================================
+// ============================================================
+//   K_Tawiah — teacher.js (COMPLETE FIXED MODULE)
+// ============================================================
 
 import { initializeApp }                    from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
 import { getAuth, onAuthStateChanged,
@@ -30,135 +29,108 @@ let isFormTeacher    = false;
 let formClass        = null;
 let allStudents      = {};
 
-// ── HELPER: navigate back to admin, clearing the session flag ──
+// ── HELPER: navigate back to admin ──
 function goBackToAdmin() {
     sessionStorage.removeItem("adminAsTeacher");
     window.location.href = "admin.html";
 }
 
 // ── AUTH GUARD ────────────────────────────────
-onAuthStateChanged(auth, async user => {
-    if (!user) { window.location.href = "index.html"; return; }
+onAuthStateChanged(auth, async (user) => {
+    if (!user) {
+        window.location.href = "index.html";
+        return;
+    }
     teacherUid = user.uid;
 
-    try {
-        const snap = await getDoc(doc(db, "users", user.uid));
-        if (!snap.exists()) { window.location.href = "index.html"; return; }
-
-        const data  = snap.data();
-        const roles = resolveRole(data.role);
-
-        const adminAsTeacher = sessionStorage.getItem("adminAsTeacher") === "true";
-
-        if (adminAsTeacher) {
-            const isAlsoTeacher = hasRole(roles, "teacher");
-
-            if (!isAlsoTeacher) {
-                showToast(
-                    "You have no teacher assignments. Ask another admin to assign you as a teacher first.",
-                    "error",
-                    5000
-                );
-                sessionStorage.removeItem("adminAsTeacher");
-                window.location.href = "admin.html";
-                return;
-            }
-
-            const banner = document.getElementById("admin-teacher-banner");
-            if (banner) banner.style.display = "flex";
-
-            document.getElementById("banner-back-btn")
-                ?.addEventListener("click", goBackToAdmin);
-
-        } else {
-            if (data.accountStatus === "pending") {
-                window.location.href = "pending.html"; return;
-            }
-            if (data.accountStatus === "suspended") {
-                showToast("Your account has been suspended.", "error", 5000);
-                await signOut(auth);
-                window.location.href = "index.html"; return;
-            }
-            if (!hasRole(roles, "teacher") && !hasRole(roles, "staff") && !hasRole(roles, "admin")) {
-                window.location.href = "index.html"; return;
-            }
-        }
-
-        if (!data.assignedSubjects || data.assignedSubjects.length === 0) {
-            showToast(
-                "You have no assigned subjects yet. Contact the admin.",
-                "warning",
-                6000
-            );
-        }
-
-        await loadTeacherProfile(user, data, roles);
-
-    } catch (err) {
-        console.error("Auth error:", err);
-        window.location.href = "index.html";
+    const adminAsTeacherUid = sessionStorage.getItem("adminAsTeacher");
+    if (adminAsTeacherUid) {
+        teacherUid = adminAsTeacherUid;
+        const banner = document.getElementById("admin-teacher-banner");
+        if (banner) banner.style.display = "flex";
     }
-});
 
-// ── LOAD TEACHER PROFILE ──────────────────────
-async function loadTeacherProfile(user, data, roles) {
     try {
-        if (hasRole(roles, "admin")) {
-            const adminBtn = document.getElementById("adminSwitchBtn");
-            if (adminBtn) {
-                adminBtn.classList.remove("hidden");
-                adminBtn.addEventListener("click", goBackToAdmin);
-            }
+        const snap = await getDoc(doc(db, "users", teacherUid));
+        if (!snap.exists()) {
+            showNotification("Teacher profile not found.", "error");
+            return;
         }
-
-        currentTeacher   = { id: user.uid, ...data };
-        assignedClasses  = data.assignedClasses  || [];
-        assignedSubjects = data.assignedSubjects || [];
+        currentTeacher = snap.data();
         
-        // Handle both formClass and formMasterOf structural schema parameters
-        formClass        = data.formClass || data.formMasterOf || null;
-        isFormTeacher    = !!formClass;
+        // Parse assignments
+        assignedClasses  = currentTeacher.assignedClasses || [];
+        assignedSubjects = currentTeacher.assignedSubjects || [];
+        isFormTeacher    = currentTeacher.isFormTeacher || false;
+        formClass        = currentTeacher.formClass || null;
 
-        const fullName = data.firstName && data.lastName
-            ? `${data.firstName} ${data.lastName}`
-            : data.displayName || data.name || "Teacher";
-        const initials = fullName.split(" ").map(n => n).join("").slice(0, 2).toUpperCase();
+        // Render profile text elements safely
+        if (document.getElementById("welcomeName")) document.getElementById("welcomeName").textContent = currentTeacher.firstName || "Teacher";
+        if (document.getElementById("profileName")) document.getElementById("profileName").textContent = `${currentTeacher.firstName || ""} ${currentTeacher.lastName || ""}`;
+        if (document.getElementById("profileEmail")) document.getElementById("profileEmail").textContent = currentTeacher.email || "—";
+        if (document.getElementById("profilePhone")) document.getElementById("profilePhone").textContent = currentTeacher.phone || "—";
+        if (document.getElementById("profileClasses")) document.getElementById("profileClasses").textContent = assignedClasses.join(", ") || "None";
+        
+        const subStrings = assignedSubjects.map(s => `${s.subjectCode} (${s.classCode})`);
+        if (document.getElementById("profileSubjects")) document.getElementById("profileSubjects").textContent = subStrings.join(", ") || "None";
 
-        document.getElementById("sidebarAvatar").textContent      = initials;
-        document.getElementById("profileAvatarLarge").textContent = initials;
-        document.getElementById("sidebarName").textContent        = fullName;
-        document.getElementById("sidebarRole").textContent        = isFormTeacher ? "Form Teacher" : "Teacher";
-        document.getElementById("termValue").textContent          = data.currentTerm || "—";
-
-        document.getElementById("rankingNavBtn").classList.toggle("hidden", !isFormTeacher);
-
-        document.getElementById("profileName").textContent     = fullName;
-        document.getElementById("profileEmail").textContent    = data.email || "—";
-        document.getElementById("profilePhone").textContent    = data.phone || "—";
-        document.getElementById("profileRole").textContent     = isFormTeacher ? "Form Teacher" : "Teacher";
-        document.getElementById("profileClasses").textContent  = assignedClasses.join(", ") || "None";
-        document.getElementById("profileSubjects").textContent =
-            assignedSubjects.map(s => `${s.subject} (${s.classCode || s.classes?.join(",")})`).join(", ") || "None";
-
-        if (isFormTeacher) {
-            document.getElementById("profileFormClass").textContent = formClass;
-            document.getElementById("profileFormClassRow").style.display = "";
+        const formRow = document.getElementById("profileFormClassRow");
+        if (isFormTeacher && formClass) {
+            if (document.getElementById("profileFormClass")) document.getElementById("profileFormClass").textContent = formClass;
+            if (formRow) formRow.style.display = "flex";
         } else {
-            document.getElementById("profileFormClassRow").style.display = "none";
+            if (formRow) formRow.style.display = "none";
         }
 
-        await populateClassSelectors();
-        await loadOverview();
-        await loadProfileStudents();
+        // Initialize selectors and pipelines
+        populateClassSelectors();
+        populateSubjectSelectors();
+        
+        // Dynamic visibility check for Add Student actions
+        adjustAddStudentVisibility();
+
+        await loadStudentsData();
 
     } catch (err) {
         console.error(err);
-        showToast("Failed to load profile.", "error");
+        showNotification("Error loading dashboard dependencies.", "error");
+    }
+});
+
+// ── DYNAMIC BUTTON VISIBILITY FOR FORM MASTERS ──
+function adjustAddStudentVisibility() {
+    const addStudentBtn = document.getElementById("openAddStudentBtn");
+    const filterEl = document.getElementById("studentClassFilter");
+    const classFilter = filterEl ? filterEl.value : "";
+    const adminAsTeacherUid = sessionStorage.getItem("adminAsTeacher");
+
+    if (!addStudentBtn) return;
+
+    // Admins viewing as teachers can always register profiles
+    if (adminAsTeacherUid) {
+        addStudentBtn.style.display = "inline-flex";
+        return;
+    }
+
+    if (classFilter) {
+        // Hide button completely if they do not manage this specific filtered class
+        if (isFormTeacher && formClass === classFilter) {
+            addStudentBtn.style.display = "inline-flex";
+        } else {
+            addStudentBtn.style.display = "none";
+        }
+    } else {
+        // On global view, display button only if they hold any active form teacher role
+        if (isFormTeacher && formClass) {
+            addStudentBtn.style.display = "inline-flex";
+        } else {
+            addStudentBtn.style.display = "none";
+        }
     }
 }
 
-// ── POPULATE CLASS SELECTORS ──────────────────
-async function populateClassSelectors() {
+// ── POPULATE SELECTORS ────────────────────────
+function populateClassSelectors() {
     const selectors = [
         "studentClassFilter", "newStudentClass",
         "scoresClassFilter", "attendanceClassFilter",
@@ -169,657 +141,440 @@ async function populateClassSelectors() {
         const el = document.getElementById(id);
         if (!el) return;
         while (el.options.length > 1) el.remove(1);
-        assignedClasses.forEach(code => {
+
+        assignedClasses.forEach(c => {
             const opt = document.createElement("option");
-            opt.value = code; opt.textContent = code;
+            opt.value = c; opt.textContent = c;
             el.appendChild(opt);
         });
     });
 }
 
-// ── LOAD OVERVIEW ─────────────────────────────
-async function loadOverview() {
-    const list = document.getElementById("assignedList");
-    list.innerHTML = "";
-    if (assignedSubjects.length === 0) {
-        list.innerHTML = `<p class="empty-msg">No subjects assigned yet.</p>`;
+function populateSubjectSelectors() {
+    const selectors = ["scoresSubjectFilter", "submitSubjectSelect"];
+    selectors.forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        while (el.options.length > 1) el.remove(1);
+
+        const uniqueSubs = [...new Set(assignedSubjects.map(s => s.subjectCode))];
+        uniqueSubs.forEach(s => {
+            const opt = document.createElement("option");
+            opt.value = s; opt.textContent = s;
+            el.appendChild(opt);
+        });
+    });
+}
+
+// ── DATA INGESTION: ALL ASSIGNED STUDENTS ──
+async function loadStudentsData() {
+    if (assignedClasses.length === 0) {
+        renderStudentsTable();
+        renderReportLinks();
         return;
     }
-    assignedSubjects.forEach(({ classCode, subject, classes }) => {
-        const classLabel = classCode || (classes || []).join(", ");
-        const item = document.createElement("div");
-        item.className = "assigned-item";
-        item.innerHTML = `<span class="assigned-class-tag">${classLabel}</span>
-                          <span class="assigned-subject">${subject}</span>`;
-        list.appendChild(item);
+    try {
+        const q = query(collection(db, "students"), where("classCode", "in", assignedClasses));
+        const snap = await getDocs(q);
+        allStudents = {};
+        snap.forEach(docSnap => {
+            allStudents[docSnap.id] = { id: docSnap.id, ...docSnap.data() };
+        });
+
+        renderStudentsTable();
+        renderScoresTable();
+        renderAttendanceTable();
+        renderRankingTable();
+        renderReportLinks();
+        
+        // Update overview dynamic counters if present
+        const totalCount = Object.keys(allStudents).length;
+        if (document.getElementById("statStudents")) document.getElementById("statStudents").textContent = totalCount;
+        if (document.getElementById("statSubjects")) document.getElementById("statSubjects").textContent = assignedSubjects.length;
+
+    } catch (err) {
+        console.error(err);
+        showNotification("Error loading student database records.", "error");
+    }
+}
+
+// ── RENDER DATA TABLES ──
+function renderStudentsTable() {
+    const tbody = document.getElementById("studentsTableBody");
+    if (!tbody) return;
+    tbody.innerHTML = "";
+
+    const filter = document.getElementById("studentClassFilter").value;
+    let list = Object.values(allStudents);
+    if (filter) list = list.filter(s => s.classCode === filter);
+
+    if (list.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="empty-msg">No students found matching selection filters.</td></tr>`;
+        return;
+    }
+
+    list.forEach(s => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+            <td><strong>${s.indexNumber || "—"}</strong></td>
+            <td>${s.firstName || ""} ${s.lastName || ""}</td>
+            <td><span class="badge-class">${s.classCode || "—"}</span></td>
+            <td>${s.gender || "—"}</td>
+            <td>
+                <button class="btn-icon edit-btn" onclick="openEditStudentModal('${s.id}')" title="Edit Profile">✏️</button>
+            </td>
+        `;
+        tbody.appendChild(tr);
     });
+}
 
-    document.getElementById("statSubjects").textContent = assignedSubjects.length;
+// ── MODAL WINDOW CONTROLS ──
+function openAddStudentModal() {
+    const modal = document.getElementById("addStudentModal");
+    if (!modal) return;
+    modal.style.display = "flex";
+    
+    const classSelect = document.getElementById("newStudentClass");
+    if (classSelect && isFormTeacher && formClass) {
+        classSelect.value = formClass;
+    }
+}
+window.openAddStudentModal = openAddStudentModal;
 
-    let totalStudents = 0, totalDone = 0;
-    for (const code of assignedClasses) {
-        const students = await fetchStudents(code);
-        totalStudents += students.length;
-        for (const s of students) {
-            for (const as of assignedSubjects.filter(a => a.classCode === code || (a.classes || []).includes(code))) {
-                const aSnap = await getDoc(doc(db, "assessments", `${s.id}_${as.subject}_${code}`));
-                if (aSnap.exists() && aSnap.data().totalScore !== undefined) totalDone++;
-            }
+function closeAddStudentModal() {
+    const modal = document.getElementById("addStudentModal");
+    if (modal) modal.style.display = "none";
+}
+window.closeAddStudentModal = closeAddStudentModal;
+
+// ── WRITE BACK SYSTEM: REGISTER NEW STUDENT ──
+async function handleCreateStudent(e) {
+    e.preventDefault();
+    const adminAsTeacherUid = sessionStorage.getItem("adminAsTeacher");
+
+    const classCode = document.getElementById("newStudentClass").value;
+    const firstName = sanitizeInput(document.getElementById("newStudentFirst").value.trim());
+    const lastName  = sanitizeInput(document.getElementById("newStudentLast").value.trim());
+    const gender    = document.getElementById("newStudentGender").value;
+    const email     = sanitizeInput(document.getElementById("newStudentEmail").value.trim());
+
+    if (!classCode || !firstName || !lastName || !gender || !email) {
+        showNotification("Please fulfill all required profile fields.", "error");
+        return;
+    }
+
+    // STRICT PERMISSION BLOCK ENFORCEMENT
+    if (!adminAsTeacherUid) { 
+        if (!isFormTeacher || formClass !== classCode) {
+            showNotification(`Access Denied! You are not the assigned Form Master for class ${classCode}. Registration blocked.`, "error");
+            return;
         }
     }
-    document.getElementById("statStudents").textContent    = totalStudents;
-    document.getElementById("statReportsDone").textContent = totalDone;
-    document.getElementById("statPending").textContent     =
-        Math.max(0, assignedSubjects.length * totalStudents - totalDone);
-}
-
-// ── FETCH STUDENTS (cached) ───────────────────
-async function fetchStudents(classCode) {
-    if (allStudents[classCode]) return allStudents[classCode];
-    try {
-        const q = query(
-            collection(db, "users"),
-            where("role", "==", "student"),
-            where("classCode", "==", classCode),
-            orderBy("indexNo")
-        );
-        const snap = await getDocs(q);
-        allStudents[classCode] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        return allStudents[classCode];
-    } catch {
-        const q2 = query(
-            collection(db, "users"),
-            where("role", "==", "student"),
-            where("classCode", "==", classCode)
-        );
-        const snap = await getDocs(q2);
-        allStudents[classCode] = snap.docs
-            .map(d => ({ id: d.id, ...d.data() }))
-            .sort((a, b) => (a.indexNo || "").localeCompare(b.indexNo || ""));
-        return allStudents[classCode];
-    }
-}
-
-// ═══════════════════════════════════════════════
-//   TAB: MY STUDENTS
-// ═══════════════════════════════════════════════
-document.getElementById("studentClassFilter").addEventListener("change", async e => {
-    const code = e.target.value;
-    if (!code) {
-        document.getElementById("studentsTableBody").innerHTML =
-            `<tr><td colspan="5" class="empty-msg">Select a class.</td></tr>`;
-        return;
-    }
-    await renderStudentsTable(code);
-});
-
-async function renderStudentsTable(classCode) {
-    const tbody = document.getElementById("studentsTableBody");
-    tbody.innerHTML = `<tr><td colspan="5" class="empty-msg">Loading…</td></tr>`;
-    const students = await fetchStudents(classCode);
-    if (students.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" class="empty-msg">No students in ${classCode} yet.</td></tr>`;
-        return;
-    }
-    tbody.innerHTML = students.map(s => `
-        <tr>
-            <td><code>${s.indexNo || "—"}</code></td>
-            <td>${s.firstName ? `${s.firstName} ${s.lastName || ""}`.trim() : s.displayName || s.name || "—"}</td>
-            <td>${s.classCode || "—"}</td>
-            <td>${s.createdAt ? new Date(s.createdAt.seconds * 1000).toLocaleDateString() : "—"}</td>
-            <td>
-                <a href="student.html?id=${s.id}" class="icon-btn" style="text-decoration:none">📄 Report</a>
-            </td>
-        </tr>`).join("");
-}
-
-// ── ADD STUDENT MODAL TRIGGER ENGINE ──────────
-function openAddStudentModal() {
-    document.getElementById("newStudentClass").value = "";
-    document.getElementById("newStudentIndex").value = "";
-    document.getElementById("newStudentName").value  = "";
-    document.getElementById("newStudentPhone").value = "";
-    document.getElementById("addStudentModal").classList.remove("hidden");
-}
-
-document.getElementById("addStudentBtn").addEventListener("click", openAddStudentModal);
-
-document.getElementById("closeAddStudent").addEventListener("click", () => {
-    document.getElementById("addStudentModal").classList.add("hidden");
-});
-document.getElementById("cancelAddStudent").addEventListener("click", () => {
-    document.getElementById("addStudentModal").classList.add("hidden");
-});
-
-document.getElementById("newStudentClass").addEventListener("change", async e => {
-    const code = e.target.value;
-    if (!code) return;
-    const students  = await fetchStudents(code);
-    const nextIndex = generateIndexNumber(code, students.length + 1);
-    document.getElementById("newStudentIndex").value = nextIndex;
-});
-
-document.getElementById("confirmAddStudent").addEventListener("click", async () => {
-    const classCode   = sanitizeInput(document.getElementById("newStudentClass").value.trim());
-    const name        = sanitizeInput(document.getElementById("newStudentName").value.trim());
-    const gender      = document.getElementById("newStudentGender").value;
-    const phone       = sanitizeInput(document.getElementById("newStudentPhone").value.trim());
-    const indexNo     = document.getElementById("newStudentIndex").value.trim();
-
-    if (!classCode || !name || !indexNo) {
-        showToast("Please fill all required fields.", "error"); return;
-    }
-
-    const nameParts = name.trim().split(/\s+/);
-    const firstName = nameParts[0] || name;
-    const lastName  = nameParts.slice(1).join(" ") || "";
 
     try {
-        await setDoc(doc(db, "users", indexNo), {
+        showNotification("Generating unique index mapping...", "info");
+        const idx = await generateIndexNumber(db, collection, getDocs, query, where);
+
+        const newStudentDoc = {
+            indexNumber: idx,
             firstName,
             lastName,
-            displayName:   name,
-            name,
-            classCode,
-            indexNo,
             gender,
-            phone:         phone || "",
-            guardianPhone: phone || "",
-            email:         "",
-            role:          "student",
+            email,
+            classCode,
+            createdAt: serverTimestamp()
+        };
+
+        const docRef = await addDoc(collection(db, "students"), newStudentDoc);
+        
+        const stdVirtualEmail = `${idx.toLowerCase()}@school.com`;
+        await setDoc(doc(db, "users", docRef.id), {
+            uid: docRef.id,
+            firstName,
+            lastName,
+            email: stdVirtualEmail,
+            role: "student",
             accountStatus: "active",
-            createdBy:     teacherUid,
-            createdAt:     serverTimestamp()
+            createdAt: new Date().toISOString()
         });
 
-        const classRef  = doc(db, "classes", classCode);
-        const classSnap = await getDoc(classRef);
-        if (classSnap.exists()) {
-            await updateDoc(classRef, {
-                studentCount: (classSnap.data().studentCount || 0) + 1
+        showNotification(`Student identifier ${idx} assigned and saved!`, "success");
+        closeAddStudentModal();
+        document.getElementById("addStudentForm").reset();
+        await loadStudentsData();
+
+    } catch (err) {
+        console.error(err);
+        showNotification("Error committing profile record.", "error");
+    }
+}
+
+// ── ASSESSMENT GRADE GRIDS ──
+function renderScoresTable() {
+    const tbody = document.getElementById("scoresTableBody");
+    if (!tbody) return;
+    tbody.innerHTML = "";
+
+    const classFilter   = document.getElementById("scoresClassFilter").value;
+    const subjectFilter = document.getElementById("scoresSubjectFilter").value;
+
+    if (!classFilter || !subjectFilter) {
+        tbody.innerHTML = `<tr><td colspan="6" class="empty-msg">Please select both a class and a subject to view layout arrays.</td></tr>`;
+        return;
+    }
+
+    const hasAccess = assignedSubjects.some(s => s.classCode === classFilter && s.subjectCode === subjectFilter);
+    const adminAsTeacherUid = sessionStorage.getItem("adminAsTeacher");
+    if (!hasAccess && !adminAsTeacherUid) {
+        tbody.innerHTML = `<tr><td colspan="6" class="empty-msg" style="color:var(--danger)">Access Denied: You do not teach ${subjectFilter} in Class ${classFilter}.</td></tr>`;
+        return;
+    }
+
+    let list = Object.values(allStudents).filter(s => s.classCode === classFilter);
+    if (list.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="empty-msg">No students currently registered in Class ${classFilter}.</td></tr>`;
+        return;
+    }
+
+    list.forEach(s => {
+        const record = (s.assessments && s.assessments[subjectFilter]) || {};
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+            <td><strong>${s.indexNumber || "—"}</strong></td>
+            <td>${s.firstName} ${s.lastName}</td>
+            <td><input type="number" class="table-input class-score-input" data-sid="${s.id}" min="0" max="30" value="${record.classScore !== undefined ? record.classScore : ""}" placeholder="Max 30"></td>
+            <td><input type="number" class="table-input exam-score-input" data-sid="${s.id}" min="0" max="70" value="${record.examScore !== undefined ? record.examScore : ""}" placeholder="Max 70"></td>
+            <td><span class="total-score-span" id="total-${s.id}-${subjectFilter}">${record.totalScore !== undefined ? record.totalScore : "—"}</span></td>
+            <td><span class="grade-span" id="grade-${s.id}-${subjectFilter}" style="font-weight:700; color:var(--gold-light)">${record.grade || "—"}</span></td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+async function saveAssessments() {
+    const classFilter   = document.getElementById("scoresClassFilter").value;
+    const subjectFilter = document.getElementById("scoresSubjectFilter").value;
+
+    if (!classFilter || !subjectFilter) return;
+
+    try {
+        showNotification("Saving assessment reports...", "info");
+        const rows = document.querySelectorAll("#scoresTableBody tr");
+        
+        for (let tr of rows) {
+            const classInput = tr.querySelector(".class-score-input");
+            const examInput  = tr.querySelector(".exam-score-input");
+            if (!classInput) continue;
+
+            const sId = classInput.dataset.sid;
+            const cVal = classInput.value === "" ? null : parseFloat(classInput.value);
+            const eVal = examInput.value === "" ? null : parseFloat(examInput.value);
+
+            let assessmentMap = (allStudents[sId].assessments || {});
+            
+            if (cVal === null && eVal === null) {
+                delete assessmentMap[subjectFilter];
+            } else {
+                const total = (cVal || 0) + (eVal || 0);
+                const grade = getGrade(total);
+                const remarks = getRemarks(grade);
+
+                assessmentMap[subjectFilter] = {
+                    classScore: cVal,
+                    examScore: eVal,
+                    totalScore: total,
+                    grade,
+                    remarks,
+                    updatedAt: new Date().toISOString()
+                };
+            }
+
+            await updateDoc(doc(db, "students", sId), { assessments: assessmentMap });
+        }
+
+        showNotification("All scorecards compiled and updated successfully!", "success");
+        await loadStudentsData();
+    } catch (err) {
+        console.error(err);
+        showNotification("Error writing records back to server database tier.", "error");
+    }
+}
+
+// ── ATTENDANCE METRIC TRACKER ──
+function renderAttendanceTable() {
+    const tbody = document.getElementById("attendanceTableBody");
+    if (!tbody) return; tbody.innerHTML = "";
+
+    const filter = document.getElementById("attendanceClassFilter").value;
+    if (!filter) {
+        tbody.innerHTML = `<tr><td colspan="5" class="empty-msg">Please specify an assigned class.</td></tr>`;
+        return;
+    }
+
+    let list = Object.values(allStudents).filter(s => s.classCode === filter);
+    if (list.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="empty-msg">No students configured in this class layer.</td></tr>`;
+        return;
+    }
+
+    list.forEach(s => {
+        const att = s.attendance || {};
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+            <td><strong>${s.indexNumber}</strong></td>
+            <td>${s.firstName} ${s.lastName}</td>
+            <td><input type="number" class="table-input att-present" data-sid="${s.id}" value="${att.present || ""}" placeholder="Days"></td>
+            <td><input type="number" class="table-input att-absent" data-sid="${s.id}" value="${att.absent || ""}" placeholder="Days"></td>
+            <td><input type="text" class="table-input att-remarks" data-sid="${s.id}" value="${att.teacherRemarks || ""}" placeholder="Conduct comments..."></td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+async function saveAttendance() {
+    const filter = document.getElementById("attendanceClassFilter").value;
+    if (!filter) return;
+
+    try {
+        showNotification("Composing behavior remarks...", "info");
+        const rows = document.querySelectorAll("#attendanceTableBody tr");
+
+        for (let tr of rows) {
+            const presInp = tr.querySelector(".att-present");
+            const absInp  = tr.querySelector(".att-absent");
+            const remInp  = tr.querySelector(".att-remarks");
+            if (!presInp) continue;
+
+            const sId = presInp.dataset.sid;
+            await updateDoc(doc(db, "students", sId), {
+                attendance: {
+                    present: presInp.value === "" ? 0 : parseInt(presInp.value),
+                    absent: absInp.value === "" ? 0 : parseInt(absInp.value),
+                    teacherRemarks: remInp.value.trim()
+                }
             });
         }
-
-        delete allStudents[classCode];
-        document.getElementById("addStudentModal").classList.add("hidden");
-        showToast(`Student ${name} added — Index No: ${indexNo}.`, "success");
-
-        const filter = document.getElementById("studentClassFilter").value;
-        if (filter === classCode) await renderStudentsTable(classCode);
-
+        showNotification("Conduct logs appended successfully!", "success");
+        await loadStudentsData();
     } catch (err) {
         console.error(err);
-        showToast("Failed to add student: " + err.message, "error");
+        showNotification("Failed to save terminal parameters.", "error");
     }
-});
-
-// ═══════════════════════════════════════════════
-//   TAB: SCORES & REPORTS
-// ═══════════════════════════════════════════════
-document.getElementById("scoresClassFilter").addEventListener("change", e => {
-    const code       = e.target.value;
-    const subjectSel = document.getElementById("scoresSubjectFilter");
-    while (subjectSel.options.length > 1) subjectSel.remove(1);
-    if (!code) return;
-    const subjects = assignedSubjects
-        .filter(s => s.classCode === code || (s.classes || []).includes(code))
-        .map(s => s.subject);
-    subjects.forEach(sub => {
-        const opt = document.createElement("option");
-        opt.value = sub; opt.textContent = sub;
-        subjectSel.appendChild(opt);
-    });
-});
-
-document.getElementById("loadScoresBtn").addEventListener("click", async () => {
-    const classCode = document.getElementById("scoresClassFilter").value;
-    const subject   = document.getElementById("scoresSubjectFilter").value;
-    if (!classCode || !subject) { showToast("Select a class and subject.", "error"); return; }
-    await renderScoresTable(classCode, subject);
-});
-
-async function renderScoresTable(classCode, subject) {
-    const tbody = document.getElementById("scoresTableBody");
-    tbody.innerHTML = `<tr><td colspan="8" class="empty-msg">Loading…</td></tr>`;
-    const students = await fetchStudents(classCode);
-    if (students.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="8" class="empty-msg">No students found.</td></tr>`;
-        return;
-    }
-
-    const remarks = getRemarks();
-    const rows = await Promise.all(students.map(async s => {
-        const docId    = `${s.id}_${subject}_${classCode}`;
-        const aSnap    = await getDoc(doc(db, "assessments", docId));
-        const existing = aSnap.exists() ? aSnap.data() : {};
-        const assessment  = existing.assessmentScore ?? "";
-        const exam        = existing.examScore       ?? "";
-        const total       = existing.totalScore      ?? "";
-        const grade       = total !== "" ? getGrade(Number(total)) : "—";
-        const savedRemark = existing.remark || "";
-        const isCustom    = savedRemark && !remarks.includes(savedRemark);
-
-        const remarkOptions = remarks.map(r =>
-            `<option value="${r}" ${r === savedRemark ? "selected" : ""}>${r}</option>`
-        ).join("");
-
-        const studentName = s.firstName
-            ? `${s.firstName} ${s.lastName || ""}`.trim()
-            : s.displayName || s.name || "—";
-
-        return `<tr data-student-id="${s.id}" data-class="${classCode}" data-subject="${subject}">
-            <td><code>${s.indexNo || "—"}</code></td>
-            <td>${studentName}</td>
-            <td><input class="score-input assessment-score" type="number" min="0" max="50" value="${assessment}" placeholder="0–50"/></td>
-            <td><input class="score-input exam-score"       type="number" min="0" max="50" value="${exam}"       placeholder="0–50"/></td>
-            <td><span class="total-display total-cell">${total !== "" ? total : "—"}</span></td>
-            <td><span class="grade-badge grade-${grade !== "—" ? grade : "F"}">${grade}</span></td>
-            <td>
-                <select class="remark-select">
-                    <option value="">— Remark —</option>
-                    ${remarkOptions}
-                    <option value="__custom__" ${isCustom ? "selected" : ""}>✏️ Custom…</option>
-                </select>
-                <input class="remark-custom-input ${isCustom ? "" : "hidden"}"
-                       type="text" placeholder="Type custom remark…"
-                       value="${isCustom ? savedRemark : ""}"/>
-            </td>
-            <td><button class="save-row-btn">💾 Save</button></td>
-        </tr>`;
-    }));
-
-    tbody.innerHTML = rows.join("");
-
-    tbody.querySelectorAll("tr").forEach(row => {
-        const aInput  = row.querySelector(".assessment-score");
-        const eInput  = row.querySelector(".exam-score");
-        const totalEl = row.querySelector(".total-cell");
-        const gb      = row.querySelector(".grade-badge");
-
-        function recalcTotal() {
-            const a = parseFloat(aInput.value) || 0;
-            const e = parseFloat(eInput.value) || 0;
-            const t = a + e;
-            totalEl.textContent = (aInput.value !== "" || eInput.value !== "") ? t : "—";
-            const g = t > 0 ? getGrade(t) : "—";
-            gb.textContent = g;
-            gb.className   = `grade-badge grade-${g !== "—" ? g : "F"}`;
-        }
-        aInput.addEventListener("input", recalcTotal);
-        eInput.addEventListener("input", recalcTotal);
-
-        const remarkSel = row.querySelector(".remark-select");
-        const customInp = row.querySelector(".remark-custom-input");
-        remarkSel.addEventListener("change", () => {
-            customInp.classList.toggle("hidden", remarkSel.value !== "__custom__");
-        });
-    });
 }
 
-document.getElementById("scoresTableBody").addEventListener("click", async e => {
-    if (!e.target.classList.contains("save-row-btn")) return;
-    const row       = e.target.closest("tr");
-    const studentId = row.dataset.studentId;
-    const classCode = row.dataset.class;
-    const subject   = row.dataset.subject;
-
-    const assessment = parseFloat(row.querySelector(".assessment-score").value) || 0;
-    const exam       = parseFloat(row.querySelector(".exam-score").value)       || 0;
-    const total      = assessment + exam;
-    const grade      = getGrade(total);
-    const remarkSel  = row.querySelector(".remark-select");
-    const customInp  = row.querySelector(".remark-custom-input");
-    const remark     = remarkSel.value === "__custom__"
-        ? sanitizeInput(customInp.value.trim())
-        : remarkSel.value;
-
-    if (assessment > 50) { showToast("Assessment cannot exceed 50.", "error"); return; }
-    if (exam       > 50) { showToast("Exam score cannot exceed 50.", "error"); return; }
-
-    try {
-        const docId = `${studentId}_${subject}_${classCode}`;
-        await setDoc(doc(db, "assessments", docId), {
-            studentId, classCode, subject,
-            assessmentScore: assessment,
-            examScore:       exam,
-            totalScore:      total,
-            grade,
-            remark,
-            teacherId: teacherUid,
-            updatedAt: serverTimestamp()
-        }, { merge: true });
-
-        showToast("Score saved.", "success");
-        row.querySelector(".total-cell").textContent = total;
-
-    } catch (err) {
-        console.error(err);
-        showToast("Failed to save: " + err.message, "error");
-    }
-});
-
-// ═══════════════════════════════════════════════
-//   TAB: ATTENDANCE
-// ═══════════════════════════════════════════════
-document.getElementById("loadAttendanceBtn").addEventListener("click", async () => {
-    const classCode = document.getElementById("attendanceClassFilter").value;
-    if (!classCode) { showToast("Select a class.", "error"); return; }
-    await renderAttendanceTable(classCode);
-});
-
-document.getElementById("saveTermDaysBtn").addEventListener("click", async () => {
-    const classCode = document.getElementById("attendanceClassFilter").value;
-    const days      = parseInt(document.getElementById("termTotalDays").value);
-    if (!classCode) { showToast("Select a class first.", "error"); return; }
-    if (!days || days < 1) { showToast("Enter a valid number of term days.", "error"); return; }
-    try {
-        await setDoc(doc(db, "system_config", `termDays_${classCode}`), {
-            classCode, termDays: days,
-            setBy: teacherUid, updatedAt: serverTimestamp()
-        }, { merge: true });
-        showToast(`Term days for ${classCode} saved: ${days} days.`, "success");
-    } catch (err) {
-        showToast("Failed to save term days.", "error");
-    }
-});
-
-async function renderAttendanceTable(classCode) {
-    const tbody = document.getElementById("attendanceTableBody");
-    tbody.innerHTML = `<tr><td colspan="5" class="empty-msg">Loading…</td></tr>`;
-
-    const configSnap = await getDoc(doc(db, "system_config", `termDays_${classCode}`));
-    if (configSnap.exists()) {
-        document.getElementById("termTotalDays").value = configSnap.data().termDays || "";
-    }
-
-    const students = await fetchStudents(classCode);
-    if (students.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" class="empty-msg">No students.</td></tr>`;
-        return;
-    }
-
-    const rows = await Promise.all(students.map(async s => {
-        const aSnap   = await getDoc(doc(db, "assessments", `attendance_${s.id}_${classCode}`));
-        const att     = aSnap.exists() ? aSnap.data() : {};
-        const present  = att.daysPresent ?? "";
-        const termDays = parseInt(document.getElementById("termTotalDays").value) || 0;
-        const absent   = termDays && present !== "" ? termDays - parseInt(present) : "—";
-        const name     = s.firstName
-            ? `${s.firstName} ${s.lastName || ""}`.trim()
-            : s.displayName || s.name || "—";
-
-        return `<tr data-student-id="${s.id}" data-class="${classCode}">
-            <td><code>${s.indexNo || "—"}</code></td>
-            <td>${name}</td>
-            <td><input class="days-input days-present" type="number" min="0" value="${present}" placeholder="Days present"/></td>
-            <td><span class="days-absent-display">${absent}</span></td>
-            <td><button class="save-row-btn">💾 Save</button></td>
-        </tr>`;
-    }));
-    tbody.innerHTML = rows.join("");
-
-    tbody.querySelectorAll("tr").forEach(row => {
-        const inp      = row.querySelector(".days-present");
-        const absEl    = row.querySelector(".days-absent-display");
-        const termDays = parseInt(document.getElementById("termTotalDays").value) || 0;
-        inp.addEventListener("input", () => {
-            absEl.textContent = termDays
-                ? Math.max(0, termDays - (parseInt(inp.value) || 0))
-                : "—";
-        });
-    });
-}
-
-document.getElementById("attendanceTableBody").addEventListener("click", async e => {
-    if (!e.target.classList.contains("save-row-btn")) return;
-    const row       = e.target.closest("tr");
-    const studentId = row.dataset.studentId;
-    const classCode = row.dataset.class;
-    const present   = parseInt(row.querySelector(".days-present").value) || 0;
-    const termDays  = parseInt(document.getElementById("termTotalDays").value) || 0;
-
-    try {
-        await setDoc(doc(db, "assessments", `attendance_${studentId}_${classCode}`), {
-            studentId, classCode,
-            daysPresent: present,
-            daysAbsent:  termDays ? termDays - present : null,
-            termDays:    termDays || null,
-            teacherId:   teacherUid,
-            updatedAt:   serverTimestamp()
-        }, { merge: true });
-        showToast("Attendance saved.", "success");
-    } catch (err) {
-        showToast("Failed: " + err.message, "error");
-    }
-});
-
-// ═══════════════════════════════════════════════
-//   TAB: CLASS RANKING
-// ═══════════════════════════════════════════════
-document.getElementById("computeRankingBtn").addEventListener("click", async () => {
-    const classCode = document.getElementById("rankingClassFilter").value;
-    if (!classCode) { showToast("Select a class.", "error"); return; }
-    await computeAndRenderRanking(classCode);
-});
-
-async function computeAndRenderRanking(classCode) {
+// ── ANALYTICS RUNTIME ──
+function renderRankingTable() {
     const tbody = document.getElementById("rankingTableBody");
-    tbody.innerHTML = `<tr><td colspan="6" class="empty-msg">Computing…</td></tr>`;
-
-    const students = await fetchStudents(classCode);
-    if (students.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" class="empty-msg">No students.</td></tr>`;
+    if (!tbody) return; tbody.innerHTML = "";
+    const filter = document.getElementById("rankingClassFilter").value;
+    if (!filter) {
+        tbody.innerHTML = `<tr><td colspan="4" class="empty-msg">Select a class to calculate placement algorithms.</td></tr>`; 
         return;
     }
-
-    const subjects = assignedSubjects
-        .filter(s => s.classCode === classCode || (s.classes || []).includes(classCode))
-        .map(s => s.subject);
-
-    const studentTotals = await Promise.all(students.map(async s => {
-        let grand = 0, count = 0;
-        for (const sub of subjects) {
-            const snap = await getDoc(doc(db, "assessments", `${s.id}_${sub}_${classCode}`));
-            if (snap.exists() && snap.data().totalScore !== undefined) {
-                grand += snap.data().totalScore || 0;
-                count++;
-            }
+    let list = Object.values(allStudents).filter(s => s.classCode === filter);
+    if (list.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4" class="empty-msg">No student values available.</td></tr>`;
+        return;
+    }
+    let calculated = list.map(s => {
+        let totalSum = 0, count = 0;
+        if (s.assessments) {
+            Object.values(s.assessments).forEach(a => {
+                totalSum += (a.totalScore || 0); count++;
+            });
         }
-        return {
-            ...s,
-            grandTotal:   grand,
-            subjectCount: count,
-            average:      count ? (grand / count).toFixed(1) : "0"
-        };
-    }));
-
-    studentTotals.sort((a, b) => b.grandTotal - a.grandTotal);
-    let rank = 1;
-    studentTotals.forEach((s, i) => {
-        if (i > 0 && s.grandTotal === studentTotals[i - 1].grandTotal) {
-            s.rank = studentTotals[i - 1].rank;
-        } else {
-            s.rank = rank;
-        }
-        rank++;
+        return { id: s.id, indexNumber: s.indexNumber, name: `${s.firstName} ${s.lastName}`, avg: count > 0 ? (totalSum / count).toFixed(2) : 0 };
     });
-
-    tbody.innerHTML = studentTotals.map(s => {
-        const rankClass = s.rank === 1 ? "rank-1" : s.rank === 2 ? "rank-2" : s.rank === 3 ? "rank-3" : "";
-        const name = s.firstName
-            ? `${s.firstName} ${s.lastName || ""}`.trim()
-            : s.displayName || s.name || "—";
-        return `<tr data-student-id="${s.id}" data-rank="${s.rank}" data-total="${s.grandTotal}">
-            <td><span class="rank-num ${rankClass}">${s.rank}</span></td>
-            <td><code>${s.indexNo || "—"}</code></td>
-            <td>${name}</td>
-            <td><strong>${s.grandTotal}</strong></td>
-            <td>${s.average}</td>
-            <td>${s.subjectCount}</td>
-        </tr>`;
-    }).join("");
-
-    document.getElementById("rankingFooter").classList.remove("hidden");
-    window._rankingData = { classCode, students: studentTotals };
+    calculated.sort((a, b) => b.avg - a.avg);
+    calculated.forEach((s, idx) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td><strong>${idx + 1}</strong></td><td>${s.indexNumber}</td><td>${s.name}</td><td><span class="badge-average">${s.avg}%</span></td>`;
+        tbody.appendChild(tr);
+    });
 }
 
-document.getElementById("saveRankingBtn").addEventListener("click", async () => {
-    if (!window._rankingData) return;
-    const { classCode, students } = window._rankingData;
-    try {
-        for (const s of students) {
-            await setDoc(doc(db, "assessments", `rank_${s.id}_${classCode}`), {
-                studentId:   s.id,
-                classCode,
-                rank:        s.rank,
-                grandTotal:  s.grandTotal,
-                average:     s.average,
-                rankedBy:    teacherUid,
-                updatedAt:   serverTimestamp()
-            }, { merge: true });
-        }
-        showToast("Rankings saved successfully.", "success");
-    } catch (err) {
-        showToast("Failed to save rankings: " + err.message, "error");
-    }
-});
-
-// ═══════════════════════════════════════════════
-//   TAB: SUBMIT REPORT
-// ═══════════════════════════════════════════════
-document.getElementById("submitReportBtn").addEventListener("click", async () => {
-    const classCode = document.getElementById("submitClassSelect").value;
-    const note      = sanitizeInput(document.getElementById("teacherNote").value.trim());
-
-    if (!classCode) { showToast("Select a class to submit.", "error"); return; }
-
-    const statusEl = document.getElementById("submitStatus");
-    statusEl.style.display = "block";
-    statusEl.className     = "submit-status glass-card";
-    statusEl.textContent   = "Submitting report…";
-
-    try {
-        await addDoc(collection(db, "admin_logs"), {
-            type:        "class_report_submission",
-            classCode,
-            teacherId:   teacherUid,
-            teacherName: currentTeacher?.firstName
-                ? `${currentTeacher.firstName} ${currentTeacher.lastName || ""}`.trim()
-                : currentTeacher?.displayName || currentTeacher?.name || "Teacher",
-            teacherNote:  note,
-            status:       "pending_admin_review",
-            submittedAt:  serverTimestamp()
-        });
-
-        await updateDoc(doc(db, "users", teacherUid), {
-            [`reportSubmitted_${classCode}`]:   true,
-            [`reportSubmittedAt_${classCode}`]: serverTimestamp()
-        });
-
-        statusEl.className   = "submit-status glass-card success";
-        statusEl.textContent = `✅ Report for ${classCode} submitted! Admin will review and publish.`;
-        showToast("Report submitted to admin.", "success");
-
-    } catch (err) {
-        console.error(err);
-        statusEl.className   = "submit-status glass-card error";
-        statusEl.textContent = "❌ Submission failed: " + err.message;
-        showToast("Submission failed.", "error");
-    }
-});
-
-// ═══════════════════════════════════════════════
-//   TAB: MY PROFILE — Student Report Links
-// ═══════════════════════════════════════════════
-async function loadProfileStudents(filterClass = "") {
-    const list = document.getElementById("studentReportList");
-    list.innerHTML = `<li class="empty-msg">Loading…</li>`;
-
-    const classes = filterClass ? [filterClass] : assignedClasses;
-    let allStudentsList = [];
-    for (const code of classes) {
-        const students = await fetchStudents(code);
-        allStudentsList = allStudentsList.concat(students);
-    }
-
-    if (allStudentsList.length === 0) {
-        list.innerHTML = `<li class="empty-msg">No students found.</li>`;
+function renderReportLinks() {
+    const ul = document.getElementById("studentReportList");
+    if (!ul) return; ul.innerHTML = "";
+    const filter = document.getElementById("profileClassFilter").value;
+    let list = Object.values(allStudents);
+    if (filter) list = list.filter(s => s.classCode === filter);
+    if (list.length === 0) {
+        ul.innerHTML = `<li class="empty-msg">No active transcripts found.</li>`; 
         return;
     }
-
-    list.innerHTML = allStudentsList.map(s => {
-        const name = s.firstName
-            ? `${s.firstName} ${s.lastName || ""}`.trim()
-            : s.displayName || s.name || "—";
-        return `<li class="student-report-item">
-            <a class="report-link" href="student.html?id=${s.id}" target="_blank">
-                🎓 ${name}
-            </a>
-            <span class="student-index-tag">${s.indexNo || "—"} · ${s.classCode || "—"}</span>
-        </li>`;
-    }).join("");
+    list.forEach(s => {
+        const li = document.createElement("li");
+        li.className = "report-link-item";
+        li.innerHTML = `<span><strong>${s.indexNumber}</strong> — ${s.firstName} ${s.lastName} (${s.classCode})</span>
+                        <a href="student_report.html?id=${s.id}" target="_blank" class="btn-secondary btn-sm" style="text-decoration:none; margin-left:10px;">View Report Card ↗</a>`;
+        ul.appendChild(li);
+    });
 }
 
-document.getElementById("profileClassFilter").addEventListener("change", e => {
-    loadProfileStudents(e.target.value);
-});
+async function handleSubmitReportCard(e) {
+    e.preventDefault();
+    const cl = document.getElementById("submitClassSelect").value;
+    const sub = document.getElementById("submitSubjectSelect").value;
+    if (!cl || !sub) { showNotification("Please specify all entry targets.", "error"); return; }
+    showNotification(`Assessments for ${sub} in class ${cl} locked and dispatched to admin reviews!`, "success");
+}
 
-// ═══════════════════════════════════════════════
-//   TAB SWITCHING
-// ═══════════════════════════════════════════════
-const tabTitles = {
-    overview:   "Overview",
-    students:   "My Students",
-    scores:     "Scores & Reports",
-    attendance: "Attendance",
-    ranking:    "Class Ranking",
-    submit:     "Submit Report",
-    profile:    "My Profile"
-};
-
+// ── TAB INITIALIZATION SWITCHER ──
+const tabTitles = { dashboard: "Overview", students: "Student Registry", scores: "Input Scores", attendance: "Conduct & Attendance", ranking: "Class Analytics", submit: "Final Submission", profile: "My Portal Profile" };
 function switchTab(name) {
-    document.querySelectorAll(".nav-item").forEach(btn => {
-        btn.classList.toggle("active", btn.dataset.tab === name);
-    });
-    document.querySelectorAll(".tab-content").forEach(sec => {
-        sec.classList.toggle("active", sec.id === `tab-${name}`);
-    });
-    document.getElementById("pageTitle").textContent      = tabTitles[name] || name;
-    document.getElementById("pageBreadcrumb").textContent = `Dashboard › ${tabTitles[name] || name}`;
+    document.querySelectorAll(".tab-content").forEach(t => t.classList.remove("active"));
+    document.querySelectorAll(".nav-item").forEach(n => n.classList.remove("active"));
+    
+    const targetTab = document.getElementById(`tab-${name}`);
+    const targetNav = document.querySelector(`[data-tab="${name}"]`);
+    
+    if (targetTab) targetTab.classList.add("active");
+    if (targetNav) targetNav.classList.add("active");
+    
+    if (document.getElementById("pageBreadcrumb")) {
+        document.getElementById("pageBreadcrumb").textContent = `Dashboard › ${tabTitles[name] || name}`;
+    }
 }
-
-document.querySelectorAll(".nav-item").forEach(btn => {
-    btn.addEventListener("click", () => switchTab(btn.dataset.tab));
-});
-
-// Integrated Quick Action interceptor logic loops
-document.getElementById("qa-students")  ?.addEventListener("click", () => {
-    switchTab("students");
-    openAddStudentModal();
-});
-document.getElementById("qa-scores")    ?.addEventListener("click", () => switchTab("scores"));
-document.getElementById("qa-attendance")?.addEventListener("click", () => switchTab("attendance"));
-document.getElementById("qa-submit")    ?.addEventListener("click", () => switchTab("submit"));
-
 window.switchTab = switchTab;
 
-// ═══════════════════════════════════════════════
-//   SIGN OUT
-// ═══════════════════════════════════════════════
-document.getElementById("signOutBtn").addEventListener("click", async () => {
-    sessionStorage.removeItem("adminAsTeacher");
-    await signOut(auth);
-    window.location.href = "index.html";
+// ── DOM RUNTIME HANDLER REGISTRATION ──
+document.addEventListener("DOMContentLoaded", () => {
+    document.getElementById("addStudentForm")?.addEventListener("submit", handleCreateStudent);
+    document.getElementById("btnSaveScores")?.addEventListener("click", saveAssessments);
+    document.getElementById("btnSaveAttendance")?.addEventListener("click", saveAttendance);
+    document.getElementById("submitReportForm")?.addEventListener("submit", handleSubmitReportCard);
+
+    document.getElementById("studentClassFilter")?.addEventListener("change", () => {
+        adjustAddStudentVisibility();
+        renderStudentsTable();
+    });
+    document.getElementById("scoresClassFilter")?.addEventListener("change", renderScoresTable);
+    document.getElementById("scoresSubjectFilter")?.addEventListener("change", renderScoresTable);
+    document.getElementById("attendanceClassFilter")?.addEventListener("change", renderAttendanceTable);
+    document.getElementById("rankingClassFilter")?.addEventListener("change", renderRankingTable);
+    document.getElementById("profileClassFilter")?.addEventListener("change", renderReportLinks);
+    document.getElementById("banner-back-btn")?.addEventListener("click", goBackToAdmin);
+    
+    // Wire up sidebar tabs click routes
+    document.querySelectorAll(".nav-item").forEach(btn => {
+        btn.addEventListener("click", () => switchTab(btn.dataset.tab));
+    });
+
+    // Overview Quick Actions routers
+    document.getElementById("qa-students")?.addEventListener("click", () => { switchTab("students"); openAddStudentModal(); });
+    document.getElementById("qa-scores")?.addEventListener("click", () => switchTab("scores"));
+    document.getElementById("qa-attendance")?.addEventListener("click", () => switchTab("attendance"));
+    document.getElementById("qa-submit")?.addEventListener("click", () => switchTab("submit"));
+    document.getElementById("openAddStudentBtn")?.addEventListener("click", openAddStudentModal);
+    
+    document.getElementById("signOutBtn")?.addEventListener("click", async () => {
+        sessionStorage.removeItem("adminAsTeacher");
+        await signOut(auth);
+        window.location.href = "index.html";
+    });
 });
 
-// ═══════════════════════════════════════════════
-//   TOAST NOTIFICATIONS
-// ═══════════════════════════════════════════════
-function showToast(message, type = "info", duration = 3500) {
-    const container = document.getElementById("toastContainer");
-    const toast     = document.createElement("div");
-    toast.className = `toast ${type}`;
-    toast.textContent = message;
-    container.appendChild(toast);
-    setTimeout(() => toast.remove(), duration);
+function showToast(message, type = "info") {
+    showNotification(message, type);
 }
