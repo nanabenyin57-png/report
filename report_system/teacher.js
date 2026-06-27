@@ -8,7 +8,7 @@ import { getAuth, onAuthStateChanged,
 import { getFirestore, doc, getDoc,
          getDocs, setDoc, addDoc, updateDoc,
          collection, query, where,
-         orderBy, serverTimestamp }          from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
+         orderBy, serverTimestamp }          from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js"; // Note: ensure firestore imports match your original setup if separate
 
 import { firebaseConfig, getGrade, getRemarks,
          generateIndexNumber, sanitizeInput,
@@ -43,20 +43,22 @@ onAuthStateChanged(auth, async (user) => {
         window.location.href = "index.html";
         return;
     }
+    
+    // Default to the currently logged in session user ID
     teacherUid = user.uid;
 
     const adminAsTeacherUid = sessionStorage.getItem("adminAsTeacher");
-    if (adminAsTeacherUid) {
+    
+    // CRITICAL FIX: Only overwrite teacherUid if the session value contains an actual Firebase UID, 
+    // not just a literal "true" text flag string.
+    if (adminAsTeacherUid && adminAsTeacherUid !== "true") {
         teacherUid = adminAsTeacherUid;
-        isAdminViewing = true;
-        const banner = document.getElementById("admin-teacher-banner");
-        if (banner) banner.style.display = "flex";
     }
 
     try {
         const snap = await getDoc(doc(db, "users", teacherUid));
         if (!snap.exists()) {
-            showNotification("Profile not found.", "error");
+            showNotification("Profile database entry not found.", "error");
             return;
         }
         currentTeacher = snap.data();
@@ -66,11 +68,15 @@ onAuthStateChanged(auth, async (user) => {
             ? currentTeacher.role 
             : [currentTeacher.role || ""];
 
-        if (rolesArray.includes("admin") || adminAsTeacherUid) {
+        // Determine if we are viewing in Admin Override Master Mode.
+        // It triggers if there's an active admin session item OR if they have the admin role but no local teacher data assigned.
+        if (adminAsTeacherUid || (rolesArray.includes("admin") && !currentTeacher.assignedClasses)) {
             isAdminViewing = true;
+            const banner = document.getElementById("admin-teacher-banner");
+            if (banner) banner.style.display = "flex";
         }
 
-        // Parse assignments or grant full override privileges if admin
+        // Parse assignments or grant full override privileges if admin override is active
         if (isAdminViewing) {
             isFormTeacher = true;
             
@@ -89,6 +95,7 @@ onAuthStateChanged(auth, async (user) => {
                 return { subjectCode: subjectName, classCode: "All" };
             });
         } else {
+            // Normal routing for teachers, or dual role users acting in their teacher capacity
             assignedClasses  = currentTeacher.assignedClasses || [];
             assignedSubjects = currentTeacher.assignedSubjects || [];
             isFormTeacher    = currentTeacher.isFormTeacher || false;
@@ -126,7 +133,7 @@ onAuthStateChanged(auth, async (user) => {
         await loadStudentsData();
 
     } catch (err) {
-        console.error(err);
+        console.error("Dashboard dependency failure: ", err);
         showNotification("Error loading dashboard dependencies.", "error");
     }
 });
@@ -180,6 +187,7 @@ function populateClassSelectors() {
     });
 }
 
+// ── POPULATE SUBJECTS ──
 function populateSubjectSelectors() {
     const selectors = ["scoresSubjectFilter", "submitSubjectSelect"];
     selectors.forEach(id => {
