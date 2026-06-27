@@ -3,13 +3,13 @@
 // ============================================================
 
 import { initializeApp }                    from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
-// ✅ CORRECTED IMPORTS
 import { getAuth, onAuthStateChanged,
          signOut }                           from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
 import { getFirestore, doc, getDoc,
          getDocs, setDoc, addDoc, updateDoc,
          collection, query, where,
-         orderBy, serverTimestamp }          from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js"; // 👈 Changed to firebase-firestore.js
+         orderBy, serverTimestamp }          from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
+
 import { firebaseConfig, getGrade, getRemarks,
          generateIndexNumber, sanitizeInput,
          showNotification, sendEmailNotification,
@@ -43,22 +43,20 @@ onAuthStateChanged(auth, async (user) => {
         window.location.href = "index.html";
         return;
     }
-    
-    // Default to the currently logged in session user ID
     teacherUid = user.uid;
 
     const adminAsTeacherUid = sessionStorage.getItem("adminAsTeacher");
-    
-    // CRITICAL FIX: Only overwrite teacherUid if the session value contains an actual Firebase UID, 
-    // not just a literal "true" text flag string.
-    if (adminAsTeacherUid && adminAsTeacherUid !== "true") {
+    if (adminAsTeacherUid) {
         teacherUid = adminAsTeacherUid;
+        isAdminViewing = true;
+        const banner = document.getElementById("admin-teacher-banner");
+        if (banner) banner.style.display = "flex";
     }
 
     try {
         const snap = await getDoc(doc(db, "users", teacherUid));
         if (!snap.exists()) {
-            showNotification("Profile database entry not found.", "error");
+            showNotification("Profile not found.", "error");
             return;
         }
         currentTeacher = snap.data();
@@ -68,24 +66,23 @@ onAuthStateChanged(auth, async (user) => {
             ? currentTeacher.role 
             : [currentTeacher.role || ""];
 
-        // Determine if we are viewing in Admin Override Master Mode.
-        // It triggers if there's an active admin session item OR if they have the admin role but no local teacher data assigned.
-        if (adminAsTeacherUid || (rolesArray.includes("admin") && !currentTeacher.assignedClasses)) {
+        if (rolesArray.includes("admin") || adminAsTeacherUid) {
             isAdminViewing = true;
-            const banner = document.getElementById("admin-teacher-banner");
-            if (banner) banner.style.display = "flex";
         }
 
-        // Parse assignments or grant full override privileges if admin override is active
+        // Parse assignments or grant full override privileges if admin
         if (isAdminViewing) {
             isFormTeacher = true;
             
-            // Fetch all global system classes to populate selection tools smoothly
-            const classSnap = await getDocs(collection(db, "classes"));
-            assignedClasses = [];
-            classSnap.forEach(d => assignedClasses.push(d.id));
+            try {
+                const classSnap = await getDocs(collection(db, "classes"));
+                assignedClasses = [];
+                classSnap.forEach(d => assignedClasses.push(d.id));
+            } catch (err) {
+                console.warn("Could not load classes collection, using fallback.", err);
+                assignedClasses = ["B4A", "B4B"]; 
+            }
             
-            // Dynamically combine all available subject strings from configuration dictionary
             const globalSubjectSet = new Set();
             Object.values(DEPARTMENT_SUBJECTS).forEach(subs => {
                 subs.forEach(s => globalSubjectSet.add(s));
@@ -95,9 +92,27 @@ onAuthStateChanged(auth, async (user) => {
                 return { subjectCode: subjectName, classCode: "All" };
             });
         } else {
-            // Normal routing for teachers, or dual role users acting in their teacher capacity
-            assignedClasses  = currentTeacher.assignedClasses || [];
-            assignedSubjects = currentTeacher.assignedSubjects || [];
+            // ✅ FIX: Dynamically parse your actual Firestore schema structure
+            assignedClasses = [];
+            assignedSubjects = [];
+            const uniqueClasses = new Set();
+
+            if (currentTeacher.assignedSubjects && Array.isArray(currentTeacher.assignedSubjects)) {
+                currentTeacher.assignedSubjects.forEach(item => {
+                    const subjectName = item.subject || "";
+                    const targetClasses = item.classes || [];
+                    
+                    targetClasses.forEach(cls => {
+                        uniqueClasses.add(cls);
+                        assignedSubjects.push({
+                            subjectCode: subjectName,
+                            classCode: cls
+                        });
+                    });
+                });
+            }
+            
+            assignedClasses = Array.from(uniqueClasses);
             isFormTeacher    = currentTeacher.isFormTeacher || false;
             formClass        = currentTeacher.formClass || null;
         }
@@ -123,17 +138,14 @@ onAuthStateChanged(auth, async (user) => {
             if (formRow) formRow.style.display = "none";
         }
 
-        // Initialize selectors and pipelines
         populateClassSelectors();
         populateSubjectSelectors();
-        
-        // Dynamic visibility check for Add Student actions
         adjustAddStudentVisibility();
 
         await loadStudentsData();
 
     } catch (err) {
-        console.error("Dashboard dependency failure: ", err);
+        console.error("Dashboard Render Crash Loop: ", err);
         showNotification("Error loading dashboard dependencies.", "error");
     }
 });
@@ -187,7 +199,6 @@ function populateClassSelectors() {
     });
 }
 
-// ── POPULATE SUBJECTS ──
 function populateSubjectSelectors() {
     const selectors = ["scoresSubjectFilter", "submitSubjectSelect"];
     selectors.forEach(id => {
