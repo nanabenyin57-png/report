@@ -3,13 +3,13 @@
 // ============================================================
 
 import { initializeApp }                    from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
+// ✅ CORRECTED IMPORTS
 import { getAuth, onAuthStateChanged,
          signOut }                           from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
 import { getFirestore, doc, getDoc,
          getDocs, setDoc, addDoc, updateDoc,
          collection, query, where,
-         orderBy, serverTimestamp }          from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js"; // Note: ensure firestore imports match your original setup if separate
-
+         orderBy, serverTimestamp }          from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js"; // 👈 Changed to firebase-firestore.js
 import { firebaseConfig, getGrade, getRemarks,
          generateIndexNumber, sanitizeInput,
          showNotification, sendEmailNotification,
