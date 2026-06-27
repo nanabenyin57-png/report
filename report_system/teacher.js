@@ -92,7 +92,7 @@ onAuthStateChanged(auth, async (user) => {
                 return { subjectCode: subjectName, classCode: "All" };
             });
         } else {
-            // ✅ FIX: Dynamically parse your actual Firestore schema structure
+            // ✅ MATCHES FIRESTORE SCHEMA (firebase.png)
             assignedClasses = [];
             assignedSubjects = [];
             const uniqueClasses = new Set();
@@ -295,6 +295,7 @@ function closeAddStudentModal() {
 }
 window.closeAddStudentModal = closeAddStudentModal;
 
+// ✅ FIXED: Correctly tracking positional elements for index signature alignment
 async function handleCreateStudent(e) {
     e.preventDefault();
 
@@ -318,7 +319,12 @@ async function handleCreateStudent(e) {
 
     try {
         showNotification("Generating unique index mapping...", "info");
-        const idx = await generateIndexNumber(db, collection, getDocs, query, where);
+        
+        const classQuery = query(collection(db, "students"), where("classCode", "==", classCode));
+        const classSnap = await getDocs(classQuery);
+        const nextPosition = classSnap.size + 1;
+
+        const idx = generateIndexNumber(classCode, nextPosition);
 
         const newStudentDoc = {
             indexNumber: idx,
@@ -420,7 +426,9 @@ async function saveAssessments() {
             } else {
                 const total = (cVal || 0) + (eVal || 0);
                 const grade = getGrade(total);
-                const remarks = getRemarks(grade);
+                // Extracting first choice element string array references cleanly
+                const remarksList = getRemarks();
+                const remarks = remarksList[0]; 
 
                 assessmentMap[subjectFilter] = {
                     classScore: cVal,

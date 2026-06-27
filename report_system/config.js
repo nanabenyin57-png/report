@@ -22,13 +22,13 @@ export const DEPARTMENT_SUBJECTS = {
 };
 
 export function getDepartment(classCode) {
-  if (!classCode) return "UpperPrimary"; // Default department
+  if (!classCode) return "UpperPrimary"; 
   const code = classCode.toUpperCase();
   if (code.includes("PRE")) return "PreSchool";
   if (code.includes("LPR")) return "LowerPrimary";
   if (code.includes("UPR")) return "UpperPrimary";
   if (code.includes("JUN")) return "JuniorHigh";
-  return "UpperPrimary"; // Fallback department
+  return "UpperPrimary"; 
 }
 
 // ── GRADE COMPUTATION ─────────────────────────
@@ -66,8 +66,8 @@ export function getRemarks() {
 
 // ── INDEX NUMBER GENERATION ───────────────────
 export function generateIndexNumber(classCode, position) {
-  const code    = (classCode || "XX").toUpperCase().replace(/\s+/g, "");
-  const padded  = String(position).padStart(3, "0");
+  const code = (classCode || "XX").toUpperCase().replace(/\s+/g, "");
+  const padded = String(position).padStart(3, "0");
   return `KT-${code}-${padded}`;
 }
 
@@ -94,14 +94,6 @@ export function sanitizeInput(str) {
 }
 
 // ── ROLE RESOLVER ─────────────────────────────
-/*
- // Resolves a role value from Firestore into an array of lowercase role strings.
- // Handles:
-    - Array:              ["admin", "teacher"]      → ["admin", "teacher"]
-    - Comma string:       "admin, teacher"          → ["admin", "teacher"]
-    - Single string:      "admin"                   → ["admin"]
-   - Whitespace string:  "admin "                  → ["admin"]
- */
 export function resolveRole(role) {
   if (Array.isArray(role)) {
     return role.map(r => String(r).trim().toLowerCase()).filter(Boolean);
@@ -115,20 +107,12 @@ export function resolveRole(role) {
   return ["unknown"];
 }
 
-/**
- * Check if a resolved role array includes a specific role.
- * Usage: hasRole(resolveRole(data.role), "admin")
- */
 export function hasRole(roles, target) {
   if (!Array.isArray(roles)) roles = resolveRole(roles);
   return roles.includes(target.toLowerCase());
 }
 
 // ── EMAIL NOTIFICATION ────────────────────────
-/**
- * Writes a document to the `mail` collection for the
- * Firebase Trigger Email extension to send.
- */
 export async function sendEmailNotification(to, subject, text, db) {
   if (!db) { console.warn("sendEmailNotification: db instance required"); return; }
   try {
